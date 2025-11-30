@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { FlipSevenLogic } from './game';
+import { TurnSevenLogic } from './game';
 
-describe('FlipSevenLogic additional tests', () => {
-  const logic = new FlipSevenLogic();
+describe('TurnSevenLogic additional tests', () => {
+  const logic = new TurnSevenLogic();
 
   it('ends game (gameover) when total crosses 200 at round end', () => {
     // Player already has 195 total, will get +10 this round

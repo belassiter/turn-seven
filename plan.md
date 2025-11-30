@@ -1,4 +1,4 @@
-This project is a web implementation of the card game Flip Seven
+This project is a web implementation of the card game Flip Seven, called Turn Seven.
 
 # High-level requirements
 1. Game can be played in common web browsers, including desktop and mobile

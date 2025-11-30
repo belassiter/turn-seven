@@ -1,35 +1,52 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { GameBoard, GameState, ClientGameStateManager } from '@turn-seven/engine';
-import { FlipSevenLogic } from '../logic/game';
+import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
+import { GameSetup } from './GameSetup';
 
-export const FlipSevenGame: React.FC = () => {
+export const TurnSevenGame: React.FC = () => {
   // Memoize the game logic and state manager so they are not recreated on every render.
-  const gameLogic = useMemo(() => new FlipSevenLogic(), []);
-  const clientManager = useMemo(() => {
-    // Kicking off a single player game as per the plan.
-    const initialState = gameLogic.createInitialState(['player1']);
-    return new ClientGameStateManager(initialState);
-  }, [gameLogic]);
-
-  const [gameState, setGameState] = useState<GameState>(clientManager.getState());
+  const gameLogic = useMemo(() => new TurnSevenLogic(), []);
+  const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
 
   useEffect(() => {
-    const unsubscribe = clientManager.subscribe(setGameState);
+    if (!clientManager) return;
+    const unsubscribe = clientManager.subscribe(s => setGameState(s));
+    // initialize local state
+    setGameState(clientManager.getState());
     return () => unsubscribe();
   }, [clientManager]);
 
   const handleHit = () => {
+    if (!clientManager) return;
     const currentState = clientManager.getState();
     const newState = gameLogic.performAction(currentState, { type: 'HIT' });
     clientManager.setState(newState);
   };
 
   const handleStay = () => {
+    if (!clientManager) return;
     const currentState = clientManager.getState();
     const newState = gameLogic.performAction(currentState, { type: 'STAY' });
     clientManager.setState(newState);
   };
+
+  const handleStart = (names: string[]) => {
+    const initialState = gameLogic.createInitialStateFromNames(names);
+    const mgr = new ClientGameStateManager(initialState);
+    setClientManager(mgr);
+  };
   
+  if (!gameState) {
+    // show setup screen
+    return (
+      <div className="flip-seven-game">
+        <h1>Turn Seven</h1>
+        <GameSetup onStart={handleStart} />
+      </div>
+    );
+  }
+
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
 
   return (
@@ -51,7 +68,7 @@ export const FlipSevenGame: React.FC = () => {
           </ul>
           <button onClick={() => {
             const next = gameLogic.startNextRound(gameState);
-            clientManager.setState(next);
+            if (clientManager) clientManager.setState(next);
           }}>Next Round</button>
         </div>
       )}
@@ -69,7 +86,7 @@ export const FlipSevenGame: React.FC = () => {
           </ul>
           <button onClick={() => {
             const reset = gameLogic.resetGame(gameState);
-            clientManager.setState(reset);
+            if (clientManager) clientManager.setState(reset);
           }}>Restart Game</button>
         </div>
       )}

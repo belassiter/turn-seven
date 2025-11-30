@@ -1,5 +1,8 @@
 import { CardModel, GameState, PlayerModel } from '@turn-seven/engine';
 
+export const MIN_PLAYERS = 3;
+export const MAX_PLAYERS = 18;
+
 // We can define a generic interface for game logic
 export interface IGameLogic {
   createInitialState(playerIds: string[]): GameState;
@@ -7,7 +10,7 @@ export interface IGameLogic {
 }
 
 // Implementation for Flip Seven
-export class FlipSevenLogic implements IGameLogic {
+export class TurnSevenLogic implements IGameLogic {
   private readonly WIN_SCORE = 200;
   createInitialState(playerIds: string[]): GameState {
     const deck = this.createDeck();
@@ -35,6 +38,36 @@ export class FlipSevenLogic implements IGameLogic {
       deck,
       discardPile: [],
       currentPlayerId: playerIds[0] || null,
+      gamePhase: 'playing',
+    };
+  }
+
+  // Create initial state given player names (keeps provided names)
+  public createInitialStateFromNames(names: string[]): GameState {
+    // generate ids from names with a suffix index to ensure uniqueness
+    const ids = names.map((n, i) => `p${i + 1}`);
+    const deck = this.createDeck();
+    const players = names.map((name, index) => ({
+      id: ids[index],
+      name: name || `Player ${index + 1}`,
+      hand: [] as CardModel[],
+      hasStayed: false,
+      isActive: true,
+      hasBusted: false,
+      roundScore: 0,
+      totalScore: 0,
+    }));
+
+    players.forEach(player => {
+      const card = deck.pop();
+      if (card) player.hand.push({ ...card, isFaceUp: true });
+    });
+
+    return {
+      players,
+      deck,
+      discardPile: [],
+      currentPlayerId: ids[0] || null,
       gamePhase: 'playing',
     };
   }

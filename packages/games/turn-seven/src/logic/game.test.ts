@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { FlipSevenLogic } from './game';
+import { TurnSevenLogic } from './game';
 
-describe('FlipSevenLogic', () => {
-  const logic = new FlipSevenLogic();
+describe('TurnSevenLogic', () => {
+  const logic = new TurnSevenLogic();
   const playerIds = ['p1', 'p2'];
 
   it('creates initial state correctly', () => {

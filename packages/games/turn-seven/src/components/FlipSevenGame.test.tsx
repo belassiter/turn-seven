@@ -1,15 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach } from 'vitest';
-import { FlipSevenGame } from './FlipSevenGame';
+import { TurnSevenGame } from './FlipSevenGame';
 
-describe('FlipSevenGame component', () => {
+describe('TurnSevenGame component', () => {
   afterEach(() => {
     cleanup();
   });
 
   it('renders the game board and actions', () => {
-    const { getByText } = render(<FlipSevenGame />);
+    const { getByText } = render(<TurnSevenGame />);
+    // start the game via setup
+    fireEvent.click(getByText('Start Game'));
     expect(getByText('Turn Seven')).toBeInTheDocument();
     expect(getByText('Hit')).toBeInTheDocument();
     expect(getByText('Stay')).toBeInTheDocument();
@@ -17,7 +19,8 @@ describe('FlipSevenGame component', () => {
   });
 
   it('handles Hit action', () => {
-    const { getByText, container } = render(<FlipSevenGame />);
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
     // Initial hand size is 1.
     const hand = container.querySelector('.player-hand');
     expect(hand?.querySelectorAll('.card')).toHaveLength(1);
@@ -30,7 +33,8 @@ describe('FlipSevenGame component', () => {
   it('handles Stay action', () => {
     // In single player, Stay keeps it on Player 1.
     // But we can verify the button is clickable and doesn't crash.
-    const { getByText } = render(<FlipSevenGame />);
+    const { getByText } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
     const hitButton = getByText('Hit') as HTMLButtonElement;
     const stayButton = getByText('Stay') as HTMLButtonElement;
 
@@ -39,21 +43,12 @@ describe('FlipSevenGame component', () => {
 
     fireEvent.click(stayButton);
 
-    // After staying in single-player mode, the player is marked as stayed and Hit should be disabled
-    expect(hitButton.disabled).toBe(true);
-    expect(getByText("Player 1's Turn")).toBeInTheDocument();
-
-    // Simulate end of round and check Next Round flow
-    // Force the component to show ended state by invoking Stay until round ends
-    // For single-player, staying should cause the round to end and show results
+    // After staying, in multi-player mode the turn should advance to the next player
+    const actionsHeader = document.querySelector('.actions h2')?.textContent || '';
     fireEvent.click(stayButton);
-    expect(getByText('Round Results')).toBeInTheDocument();
-
-    const nextBtn = getByText('Next Round');
-    fireEvent.click(nextBtn);
-
-    // After next round, the game should be in playing state and player's hand should reset to 1 card
-    const hand = document.querySelector('.player-hand');
-    expect(hand?.querySelectorAll('.card').length).toBe(1);
+    const actionsHeaderAfter = document.querySelector('.actions h2')?.textContent || '';
+    expect(actionsHeaderAfter).not.toBe(actionsHeader);
+    // Hit should be enabled for the next player
+    expect(hitButton.disabled).toBe(false);
   });
 });

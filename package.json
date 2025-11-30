@@ -2,14 +2,16 @@
   "name": "turn-seven-monorepo",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter flip-seven dev",
-    "build": "pnpm --filter flip-seven build",
+    "dev": "pnpm --filter turn-seven dev",
+    "build": "pnpm --filter turn-seven build",
     "test": "vitest",
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/ui": "^4.0.14",
     "jsdom": "^27.2.0",
