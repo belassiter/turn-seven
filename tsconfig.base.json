@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "target": "ESNext",
+    "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@turn-seven/engine": ["packages/engine/src/index.ts"]
+    }
+  }
+}

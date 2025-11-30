@@ -31,6 +31,9 @@ The project will be built as a generic card game engine with "Flip Seven" as the
 - **Project Setup:** Vite in a `pnpm` monorepo.
 - **Generic UI Components:** Will include a `GameBoard`, `PlayerHand`, `Card` (with flip animation), and `Deck`. These will be styleable and configurable.
 - **Styling:** Tailwind CSS will be used for utility-first styling.
+- **Testing:** We will use **Vitest** as our testing framework. Our strategy is:
+  - **Strict TDD for the Core Engine:** For the `packages/engine`, we will strictly adhere to TDD (Test-Driven Development). This means writing failing tests before any implementation. This ensures the engine is robust and has a clean, stable API.
+  - **Conventional Testing for Game Logic & UI:** For the `packages/games/flip-seven`, we will write unit and integration tests for game logic and components, but not strictly follow TDD. This allows for more flexibility and faster iteration on the user-facing parts of the application.
 - **State Management:** A decoupled state model ("UI State" vs "Server State") will be managed by a generic `useGameState` hook.
 - **Backend & Hosting:** All backend and hosting will be managed by Firebase.
   - **Hosting:** Firebase Hosting.
@@ -45,7 +48,7 @@ The project will be built as a generic card game engine with "Flip Seven" as the
 # Increments
 The work will be divided between building the engine and implementing the game.
 
-1.  **Engine Foundation & Local Mode Single Player:**
+1.  **Engine Foundation & Local Mode Single Player (In Progress):**
     - **Done:** Set up the monorepo with `engine` and `games/flip-seven` packages.
     - **Engine:** Create generic `Card`, `PlayerHand`, and `GameBoard` components.
     - **Engine:** Implement a simple, client-only state manager.
@@ -55,6 +58,7 @@ The work will be divided between building the engine and implementing the game.
     - **Engine:** Refine the state manager to handle multiple players in a local game.
     - **Flip Seven:** Implement the logic for busting and turn progression.
 3.  **Backend Integration (Remote Play):**
+    - **TODO:** Set up Firebase.
     - **Engine:** Set up Firebase, Auth, Firestore, and the generic `performAction` Cloud Function.
     - **Engine:** Create the `useGameState` hook to subscribe to Firestore.
     - **Flip Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.

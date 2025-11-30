@@ -6,17 +6,16 @@ Players earn points by collecting Number cards during their turn. You can stop y
 There’s also a special bonus: if you successfully collect 7 unique Number cards during your turn, you instantly end the round and earn an additional 15-point bonus, regardless of what other players have.
 
 # Components
-The Flip 7 deck contains 94 cards. Here’s how they break down:
 
-## Number Cards (81 total):
+## Number Cards:
 Each Number card is worth its face value in points. The higher the number, the more of that card exist in the deck.
 
-12 cards showing the number 12
-11 cards showing the number 11
-… continuing downward …
-2 cards showing the number 2
-1 card showing the number 1
-1 card showing the number 0 (worth zero points but counts toward 7 unique numbers)
+- 12 cards showing the number 12
+- 11 cards showing the number 11
+- … continuing downward …
+- 2 cards showing the number 2
+- 1 card showing the number 1
+- 1 card showing the number 0 (worth zero points but counts toward 7 unique numbers)
 This distribution means high numbers are more likely to appear, while low numbers are rare and risky to chase.
 
 ## Modifier Cards:
@@ -31,7 +30,7 @@ Modifier cards are not Number cards and do not count toward the 7-unique-card bo
 These cards interrupt the normal flow of the game and introduce tactical decisions and surprise outcomes.
 
 # Setup
-Shuffle all 94 cards thoroughly to form a central draw pile.
+Shuffle all cards thoroughly to form a central draw pile.
 Choose one player to be the Dealer. This role rotates clockwise after each round.
 Works with 3-18 players
 You’re now ready to begin play.
