@@ -5,7 +5,7 @@ import { Card } from './Card';
 
 describe('Card label scaling', () => {
   it('adds compact-label class for long action labels', () => {
-    const longLabel = 'Flip Three Now!'; // length > 10
+    const longLabel = 'Turn Three Now!'; // length > 10
     const card = { id: 'a1', suit: 'action', rank: longLabel, isFaceUp: true } as any;
     const { container } = render(<Card card={card} />);
     const el = container.querySelector('.card');
@@ -33,7 +33,7 @@ describe('Card label scaling', () => {
   });
 
   it('does not add compact-label for short labels', () => {
-    const shortLabel = 'Flip';
+    const shortLabel = 'Turn';
     const card = { id: 'a2', suit: 'action', rank: shortLabel, isFaceUp: true } as any;
     const { container } = render(<Card card={card} />);
     expect(container.querySelector('.card.compact-label')).toBeNull();

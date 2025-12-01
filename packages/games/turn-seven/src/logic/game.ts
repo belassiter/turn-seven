@@ -9,7 +9,7 @@ export interface IGameLogic {
   performAction(state: GameState, action: { type: string; payload?: any }): GameState;
 }
 
-// Implementation for Flip Seven
+// Implementation for Turn Seven
 export class TurnSevenLogic implements IGameLogic {
   private readonly WIN_SCORE = 200;
   createInitialState(playerIds: string[]): GameState {
@@ -106,7 +106,7 @@ export class TurnSevenLogic implements IGameLogic {
       }
     }
     
-    // TODO: check for bust condition based on Flip Seven rules.
+    // TODO: check for bust condition based on Turn Seven rules.
 
     // After a hit, check for round end (no active players) or 7-unique condition
     this.checkRoundEnd(newState);
@@ -201,7 +201,7 @@ export class TurnSevenLogic implements IGameLogic {
             if (!isNaN(add)) plusModifiers += add;
           }
         }
-        // action cards (Freeze, Flip Three, Second Chance) don't affect scoring here
+        // action cards (Freeze, Turn Three, Second Chance) don't affect scoring here
       }
 
       // apply multipliers (each x2 doubles)
@@ -289,8 +289,8 @@ export class TurnSevenLogic implements IGameLogic {
       deck.push({ id: `card-${idCounter++}`, suit: 'modifier', rank: mod, isFaceUp: false });
     }
 
-    // Add action cards: Freeze, FlipThree, SecondChance (3 copies each)
-    const actions = ['Freeze', 'FlipThree', 'SecondChance'];
+    // Add action cards: Freeze, TurnThree, SecondChance (3 copies each)
+    const actions = ['Freeze', 'TurnThree', 'SecondChance'];
     for (const action of actions) {
       for (let i = 0; i < 3; i++) {
         deck.push({ id: `card-${idCounter++}`, suit: 'action', rank: action, isFaceUp: false });

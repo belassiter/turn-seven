@@ -4,7 +4,6 @@ import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
 import { GameSetup } from './GameSetup';
 
 export const TurnSevenGame: React.FC = () => {
-  // Memoize the game logic and state manager so they are not recreated on every render.
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
   const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -12,7 +11,6 @@ export const TurnSevenGame: React.FC = () => {
   useEffect(() => {
     if (!clientManager) return;
     const unsubscribe = clientManager.subscribe(s => setGameState(s));
-    // initialize local state
     setGameState(clientManager.getState());
     return () => unsubscribe();
   }, [clientManager]);
@@ -36,9 +34,8 @@ export const TurnSevenGame: React.FC = () => {
     const mgr = new ClientGameStateManager(initialState);
     setClientManager(mgr);
   };
-  
+
   if (!gameState) {
-    // show setup screen
     return (
       <div className="turn-seven-game">
         <h1>Turn Seven</h1>
