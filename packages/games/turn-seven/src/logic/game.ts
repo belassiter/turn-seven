@@ -87,7 +87,8 @@ export class TurnSevenLogic implements IGameLogic {
     // Using structuredClone for deep cloning state, a modern and safe approach for immutability.
     const newState = structuredClone(state);
     const { players, deck, currentPlayerId } = newState;
-    const currentPlayer = players.find(p => p.id === currentPlayerId);
+    const currentPlayerIndex = players.findIndex(p => p.id === currentPlayerId);
+    const currentPlayer = players[currentPlayerIndex];
     if (!currentPlayer) return newState;
 
     const card = deck.pop();
@@ -106,9 +107,27 @@ export class TurnSevenLogic implements IGameLogic {
       }
     }
     
-    // TODO: check for bust condition based on Turn Seven rules.
+    // After a hit, advance to the next active player (forward-wrapping). If no active players remain, end the round.
+    const total = players.length;
+    let found = false;
+    if (total > 0) {
+      for (let offset = 1; offset < total; offset++) {
+        const idx = (currentPlayerIndex + offset) % total;
+        if (players[idx].isActive) {
+          newState.currentPlayerId = players[idx].id;
+          found = true;
+          break;
+        }
+      }
+    }
 
-    // After a hit, check for round end (no active players) or 7-unique condition
+    if (!found) {
+      // No active players left; compute scores and end round.
+      this.computeScores(newState);
+      if (newState.gamePhase !== 'gameover') newState.gamePhase = 'ended';
+    }
+
+    // Also detect 7-unique condition
     this.checkRoundEnd(newState);
     return newState;
   }
@@ -123,15 +142,24 @@ export class TurnSevenLogic implements IGameLogic {
     players[currentPlayerIndex].hasStayed = true;
     players[currentPlayerIndex].isActive = false;
 
-    // Find next active player
-    const nextActiveIndex = players.findIndex((p: any, idx: number) => p.isActive && idx !== currentPlayerIndex);
-    if (nextActiveIndex !== -1) {
-      newState.currentPlayerId = players[nextActiveIndex].id;
-    } else {
+    // Advance to next active player (forward-wrapping)
+    const total = players.length;
+    let found = false;
+    if (total > 0) {
+      for (let offset = 1; offset < total; offset++) {
+        const idx = (currentPlayerIndex + offset) % total;
+        if (players[idx].isActive) {
+          newState.currentPlayerId = players[idx].id;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
       // No active players left; end the round and compute scores
       newState.currentPlayerId = currentPlayerId;
       this.computeScores(newState);
-      // computeScores may set gamePhase to 'gameover' if someone reached the win threshold.
       if (newState.gamePhase !== 'gameover') {
         newState.gamePhase = 'ended';
       }
