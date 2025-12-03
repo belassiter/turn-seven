@@ -1,13 +1,18 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@turn-seven/engine": ["../../engine/src/index.ts"]
+    },
+    "composite": true,
+    "types": ["@testing-library/jest-dom"],
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "../../engine/src"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "../../engine/src/**/*.test.ts",
-    "../../engine/src/**/*.test.tsx"
+  "references": [
+    { "path": "../../engine" }
   ]
 }

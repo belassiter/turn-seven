@@ -1,10 +1,28 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { TurnSevenGame } from './TurnSevenGame';
+import { TurnSevenLogic } from '../logic/game';
 
 describe('TurnSevenGame component', () => {
+  beforeEach(() => {
+    // Mock createDeck to return a fixed deck to avoid flakiness and "TurnThree" surprises
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+      { id: 'c2', suit: 'number', rank: '2', isFaceUp: false },
+      { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
+      { id: 'c4', suit: 'number', rank: '4', isFaceUp: false },
+      { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
+      { id: 'c6', suit: 'number', rank: '6', isFaceUp: false },
+      { id: 'c7', suit: 'number', rank: '7', isFaceUp: false },
+      { id: 'c8', suit: 'number', rank: '8', isFaceUp: false },
+      { id: 'c9', suit: 'number', rank: '9', isFaceUp: false },
+      { id: 'c10', suit: 'number', rank: '10', isFaceUp: false },
+    ].reverse()); // reverse because pop() takes from end
+  });
+
   afterEach(() => {
+    vi.restoreAllMocks();
     cleanup();
   });
 

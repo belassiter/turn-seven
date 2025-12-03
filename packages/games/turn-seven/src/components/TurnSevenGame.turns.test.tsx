@@ -9,6 +9,9 @@ describe('TurnSevenGame turn sequence (UI)', () => {
   });
 
   it('advances current player on Stay until Next Round appears', () => {
+    const realRandom = Math.random;
+    // make deck shuffling deterministic for this test
+    Math.random = () => 0.42;
     const { getByText } = render(<TurnSevenGame />);
     // Start the game via setup
     fireEvent.click(getByText('Start Game'));
@@ -33,9 +36,12 @@ describe('TurnSevenGame turn sequence (UI)', () => {
     // Ensure we saw at least two different players during the sequence
     const unique = Array.from(new Set(seen));
     expect(unique.length).toBeGreaterThanOrEqual(2);
+    Math.random = realRandom;
   });
 
   it('current player rotates after Hit', () => {
+    const realRandom = Math.random;
+    Math.random = () => 0.42;
     const { getByText } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
@@ -44,5 +50,6 @@ describe('TurnSevenGame turn sequence (UI)', () => {
     fireEvent.click(getByText('Hit'));
     const actionsHeaderAfter = document.querySelector('.actions h2')?.textContent || '';
     expect(actionsHeaderAfter).not.toBe(actionsHeader);
+    Math.random = realRandom;
   });
 });

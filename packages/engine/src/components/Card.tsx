@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 
 export interface CardModel {
   id: string; // A unique ID for this card instance
@@ -15,64 +15,54 @@ export const Card: React.FC<CardProps> = ({ card }) => {
   const { rank, suit, isFaceUp = false } = card;
 
   const normalizedSuit = String(suit).toLowerCase();
-  const labelText = String(rank);
   const isAction = normalizedSuit === 'action';
+  
+  // For action cards, replace spaces with newlines to force vertical stacking
+  // "Turn Three" -> "Turn\nThree"
+  // Also handle CamelCase: "TurnThree" -> "Turn\nThree"
+  const labelText = String(rank);
+  const displayLabel = isAction 
+    ? labelText.replace(/([a-z])([A-Z])/g, '$1\n$2').replace(/ /g, '\n') 
+    : labelText;
+
   const isModifier = normalizedSuit === 'modifier' || labelText.startsWith('+');
   const showOnlyCenter = normalizedSuit === 'number' || isAction || isModifier;
-  const compactThreshold = 10;
-  const isCompact = labelText.length > compactThreshold;
 
-  // Scale the font-size to fit the card width. Prefer measuring text in the
-  // browser when possible; fall back to a deterministic estimate in JSDOM.
-  const cardWidthPx = 100; // matches `.card { width: 100px }` in CSS
-  const horizontalPaddingPx = 12; // left+right internal padding allowance
-  const availableWidthPx = Math.max(20, cardWidthPx - horizontalPaddingPx);
-  const baseSizePx = 48;
-  const minSizePx = 8;
+  const textRef = useRef<HTMLSpanElement>(null);
 
-  const estimateFontSize = () => {
-    const approxCharWidthFactor = 0.55; // approximate width per character relative to font-size
-    const estimatedFontPx = Math.floor(availableWidthPx / Math.max(1, labelText.length * approxCharWidthFactor));
-    return Math.min(baseSizePx, Math.max(minSizePx, estimatedFontPx));
-  };
+  useLayoutEffect(() => {
+    const textEl = textRef.current;
+    const containerEl = textEl?.parentElement;
 
-  const [centerStyle, setCenterStyle] = useState<React.CSSProperties | undefined>(
-    isCompact ? { fontSize: `${estimateFontSize()}px` } : undefined
-  );
+    if (!textEl || !containerEl || !showOnlyCenter) return;
 
-  useEffect(() => {
-    if (!isCompact) return;
-    // Try to measure with canvas in real browsers for accurate fitting. If
-    // canvas isn't available (JSDOM) fall back to the estimate.
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext && canvas.getContext('2d');
-      if (!ctx) {
-        setCenterStyle({ fontSize: `${estimateFontSize()}px` });
-        return;
+    // Only scale action cards. Number and modifier cards fit fine with default CSS.
+    if (!isAction) return;
+
+    // If in JSDOM/test environment with no layout, skip resizing
+    if (containerEl.clientWidth === 0 && containerEl.clientHeight === 0) return;
+
+    // Reset to base size to start measurement
+    // Start with a large font size (3rem approx 48px) to match number cards
+    let currentSize = 48; 
+    textEl.style.fontSize = `${currentSize}px`;
+    textEl.style.lineHeight = '0.9';
+    textEl.style.display = 'inline-block'; // Ensure correct width measurement
+    textEl.style.textAlign = 'center';
+    textEl.style.whiteSpace = 'pre'; // Respect newlines, don't wrap otherwise
+    
+    const minSize = 10;
+
+    // Iteratively reduce font size until it fits
+    while (currentSize > minSize) {
+      // Check if the text fits within the container
+      if (textEl.offsetWidth <= containerEl.clientWidth && textEl.offsetHeight <= containerEl.clientHeight) {
+        break;
       }
-
-      // Binary search for the largest font-size that fits availableWidthPx
-      let lo = minSizePx;
-      let hi = baseSizePx;
-      let best = lo;
-      const fontFamily = getComputedStyle(document.documentElement).fontFamily || 'sans-serif';
-      while (lo <= hi) {
-        const mid = Math.floor((lo + hi) / 2);
-        ctx.font = `${mid}px ${fontFamily}`;
-        const w = ctx.measureText(labelText).width;
-        if (w <= availableWidthPx) {
-          best = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-      setCenterStyle({ fontSize: `${best}px` });
-    } catch (e) {
-      setCenterStyle({ fontSize: `${estimateFontSize()}px` });
+      currentSize -= 1; // finer grain decrement
+      textEl.style.fontSize = `${currentSize}px`;
     }
-  }, [labelText, isCompact]);
+  }, [displayLabel, showOnlyCenter, isAction]);
 
   const cardClasses = [
     'card',
@@ -80,7 +70,6 @@ export const Card: React.FC<CardProps> = ({ card }) => {
     `suit-${normalizedSuit}`,
     `rank-${String(rank).toLowerCase()}`,
     normalizedSuit === 'number' ? 'number-card' : '',
-    isCompact ? 'compact-label' : ''
   ].join(' ');
 
   return (
@@ -89,18 +78,25 @@ export const Card: React.FC<CardProps> = ({ card }) => {
         <>
           {/* For number and action cards render only the centered rank in the DOM; for other suits render corners + center. */}
             {showOnlyCenter ? (
-            <span className="rank-center" data-testid="rank-center" style={centerStyle}>{labelText}</span>
+            <span 
+              className="rank-center" 
+              data-testid="rank-center"
+            >
+              <span ref={textRef}>{displayLabel}</span>
+            </span>
           ) : (
             <>
               <span className="rank top-left">{labelText}</span>
               <span className="suit-icon"></span>
-              <span className="rank-center" data-testid="rank-center" style={centerStyle}>{labelText}</span>
+              <span className="rank-center" data-testid="rank-center">{labelText}</span>
               <span className="rank bottom-right">{labelText}</span>
             </>
           )}
         </>
       ) : (
-        <div className="card-back"></div>
+        <div className="card-back">
+          <span className="back-label">T7</span>
+        </div>
       )}
     </div>
   );

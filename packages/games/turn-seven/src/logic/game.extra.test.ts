@@ -41,7 +41,7 @@ describe('TurnSevenLogic additional tests', () => {
     };
 
     const after = logic.performAction(state as any, { type: 'STAY' });
-    const p1 = after.players.find((p: any) => p.id === 'p1');
+    const p1 = after.players.find((p: any) => p.id === 'p1')!;
     expect(p1.roundScore).toBe(20);
     expect(p1.totalScore).toBe(20);
   });

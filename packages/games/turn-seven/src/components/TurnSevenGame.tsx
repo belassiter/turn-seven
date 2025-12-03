@@ -2,11 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { GameBoard, GameState, ClientGameStateManager } from '@turn-seven/engine';
 import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
 import { GameSetup } from './GameSetup';
+import { useActionTargeting } from '../hooks/useActionTargeting';
 
 export const TurnSevenGame: React.FC = () => {
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
   const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  
+  const { 
+    targetingState, 
+    startTargeting, 
+    cancelTargeting, 
+    confirmTarget 
+  } = useActionTargeting(clientManager, gameLogic);
 
   useEffect(() => {
     if (!clientManager) return;
@@ -45,6 +53,64 @@ export const TurnSevenGame: React.FC = () => {
   }
 
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+  const hasPendingActions = currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
+
+  const handlePlayPendingAction = (cardId: string, targetId: string) => {
+    if (!clientManager || !currentPlayer) return;
+    const currentState = clientManager.getState();
+    const newState = gameLogic.performAction(currentState, {
+      type: 'PLAY_ACTION',
+      payload: {
+        actorId: currentPlayer.id,
+        cardId: cardId,
+        targetId,
+      },
+    });
+    clientManager.setState(newState);
+  };
+
+  const renderPendingActionUI = () => {
+    if (!hasPendingActions || !currentPlayer) return null;
+    const pendingId = currentPlayer.pendingImmediateActionIds![0];
+    const pendingCard = currentPlayer.reservedActions?.find(c => c.id === pendingId);
+    
+    if (!pendingCard) return null;
+
+    const cardName = String(pendingCard.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    return (
+      <div className="pending-action-ui">
+        <h3>Action Required</h3>
+        <p>Choose an active player to receive the <strong>{cardName}</strong></p>
+        <div className="player-selection">
+          {gameState.players.map(p => {
+             if (!p.isActive) return null;
+             return (
+               <button key={p.id} onClick={() => handlePlayPendingAction(pendingId, p.id)}>
+                 {p.name}{p.id === currentPlayer.id ? ' (self)' : ''}
+               </button>
+             );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderReservedActions = () => {
+    if (hasPendingActions) return null; // Hide normal reserved actions if pending action exists
+    if (!currentPlayer || !currentPlayer.reservedActions || currentPlayer.reservedActions.length === 0) return null;
+    return (
+      <div className="reserved-actions">
+        <h3>Reserved Actions</h3>
+        {currentPlayer.reservedActions.map(a => (
+          <div key={a.id} className="reserved-action">
+            <span>{String(a.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
+            <button onClick={() => startTargeting(a.id, currentPlayer.id)}>Play</button>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="turn-seven-game">
@@ -88,9 +154,29 @@ export const TurnSevenGame: React.FC = () => {
         </div>
       )}
       <div className="actions">
-        <h2>{currentPlayer?.name}'s Turn</h2>
-        <button onClick={handleHit} disabled={!!currentPlayer?.hasStayed || !currentPlayer?.isActive || !!currentPlayer?.hasBusted}>Hit</button>
-        <button onClick={handleStay} disabled={!!currentPlayer?.hasStayed || !!currentPlayer?.hasBusted}>Stay</button>
+        {gameState.gamePhase === 'playing' && (
+          <>
+            <h2>{currentPlayer?.name}'s Turn</h2>
+            {!hasPendingActions && (
+              <>
+                <button onClick={handleHit} disabled={!!currentPlayer?.hasStayed || !currentPlayer?.isActive || !!currentPlayer?.hasBusted}>Hit</button>
+                <button onClick={handleStay} disabled={!!currentPlayer?.hasStayed || !!currentPlayer?.hasBusted}>Stay</button>
+              </>
+            )}
+            {hasPendingActions ? renderPendingActionUI() : renderReservedActions()}
+            {targetingState && (
+              <div className="action-targeting">
+                <h4>Select target for action</h4>
+                {gameState.players.map(p => (
+                  <button key={p.id} onClick={() => confirmTarget(p.id)} disabled={!p.isActive && p.id !== targetingState.actorId}>
+                    {p.name}{p.id === targetingState.actorId ? ' (self)' : ''}
+                  </button>
+                ))}
+                <button onClick={cancelTargeting}>Cancel</button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

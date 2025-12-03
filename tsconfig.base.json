@@ -2,13 +2,14 @@
   "compilerOptions": {
     "composite": true,
     "strict": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "module": "ESNext",
     "target": "ESNext",
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    // Base configuration for the monorepo
     "baseUrl": ".",
     "paths": {
       "@turn-seven/engine": ["packages/engine/src/index.ts"]
