@@ -11,6 +11,15 @@ export const TurnSevenGame: React.FC = () => {
   const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showOdds, setShowOdds] = useState(false);
+
+  // Memoize potentially expensive odds/expectation calculation so it doesn't run every render
+  // Must be called unconditionally (hooks rule), so compute null when gameState is not present.
+  const hitStats = useMemo(() => {
+    if (!showOdds || !gameState) return null;
+    const current = gameState.players.find(p => p.id === gameState.currentPlayerId);
+    const activeCountLocal = gameState.players.filter(p => p.isActive).length;
+    return computeHitExpectation(current?.hand, gameState.deck, activeCountLocal);
+  }, [showOdds, gameState]);
   
   const { 
     targetingState, 
@@ -59,6 +68,8 @@ export const TurnSevenGame: React.FC = () => {
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
   const hasPendingActions = currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
   const activeCount = gameState.players.filter(p => p.isActive).length;
+
+  // hitStats already declared earlier (top-level) — use that.
 
   const handlePlayPendingAction = (cardId: string, targetId: string) => {
     if (!clientManager || !currentPlayer) return;
@@ -152,7 +163,7 @@ export const TurnSevenGame: React.FC = () => {
                 {showOdds && (
                   (() => {
                     // Compute expected score, bust and Turn7 probabilities for a single Hit
-                    const stats = computeHitExpectation(currentPlayer?.hand, gameState.deck, activeCount);
+                    const stats = hitStats ?? { expectedScore: 0, bustProbability: 0, turn7Probability: 0 };
                     const expected = Math.round(stats.expectedScore);
                     // Compute current round score from hand (roundScore is only set at round end)
                     const current = Math.round(computeHandScore(currentPlayer?.hand ?? []));

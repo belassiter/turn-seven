@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TurnSevenLogic } from './game';
 
 describe('Round end and startNextRound behavior', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('ends round sets gamePhase ended and clears currentPlayerId', () => {
     const logic = new TurnSevenLogic();
     // Minimal state with all players inactive
@@ -24,6 +28,17 @@ describe('Round end and startNextRound behavior', () => {
 
   it('startNextRound resets isFrozen and sets currentPlayerId to first player', () => {
     const logic = new TurnSevenLogic();
+    
+    // Mock createDeck to return simple number cards to avoid action card side effects (flakiness)
+    vi.spyOn(logic as any, 'createDeck').mockReturnValue([
+      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+      { id: 'c2', suit: 'number', rank: '2', isFaceUp: false },
+      { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
+      { id: 'c4', suit: 'number', rank: '4', isFaceUp: false },
+      { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
+      { id: 'c6', suit: 'number', rank: '6', isFaceUp: false },
+    ].reverse());
+
     const state: any = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, pendingImmediateActionIds: [] },

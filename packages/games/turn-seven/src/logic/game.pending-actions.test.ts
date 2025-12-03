@@ -25,7 +25,10 @@ describe('Pending immediate actions block HIT/STAY', () => {
     const cp = s.players.find(p => p.id === s.currentPlayerId)!;
     cp.pendingImmediateActionIds = ['a1'];
 
+    // debug: inspect state before action
+    // console.debug('DEBUG before STAY', JSON.stringify(s, null, 2));
     const after = logic.performAction(s, { type: 'STAY' });
+    // console.debug('DEBUG after STAY', JSON.stringify(after, null, 2));
     // hasStayed should remain false
     const stayed = after.players.find(p => p.id === s.currentPlayerId)!.hasStayed;
     expect(stayed).toBe(false);

@@ -51,11 +51,22 @@ export function computeBustProbability(
   }
 
   // Special case: only one active player remains — account for TurnThree chains.
+  // WARNING: exact enumeration below can explode for large decks and many TurnThree
+  // cards. Add a safety guard to avoid freezing the UI by falling back to the
+  // simple fraction-based calculation when the deck is large.
+  const MAX_ENUM_DEPTH = 14; // if deck is larger, use simple approx to avoid CPU explosion
+  const turnThreeCount = deck.filter(d => d.suit === 'action' && String(d.rank) === 'TurnThree').length;
+
+  if (deck.length > MAX_ENUM_DEPTH && turnThreeCount > 0) {
+    // Fall back to the simple fraction-based estimate.
+    if (totalConsidered === 0) return 0;
+    return bustCount / totalConsidered;
+  }
   // We'll enumerate sequences deterministically (depth bounded by number of TurnThree cards in deck).
 
   // Helper: recursively process 'queue' number of sequential draws from the deck.
   // Returns probability (0..1) that at least one bust occurs during these draws.
-  const turnThreeCount = deck.filter(d => d.suit === 'action' && String(d.rank) === 'TurnThree').length;
+  // (turnThreeCount already computed above)
 
   function probBustSequential(currentHandSet: Set<string>, currentDeck: CardModel[], hasSC: boolean, queue: number, remainingTurnThrees: number): number {
     if (queue <= 0) return 0;
@@ -189,6 +200,45 @@ export function computeHitExpectation(
 
   // Special-case: one active player — perform enumeration of TurnThree chains and compute expectation
   const turnThreeCount = deck.filter(d => d.suit === 'action' && String(d.rank) === 'TurnThree').length;
+
+  // Guard: exact enumeration can blow up; if deck is large and there are TurnThree cards
+  // just fall back to the simpler per-card expectation to keep UI responsive.
+  const MAX_ENUM_DECK = 14;
+  if (deck.length > MAX_ENUM_DECK && turnThreeCount > 0) {
+    // reuse the simple (non-chain) method from above to approximate
+    let expected = 0;
+    let bust = 0;
+    let turn7 = 0;
+    const handNumberRanks = new Set(hand.filter(c => !c.suit || c.suit === 'number').map(c => String(c.rank)));
+
+    for (const c of deck) {
+      const p = 1 / deck.length;
+      if (!c.suit || c.suit === 'number') {
+        const rank = String(c.rank);
+        if (handNumberRanks.has(rank)) {
+          bust += p;
+        } else {
+          const newHand = [...hand, c];
+          const score = computeHandScore(newHand);
+          expected += p * score;
+          if (new Set(newHand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank)).size >= 7) turn7 += p;
+        }
+      } else if (c.suit === 'modifier') {
+        const newHand = [...hand, c];
+        const score = computeHandScore(newHand);
+        expected += p * score;
+      } else if (c.suit === 'action') {
+        const newHand = [...hand];
+        if (String(c.rank) === 'SecondChance' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'SecondChance')) {
+          newHand.push(c);
+        }
+        const score = computeHandScore(newHand);
+        expected += p * score;
+      }
+    }
+
+    return { expectedScore: expected, bustProbability: bust, turn7Probability: turn7 };
+  }
 
   function simulate(currentHand: CardModel[], currentDeck: CardModel[], hasSC: boolean, queue: number, remainingTurnThrees: number): { exp: number; bust: number; turn7: number } {
     if (currentDeck.length === 0 || queue <= 0) {

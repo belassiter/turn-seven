@@ -55,25 +55,45 @@ describe('Round Start Logic', () => {
     // Restore mock
     (logic as any).createDeck = originalCreateDeck;
 
-    const p1 = nextState.players[0];
-    const p2 = nextState.players[1];
-    const p3 = nextState.players[2];
-
     // P1 should have the '5' (replacement for TurnThree)
-    expect(p1.hand).toHaveLength(1);
-    expect(p1.hand[0].rank).toBe('5');
+    // Wait, P1 drew TurnThree. It was queued.
+    // P1 must target P2.
+    // Then P2 draws 3 cards.
+    // Then P1 continues dealing -> draws 5.
+    // Then P2 continues dealing -> draws 6.
+    // Then P3 continues dealing -> draws 7.
+    
+    // We need to simulate the targeting action.
+    // startNextRound will pause after P1 draws TurnThree.
+    // P1 has pending action.
+    
+    // So nextState will have P1 with pending TurnThree.
+    expect(nextState.players[0].pendingImmediateActionIds).toContain('a1');
+    
+    // Perform the action: P1 targets P2
+    const afterAction = logic.performAction(nextState, {
+        type: 'PLAY_ACTION',
+        payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' }
+    });
+    
+    const p1Final = afterAction.players[0];
+    const p2Final = afterAction.players[1];
+    const p3Final = afterAction.players[2];
 
-    // P2 should have TurnThree + 3 drawn (8,9,10) + 1 initial deal (6) = 5 cards
-    expect(p2.hand).toHaveLength(5);
-    const ranks = p2.hand.map(c => c.rank);
+    // Now P1 should have the '5' (replacement for TurnThree)
+    expect(p1Final.hand).toHaveLength(1);
+    expect(p1Final.hand[0].rank).toBe('5');
+
+    // P2 should have TurnThree + 3 drawn (8,9,10) = 4 cards (no extra base card as they already received cards)
+    expect(p2Final.hand).toHaveLength(4);
+    const ranks = p2Final.hand.map(c => c.rank);
     expect(ranks).toContain('TurnThree');
     expect(ranks).toContain('8');
     expect(ranks).toContain('9');
     expect(ranks).toContain('10');
-    expect(ranks).toContain('6');
 
-    // P3 should have '7'
-    expect(p3.hand).toHaveLength(1);
-    expect(p3.hand[0].rank).toBe('7');
+    // P3 should have '6' (since P2 did not receive an extra base card)
+    expect(p3Final.hand).toHaveLength(1);
+    expect(p3Final.hand[0].rank).toBe('6');
   });
 });

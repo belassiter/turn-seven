@@ -30,29 +30,24 @@ export class TurnSevenLogic implements IGameLogic {
     }));
 
     // Deal one card to each player to start, resolving Action cards immediately.
-    players.forEach((player, idx) => {
-      // ensure each player receives at least one card (non-action) if possible
-      let keptCard = false;
-      while (!keptCard && deck.length > 0) {
-        const card = deck.pop();
-        if (!card) break;
-        if (card.suit === 'action') {
-          this.resolveActionOnDeal(players, idx, card, deck);
-          if (player.hand.some((h: any) => h.id === card.id)) {
-            keptCard = true;
-          }
-        } else {
-          player.hand.push({ ...card, isFaceUp: true });
-          keptCard = true;
-        }
-      }
+    // If a player already received a card (e.g. as a target of an earlier action),
+    // that counts as their initial card and we should not deal another.
+    this.continueDealing({
+      players,
+      deck,
+      discardPile: [],
+      currentPlayerId: playerIds[0] || null,
+      gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
     });
 
     return {
       players,
       deck,
       discardPile: [],
-      currentPlayerId: playerIds[0] || null,
+      currentPlayerId: players.find(p => p.pendingImmediateActionIds?.length > 0)?.id || playerIds[0] || null,
       gamePhase: 'playing',
       roundNumber: 1,
       previousTurnLog: undefined,
@@ -80,28 +75,22 @@ export class TurnSevenLogic implements IGameLogic {
     }));
 
     // Deal one card to each player and resolve action cards immediately.
-    players.forEach((player, idx) => {
-      let keptCard = false;
-      while (!keptCard && deck.length > 0) {
-        const card = deck.pop();
-        if (!card) break;
-        if (card.suit === 'action') {
-          this.resolveActionOnDeal(players, idx, card, deck);
-          if (player.hand.some((h: any) => h.id === card.id)) {
-            keptCard = true;
-          }
-        } else {
-          player.hand.push({ ...card, isFaceUp: true });
-          keptCard = true;
-        }
-      }
+    this.continueDealing({
+      players,
+      deck,
+      discardPile: [],
+      currentPlayerId: ids[0] || null,
+      gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
     });
 
     return {
       players,
       deck,
       discardPile: [],
-      currentPlayerId: ids[0] || null,
+      currentPlayerId: players.find(p => p.pendingImmediateActionIds?.length > 0)?.id || ids[0] || null,
       gamePhase: 'playing',
       roundNumber: 1,
       previousTurnLog: undefined,
@@ -366,7 +355,16 @@ export class TurnSevenLogic implements IGameLogic {
             target.hand.push({ ...next, isFaceUp: true });
           } else if (next.suit === 'action') {
             if (String(next.rank) === 'SecondChance') {
-              this.giveSecondChance(players, targetIndex, next);
+              if (!target.hasSecondChance) {
+                target.hasSecondChance = true;
+                target.hand.push({ ...next, isFaceUp: true });
+              } else {
+                // Queue for targeting
+                target.reservedActions = target.reservedActions || [];
+                target.reservedActions.push({ ...next, isFaceUp: true });
+                target.hand.push({ ...next, isFaceUp: true });
+                revealedActions.push(next);
+              }
             } else {
               // set aside non-resolution action cards into target's hand for later play
               target.reservedActions = target.reservedActions || [];
@@ -443,6 +441,31 @@ export class TurnSevenLogic implements IGameLogic {
         }
         break;
       }
+    }
+
+    // After resolving an action, check if we are still in the initial deal phase (active players with no cards).
+    // If so, continue dealing instead of normal turn advancement.
+    // Note: advanceTurn might have been called above.
+    // If we are in deal phase, advanceTurn might pick a player with no cards.
+    // But we want to DEAL to them, not let them HIT/STAY.
+    // So we should check this condition.
+    // However, `advanceTurn` sets `currentPlayerId`.
+    // `continueDealing` also sets `currentPlayerId`.
+    // If we call `continueDealing`, it will override `currentPlayerId` to the next person needing a card.
+    // This is correct.
+    
+    // But wait, if `advanceTurn` was called, it might have ended the round if no active players?
+    // If we are in initial deal, there should be active players.
+    // Also, `advanceTurn` moves to next player.
+    // `continueDealing` finds first player with empty hand.
+    // If P1 played action, and P1 has empty hand (because action card is gone), P1 needs card.
+    // `continueDealing` will find P1.
+    // So calling `continueDealing` is safe and correct.
+    
+    const needsDeal = newState.players.some(p => p.isActive && p.hand.length === 0 && (!p.reservedActions || p.reservedActions.length === 0));
+    if (needsDeal) {
+        // If we are in deal phase, we override whatever advanceTurn did.
+        this.continueDealing(newState);
     }
 
     return newState;
@@ -639,27 +662,16 @@ export class TurnSevenLogic implements IGameLogic {
       pendingImmediateActionIds: [],
     }));
 
-    // Deal one card to each player (face up)
-    newState.players.forEach((p: any, idx: number) => {
-      let keptCard = false;
-      while (!keptCard && newState.deck.length > 0) {
-        const card = newState.deck.pop();
-        if (!card) break;
-        if (card.suit === 'action') {
-          this.resolveActionOnDeal(newState.players, idx, card, newState.deck);
-          // If the player kept the card (e.g. Second Chance or self-target), they are done.
-          // If the card went to someone else, they get a replacement.
-          if (p.hand.some((h: any) => h.id === card.id)) {
-            keptCard = true;
-          }
-        } else {
-          p.hand.push({ ...card, isFaceUp: true });
-          keptCard = true;
-        }
-      }
-    });
+    // Deal one card to each player (face up). If a player was already dealt a
+    // card (e.g. was targeted earlier during action resolution), don't give
+    // them another — that initial card counts for them.
+    this.continueDealing(newState);
 
-    newState.currentPlayerId = newState.players[0]?.id ?? null;
+    // If continueDealing paused, currentPlayerId is set to the pending player.
+    // If it finished, it set currentPlayerId to the first active player.
+    // So we don't need to force it here, unless continueDealing failed to set it?
+    // continueDealing sets it.
+    
     return newState;
   }
 
@@ -735,100 +747,113 @@ export class TurnSevenLogic implements IGameLogic {
   // `deck` is the deck array (top = end of array via pop()).
   private resolveActionOnDeal(players: any[], drawerIdx: number, card: CardModel, deck: CardModel[]) {
     const rank = String(card.rank);
-    // default target: next active player (wrap), or drawer if none
-    let targetIdx = this.nextActiveIndex(players, drawerIdx);
-    if (targetIdx === -1) targetIdx = drawerIdx;
+    const drawer = players[drawerIdx];
 
     switch (rank) {
       case 'Freeze': {
-        // target must immediately end their turn (stay)
-        const t = players[targetIdx];
-        t.hasStayed = true;
-        t.isFrozen = true;
-        t.isActive = false;
-        t.hand.push({ ...card, isFaceUp: true });
-        // nothing else to do
+        // Queue for user targeting
+        drawer.reservedActions = drawer.reservedActions || [];
+        drawer.reservedActions.push({ ...card, isFaceUp: true });
+        drawer.hand.push({ ...card, isFaceUp: true });
+        drawer.pendingImmediateActionIds = drawer.pendingImmediateActionIds || [];
+        drawer.pendingImmediateActionIds.push(card.id);
         break;
       }
       case 'TurnThree': {
-        // target must draw next three cards, resolving numbers/modifiers; action cards revealed are set aside (not resolved now)
-        const t = players[targetIdx];
-        t.hand.push({ ...card, isFaceUp: true });
-        const revealedActions: CardModel[] = [];
-        for (let i = 0; i < 3; i++) {
-          const next = deck.pop();
-          if (!next) break;
-          if (!next.suit || next.suit === 'number') {
-            // number card
-            // if duplicate
-            const drawnRank = next.rank;
-            const duplicateCount = t.hand.filter((h: any) => h.rank === drawnRank).length;
-            t.hand.push({ ...next, isFaceUp: true });
-            if (duplicateCount >= 1) {
-              // would bust
-              if (t.hasSecondChance) {
-                // consume second chance: discard duplicate and remove second chance
-                t.hand = t.hand.filter((h: any) => !(h.id === next.id));
-                // Also remove the Second Chance card from hand
-                const scIdx = t.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'SecondChance');
-                if (scIdx !== -1) t.hand.splice(scIdx, 1);
-                t.hasSecondChance = false;
-                // duplicate discarded, continue
-              } else {
-                t.hasBusted = true;
-                t.isActive = false;
-                // Flip this player's cards face-down when they bust during resolveActionOnDeal
-                if (t.hand && t.hand.length > 0) {
-                  t.hand = t.hand.map((c: any) => ({ ...c, isFaceUp: false }));
-                }
-                break;
-              }
-            }
-            // check 7-unique handled later by checkRoundEnd
-          } else if (next.suit === 'modifier') {
-            t.hand.push({ ...next, isFaceUp: true });
-          } else if (next.suit === 'action') {
-            // Set aside: if SecondChance, give to player (if eligible), otherwise add to hand but don't resolve
-            if (String(next.rank) === 'SecondChance') {
-              this.giveSecondChance(players, targetIdx, next);
-            } else {
-              // add action card to player's hand to be used later (but not resolved now)
-              t.reservedActions = t.reservedActions || [];
-              t.reservedActions.push({ ...next, isFaceUp: true });
-              t.hand.push({ ...next, isFaceUp: true });
-              revealedActions.push(next);
-              // console.log('Added to revealedActions:', next.id);
-            }
-          }
-        }
-
-        // If player busted, discard set-aside actions (Case 14/15)
-        if (t.hasBusted) {
-           revealedActions.forEach(a => {
-             if (t.reservedActions) t.reservedActions = t.reservedActions.filter((r: any) => r.id !== a.id);
-             t.hand = t.hand.filter((h: any) => h.id !== a.id);
-           });
-           // Discard the original TurnThree card when the player busts
-           t.hand = t.hand.filter((h: any) => h.id !== card.id);
-           deck; // no-op to preserve variable usage in some linting setups
-           // add the TurnThree to a discard pile is handled by caller (performAction flow)
-        } else {
-           // Queue revealed actions
-              if (t.isActive && revealedActions.length > 0) {
-             t.pendingImmediateActionIds = t.pendingImmediateActionIds || [];
-             revealedActions.forEach(a => t.pendingImmediateActionIds.push(a.id));
-           }
-           // Keep the original TurnThree card in the player's hand after resolution
-        }
+        // Queue for user targeting
+        drawer.reservedActions = drawer.reservedActions || [];
+        drawer.reservedActions.push({ ...card, isFaceUp: true });
+        drawer.hand.push({ ...card, isFaceUp: true });
+        drawer.pendingImmediateActionIds = drawer.pendingImmediateActionIds || [];
+        drawer.pendingImmediateActionIds.push(card.id);
         break;
       }
       case 'SecondChance': {
-        // Give to drawer if they don't have, otherwise pass to another active player or discard
-        this.giveSecondChance(players, drawerIdx, card);
+        // If drawer doesn't have one, keep it.
+        if (!drawer.hasSecondChance) {
+             drawer.hasSecondChance = true;
+             drawer.hand.push({ ...card, isFaceUp: true });
+        } else {
+             // Drawer has one. Must give away.
+             // Queue for targeting.
+             drawer.reservedActions = drawer.reservedActions || [];
+             drawer.reservedActions.push({ ...card, isFaceUp: true });
+             drawer.hand.push({ ...card, isFaceUp: true });
+             drawer.pendingImmediateActionIds = drawer.pendingImmediateActionIds || [];
+             drawer.pendingImmediateActionIds.push(card.id);
+        }
         break;
       }
       default:
         break;
+    }
+  }
+
+  private continueDealing(state: GameState) {
+    // If deck is empty, we can't deal.
+    if (state.deck.length === 0) {
+        // Ensure we have a valid current player if possible
+        if (!state.currentPlayerId) {
+             const first = state.players.find(p => p.isActive);
+             state.currentPlayerId = first ? first.id : null;
+        }
+        return;
+    }
+
+    // Check if anyone has pending actions. If so, they must act first.
+    const pendingPlayer = state.players.find(p => p.pendingImmediateActionIds && p.pendingImmediateActionIds.length > 0);
+    if (pendingPlayer) {
+        state.currentPlayerId = pendingPlayer.id;
+        return; // Pause for action
+    }
+
+    // Find first active player with empty hand (and no reserved actions that count as "having cards"?)
+    // Actually, if they have reserved actions (like a queued Freeze), they technically have a card.
+    // But if they just resolved it (played it), they might have 0 cards again.
+    // So we check for empty hand AND empty reserved actions.
+    const playerIndex = state.players.findIndex(p => p.isActive && p.hand.length === 0 && (!p.reservedActions || p.reservedActions.length === 0));
+    
+    if (playerIndex === -1) {
+        // Everyone has cards. Deal done.
+        // Set current player to first active player to start the game.
+        // Only if currentPlayerId is not set or we want to reset it?
+        // Usually P1 starts.
+        const first = state.players.find(p => p.isActive);
+        state.currentPlayerId = first ? first.id : null;
+        return;
+    }
+
+    // Deal to this player
+    const player = state.players[playerIndex];
+    state.currentPlayerId = player.id;
+
+    let keptCard = false;
+    while (!keptCard && state.deck.length > 0) {
+        const card = state.deck.pop();
+        if (!card) break;
+        
+        if (card.suit === 'action') {
+            this.resolveActionOnDeal(state.players, playerIndex, card, state.deck);
+            
+            // If pending action created, STOP.
+            if (player.pendingImmediateActionIds && player.pendingImmediateActionIds.includes(card.id)) {
+                return; 
+            }
+            
+            // If not pending (e.g. Second Chance auto-resolved to someone else), check if player kept it
+            if (player.hand.some((h: any) => h.id === card.id)) {
+                keptCard = true;
+            }
+            // If not kept, loop continues (draw replacement)
+        } else {
+            player.hand.push({ ...card, isFaceUp: true });
+            keptCard = true;
+        }
+    }
+    
+    // If we successfully dealt to this player, continue to next
+    if (keptCard) {
+        this.continueDealing(state);
     }
   }
 

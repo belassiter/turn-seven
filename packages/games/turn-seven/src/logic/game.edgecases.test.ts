@@ -341,6 +341,16 @@ describe('Turn Seven Edge Cases', () => {
     // B should still have SC (original)
     expect(state.players[1].hasSecondChance).toBe(true);
     
+    // B should have pending action to give SC to someone
+    // Because B already has one, the new one is queued for targeting.
+    expect(state.players[1].pendingImmediateActionIds).toContain(sc2.id);
+    
+    // B targets C with the new SC
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: sc2.id, targetId: playerC.id }
+    });
+
     // C should have received the new SC
     expect(state.players[2].hasSecondChance).toBe(true);
     expect(state.players[2].hand.some((c: any) => c.id === sc2.id)).toBe(true);

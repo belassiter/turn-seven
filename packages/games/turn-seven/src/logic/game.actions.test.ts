@@ -114,40 +114,44 @@ describe('Action card behavior', () => {
     expect(p3.hasSecondChance).toBe(true); // Received the passed one
   });
 
-  it('resolveActionOnDeal: Freeze forces target to stay', () => {
+  it('resolveActionOnDeal: Freeze queues action for drawer', () => {
     const players = [
-      { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true },
+      { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, reservedActions: [], pendingImmediateActionIds: [] },
       { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true },
     ];
     const deck: any[] = [];
     const freezeCard = { id: 'a1', suit: 'action', rank: 'Freeze' };
 
-    // P1 draws Freeze. Target is P2 (next active).
+    // P1 draws Freeze.
     testLogic.invokeResolveActionOnDeal(players, 0, freezeCard, deck);
 
-    expect(players[1].hasStayed).toBe(true);
-    expect(players[1].isActive).toBe(false);
+    // P1 should have pending action
+    expect(players[0].pendingImmediateActionIds).toContain('a1');
+    expect(players[0].reservedActions).toHaveLength(1);
+    
+    // P2 should NOT be frozen
+    expect(players[1].hasStayed).toBe(false);
   });
 
-  it('resolveActionOnDeal: TurnThree forces target to draw', () => {
+  it('resolveActionOnDeal: TurnThree queues action for drawer', () => {
     const players = [
-      { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true },
+      { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, reservedActions: [], pendingImmediateActionIds: [] },
       { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true },
     ];
-    // Deck has 3 cards
     const deck = [
       { id: 'c1', suit: 'number', rank: '1' },
-      { id: 'c2', suit: 'number', rank: '2' },
-      { id: 'c3', suit: 'number', rank: '3' },
     ];
     const turnThreeCard = { id: 'a1', suit: 'action', rank: 'TurnThree' };
 
-    // P1 draws TurnThree. Target is P2.
+    // P1 draws TurnThree.
     testLogic.invokeResolveActionOnDeal(players, 0, turnThreeCard, deck);
 
-    // Hand has 4 cards: TurnThree (played) + 3 drawn cards
-    expect(players[1].hand).toHaveLength(4);
-    expect(deck).toHaveLength(0);
+    // P1 should have pending action
+    expect(players[0].pendingImmediateActionIds).toContain('a1');
+    
+    // P2 should NOT have drawn cards
+    expect(players[1].hand).toHaveLength(0);
+    expect(deck).toHaveLength(1);
   });
 
   it('TurnThree triggers round end immediately if target collects 7 unique cards', () => {

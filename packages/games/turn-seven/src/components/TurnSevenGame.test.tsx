@@ -94,4 +94,69 @@ describe('TurnSevenGame component', () => {
     // Should not show a Turn 7 percentage when turn7Probability is exactly zero
     expect(screen.queryByText(/Turn 7/)).toBeNull();
   });
+
+  it('handles Freeze assigned during initial deal (UI-level)', () => {
+    // MIN_PLAYERS is 3 so we test a 3-player initial deal
+    // Stack (top to bottom): Freeze (P1->P2), 5 (P1 replacement), 6 (P2 initial)
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
+      { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
+      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+    ] as any);
+
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    const hands = container.querySelectorAll('.player-hand');
+    expect(hands.length).toBeGreaterThanOrEqual(2);
+
+    // Player 1 (index 0) should have the Freeze card pending
+    // And should see targeting UI (e.g. "Choose a target")
+    // We simulate clicking Player 2 to target them.
+    
+    // The pending action UI renders buttons for each player.
+    // We need to find the button for Player 2.
+    const player2Button = screen.getByRole('button', { name: /Player 2/i });
+    fireEvent.click(player2Button);
+
+    // Now Player 2 should be frozen
+    // Player 2 (index 1) should only have the Freeze card (1 card) and be frozen
+    const p2Cards = hands[1].querySelectorAll('.card');
+    expect(p2Cards).toHaveLength(1);
+    // header should include "(Frozen)" per GameBoard rendering
+    const header = hands[1].closest('.player-area')?.querySelector('h2')?.textContent || '';
+    expect(header.includes('(Frozen)')).toBeTruthy();
+  });
+
+  it('handles TurnThree initial-deal chain (UI-level)', () => {
+    // 3-player stack top->bottom:
+    // TurnThree (P1->P2), 8, Freeze, 9, 5 (P1 replacement), 6 (P2 initial)
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
+      { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
+      { id: 'n9', rank: '9', suit: 'number', isFaceUp: false },
+      { id: 'a2', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'n8', rank: '8', suit: 'number', isFaceUp: false },
+      { id: 'a1', rank: 'TurnThree', suit: 'action', isFaceUp: false },
+    ] as any);
+
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    const hands = container.querySelectorAll('.player-hand');
+    
+    // Player 1 has TurnThree pending. Target Player 2.
+    const player2Button = screen.getByRole('button', { name: /Player 2/i });
+    fireEvent.click(player2Button);
+
+    const p2Cards = hands[1].querySelectorAll('.card');
+
+    // Expect Player 2 to have TurnThree + 8 + Freeze + 9 (4 cards)
+    expect(p2Cards).toHaveLength(4);
+    const ranks = Array.from(p2Cards).map(c => c.textContent || '');
+    // normalize whitespace when checking for 'TurnThree' because the card renderer
+    // places a newline between camel-cased words ("Turn\nThree").
+    expect(ranks.some(t => t.replace(/\s/g, '').includes('TurnThree'))).toBeTruthy();
+    expect(ranks.some(t => t.includes('Freeze'))).toBeTruthy();
+  });
 });
