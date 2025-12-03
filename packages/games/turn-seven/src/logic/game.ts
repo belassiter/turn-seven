@@ -54,6 +54,9 @@ export class TurnSevenLogic implements IGameLogic {
       discardPile: [],
       currentPlayerId: playerIds[0] || null,
       gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
     };
   }
 
@@ -100,6 +103,9 @@ export class TurnSevenLogic implements IGameLogic {
       discardPile: [],
       currentPlayerId: ids[0] || null,
       gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
     };
   }
 
@@ -143,6 +149,8 @@ export class TurnSevenLogic implements IGameLogic {
     const card = newState.deck.pop();
     if (!card) return newState;
 
+    let log = `${currentPlayer.name} hit: drew ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}.`;
+
     if (card.suit === 'action') {
       // Reserve action for later play and show a visible representation in hand for UI
       currentPlayer.reservedActions = currentPlayer.reservedActions || [];
@@ -168,6 +176,7 @@ export class TurnSevenLogic implements IGameLogic {
           // Resolving Second Chance means keeping it.
           // Does turn end? User says "Play should just continue to the next player."
           // So we force turn advance.
+          newState.previousTurnLog = log;
           this.advanceTurn(newState);
           this.checkRoundEnd(newState);
           return newState;
@@ -193,6 +202,7 @@ export class TurnSevenLogic implements IGameLogic {
         } else {
           currentPlayer.hasBusted = true;
           currentPlayer.isActive = false;
+          log += " Busted!";
           // Flip this player's cards face-down when they bust
           if (currentPlayer.hand && currentPlayer.hand.length > 0) {
             currentPlayer.hand = currentPlayer.hand.map((c: any) => ({ ...c, isFaceUp: false }));
@@ -200,6 +210,15 @@ export class TurnSevenLogic implements IGameLogic {
         }
       }
     }
+
+    // Check for Turn 7 condition for logging
+    const numberRanks = currentPlayer.hand.filter((h: any) => (!h.suit || h.suit === 'number')).map((h: any) => h.rank);
+    const uniqueCount = new Set(numberRanks).size;
+    if (uniqueCount >= 7) {
+       log += " Turn 7!";
+    }
+
+    newState.previousTurnLog = log;
 
     // If the player has pending immediate actions (e.g. Freeze/TurnThree target selection),
     // the turn does not advance yet. They must resolve the action.
@@ -278,6 +297,10 @@ export class TurnSevenLogic implements IGameLogic {
 
     // Resolve the action
     const rank = String(card.rank);
+    const cardName = rank.replace(/([a-z])([A-Z])/g, '$1 $2');
+    let log = `${actor.name} played ${cardName} on ${target.name}.`;
+    newState.previousTurnLog = log;
+
     switch (rank) {
       case 'Freeze': {
         // target immediately stays and becomes inactive
@@ -317,6 +340,7 @@ export class TurnSevenLogic implements IGameLogic {
               } else {
                 target.hasBusted = true;
                 target.isActive = false;
+                log += ` ${target.name} Busted!`;
                 // Flip target's cards face-down when they bust during TurnThree
                 if (target.hand && target.hand.length > 0) {
                   target.hand = target.hand.map((c: any) => ({ ...c, isFaceUp: false }));
@@ -335,6 +359,7 @@ export class TurnSevenLogic implements IGameLogic {
                   // Round ended due to 7-unique — clear current player so UI reflects ended state
                   newState.currentPlayerId = null;
                }
+               log += ` ${target.name} Turn 7!`;
                break; // Stop drawing
             }
           } else if (next.suit === 'modifier') {
@@ -400,6 +425,7 @@ export class TurnSevenLogic implements IGameLogic {
               }
            }
         }
+        newState.previousTurnLog = log;
         break;
       }
       case 'SecondChance': {
@@ -437,6 +463,7 @@ export class TurnSevenLogic implements IGameLogic {
     // Mark current player as stayed and inactive for drawing
     players[currentPlayerIndex].hasStayed = true;
     players[currentPlayerIndex].isActive = false;
+    newState.previousTurnLog = `${currentPlayer.name} stayed.`;
 
     // Advance to next active player (forward-wrapping)
     const total = players.length;
@@ -561,16 +588,43 @@ export class TurnSevenLogic implements IGameLogic {
     // ensure totalScore reset to zero
     newState.players = newState.players.map(p => ({ ...p, totalScore: 0, roundScore: 0 }));
     newState.gamePhase = 'playing';
+    newState.roundNumber = 1;
+    newState.previousTurnLog = undefined;
+    newState.previousRoundScores = undefined;
     return newState;
   }
 
   public startNextRound(state: GameState): GameState {
     const newState = structuredClone(state);
+    
+    // Capture scores from the end of the previous round
+    newState.previousRoundScores = {};
+    state.players.forEach(p => {
+      if (newState.previousRoundScores) {
+        let resultType: 'normal' | 'bust' | 'turn-seven' = 'normal';
+        if (p.hasBusted) {
+            resultType = 'bust';
+        } else {
+            const numberRanks = p.hand.filter((h: any) => (!h.suit || h.suit === 'number')).map((h: any) => h.rank);
+            const uniqueCount = new Set(numberRanks).size;
+            if (uniqueCount >= 7) {
+                resultType = 'turn-seven';
+            }
+        }
+        newState.previousRoundScores[p.id] = {
+            score: p.totalScore ?? 0,
+            resultType
+        };
+      }
+    });
+
     // Reset per-round fields but keep totalScore
     const deck = this.createDeck();
     newState.deck = deck;
     newState.discardPile = [];
     newState.gamePhase = 'playing';
+    newState.roundNumber = (state.roundNumber || 1) + 1;
+    newState.previousTurnLog = undefined;
 
     newState.players = newState.players.map((p: any) => ({
       id: p.id,

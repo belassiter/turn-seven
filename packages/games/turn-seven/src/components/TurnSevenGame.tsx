@@ -115,44 +115,6 @@ export const TurnSevenGame: React.FC = () => {
   return (
     <div className="turn-seven-game">
       <h1>Turn Seven</h1>
-      <GameBoard
-        players={gameState.players}
-        currentPlayerId={gameState.currentPlayerId ?? undefined}
-        deck={gameState.deck}
-        discardPile={gameState.discardPile}
-      />
-      {gameState.gamePhase === 'ended' && (
-        <div className="round-results">
-          <h2>Round Results</h2>
-          <ul>
-            {gameState.players.map(p => (
-              <li key={p.id}>{p.name}: Round {p.roundScore ?? 0} pts — Total {p.totalScore ?? 0} pts {p.hasBusted ? '(Busted)' : ''}</li>
-            ))}
-          </ul>
-          <button onClick={() => {
-            const next = gameLogic.startNextRound(gameState);
-            if (clientManager) clientManager.setState(next);
-          }}>Next Round</button>
-        </div>
-      )}
-      {gameState.gamePhase === 'gameover' && (
-        <div className="game-over">
-          <h2>Game Over</h2>
-          <p>
-            Winner: { (gameState as any).winnerId ? gameState.players.find(p => p.id === (gameState as any).winnerId)?.name : '—' }
-          </p>
-          <p>Final Scores:</p>
-          <ul>
-            {gameState.players.map(p => (
-              <li key={p.id}>{p.name}: {p.totalScore ?? 0} pts</li>
-            ))}
-          </ul>
-          <button onClick={() => {
-            const reset = gameLogic.resetGame(gameState);
-            if (clientManager) clientManager.setState(reset);
-          }}>Restart Game</button>
-        </div>
-      )}
       <div className="actions">
         {gameState.gamePhase === 'playing' && (
           <>
@@ -178,6 +140,70 @@ export const TurnSevenGame: React.FC = () => {
           </>
         )}
       </div>
+      <GameBoard
+        players={gameState.players}
+        currentPlayerId={gameState.currentPlayerId ?? undefined}
+        deck={gameState.deck}
+        discardPile={gameState.discardPile}
+        roundNumber={gameState.roundNumber}
+      />
+      {gameState.gamePhase === 'ended' && (
+        <div className="round-results">
+          <h2>Round Results</h2>
+          <ul>
+            {gameState.players.map(p => {
+              const numberRanks = p.hand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank);
+              const uniqueCount = new Set(numberRanks).size;
+              const isTurnSeven = uniqueCount >= 7;
+              return (
+                <li key={p.id}>{p.name}: Round {p.roundScore ?? 0} pts — Total {p.totalScore ?? 0} pts {p.hasBusted ? '(Busted)' : ''}{isTurnSeven ? ' (Turn 7)' : ''}</li>
+              );
+            })}
+          </ul>
+          <button onClick={() => {
+            const next = gameLogic.startNextRound(gameState);
+            if (clientManager) clientManager.setState(next);
+          }}>Next Round</button>
+        </div>
+      )}
+      {gameState.gamePhase === 'gameover' && (
+        <div className="game-over">
+          <h2>Game Over</h2>
+          <p>
+            Winner: { (gameState as any).winnerId ? gameState.players.find(p => p.id === (gameState as any).winnerId)?.name : '—' }
+          </p>
+          <p>Final Scores:</p>
+          <ul>
+            {gameState.players.map(p => (
+              <li key={p.id}>{p.name}: {p.totalScore ?? 0} pts</li>
+            ))}
+          </ul>
+          <button onClick={() => {
+            const reset = gameLogic.resetGame(gameState);
+            if (clientManager) clientManager.setState(reset);
+          }}>Restart Game</button>
+        </div>
+      )}
+      {gameState.gamePhase === 'playing' && gameState.roundNumber > 1 && gameState.previousRoundScores && (
+        <div className="previous-round-scores">
+          <h3>Scores from Previous Round</h3>
+          <ul>
+            {Object.entries(gameState.previousRoundScores).map(([id, data]) => {
+              const player = gameState.players.find(p => p.id === id);
+              // @ts-ignore
+              const { score, resultType } = data;
+              return <li key={id}>{player?.name || id}: {score} {resultType === 'turn-seven' ? '(Turn 7)' : ''}</li>;
+            })}
+          </ul>
+        </div>
+      )}
+
+      {gameState.previousTurnLog && (
+        <div className="previous-turn-log">
+          <h3>Last Action</h3>
+          <p>{gameState.previousTurnLog}</p>
+        </div>
+      )}
     </div>
   );
 };

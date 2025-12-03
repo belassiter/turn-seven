@@ -11,6 +11,9 @@ export interface GameState {
   discardPile: CardModel[];
   gamePhase: 'initial' | 'playing' | 'ended' | 'gameover';
   winnerId?: string | null;
+  roundNumber: number;
+  previousTurnLog?: string;
+  previousRoundScores?: { [playerId: string]: { score: number; resultType?: 'turn-seven' | 'bust' | 'normal' } };
 }
 
 // A simple in-memory store for the game state.

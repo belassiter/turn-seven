@@ -27,9 +27,10 @@ export interface GameBoardProps {
   currentPlayerId?: string;
   deck: CardModel[]; // or just a number
   discardPile: CardModel[];
+  roundNumber?: number;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, deck, discardPile }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, deck, discardPile, roundNumber }) => {
   const computeHandScore = (hand: CardModel[] = []) => {
     let numberSum = 0;
     let multiplierCount = 0;
@@ -82,6 +83,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, 
       </div>
       <div className="common-area">
         <div className="deck-area">
+          {roundNumber && <div className="round-number">Round {roundNumber}</div>}
           <div className="card-pile">
             <div className="card-back"></div>
             <span>Deck: {deck.length}</span>
