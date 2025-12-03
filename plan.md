@@ -74,6 +74,11 @@ The work will be divided between building the engine and implementing the game.
 5.  **Polish & Animations:**
     - [ ] **Engine:** Refine the card turn animation and add other generic animations (e.g., card dealing).
     - [ ] **Turn Seven:** Add game-specific animations like busting or freezing effects.
+6. **Card analysis**
+    - [ ] Probability of busting (based on full deck)
+    - [ ] Probability of busting (visible cards)
+    - [ ] Probability of busting based on all cards seen since shuffle
+    - [ ] same conditions as above, but expected score if hit
 
 ## Recent Tasks (Completed)
 ### Fix Card Text Truncation

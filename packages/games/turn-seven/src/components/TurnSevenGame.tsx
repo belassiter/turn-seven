@@ -3,11 +3,13 @@ import { GameBoard, GameState, ClientGameStateManager } from '@turn-seven/engine
 import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
 import { GameSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
+import { computeBustProbability } from '../logic/odds';
 
 export const TurnSevenGame: React.FC = () => {
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
   const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [showOdds, setShowOdds] = useState(false);
   
   const { 
     targetingState, 
@@ -51,6 +53,7 @@ export const TurnSevenGame: React.FC = () => {
       </div>
     );
   }
+
 
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
   const hasPendingActions = currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
@@ -114,7 +117,26 @@ export const TurnSevenGame: React.FC = () => {
 
   return (
     <div className="turn-seven-game">
-      <h1>Turn Seven</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1 style={{ margin: 0 }}>Turn Seven</h1>
+        {/* Dice toggle to show bust odds for the current player. Gray=off, green=on. */}
+        <button
+          aria-pressed={showOdds}
+          onClick={() => setShowOdds(s => !s)}
+          title={showOdds ? 'Hide bust odds' : 'Show bust odds'}
+          style={{
+            background: showOdds ? '#16a34a' : '#9ca3af',
+            color: 'white',
+            borderRadius: 6,
+            border: 'none',
+            padding: '6px 10px',
+            cursor: 'pointer',
+            fontSize: 18,
+          }}
+        >
+          🎲
+        </button>
+      </div>
       <div className="actions">
         {gameState.gamePhase === 'playing' && (
           <>
@@ -123,6 +145,17 @@ export const TurnSevenGame: React.FC = () => {
               <>
                 <button onClick={handleHit} disabled={!!currentPlayer?.hasStayed || !currentPlayer?.isActive || !!currentPlayer?.hasBusted}>Hit</button>
                 <button onClick={handleStay} disabled={!!currentPlayer?.hasStayed || !!currentPlayer?.hasBusted}>Stay</button>
+                {/* Show odds to the right of the actions when enabled */}
+                {showOdds && (
+                  (() => {
+                    // Simple UI-only probability calculation: what fraction of the remaining DECK
+                    // would cause a bust if drawn. Note: action cards are ignored in this estimate
+                    // (we assume they do not cause a bust). This is a simplification for now.
+                    const prob = computeBustProbability(currentPlayer?.hand, gameState.deck) * 100;
+                    const display = Number.isFinite(prob) ? `${Math.round(prob)}% chance of busting` : '—%';
+                    return <span style={{ marginLeft: 12, fontWeight: 600 }}>{display}</span>;
+                  })()
+                )}
               </>
             )}
             {hasPendingActions ? renderPendingActionUI() : renderReservedActions()}
