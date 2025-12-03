@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeBustProbability } from './odds';
+import { computeBustProbability, computeHitExpectation } from './odds';
 
 const numberCard = (id: string, rank: string) => ({ id, suit: 'number', rank, isFaceUp: false });
 const modifierCard = (id: string, rank: string) => ({ id, suit: 'modifier', rank, isFaceUp: false });
@@ -61,5 +61,29 @@ describe('computeBustProbability', () => {
     // No duplicates present; even with TurnThree draws the player cannot bust
     const p = computeBustProbability(hand as any, deck as any, 1);
     expect(p).toBe(0);
+  });
+
+  it('computes expected score, bust and turn7 probabilities (multi-player simple case)', () => {
+    const hand = [numberCard('h1', '5')];
+    const deck = [numberCard('d1', '5'), numberCard('d2', '6'), modifierCard('m1', '+2')];
+
+    const res = computeHitExpectation(hand as any, deck as any, 2);
+    // possibilities: draw 5 -> bust (score 0)
+    // draw 6 -> hand [5,6] => score = 11
+    // draw +2 -> hand [5,+2] => score = 5+2=7
+    // expected = (0 + 11 + 7)/3 = 6
+    expect(Math.abs(res.expectedScore - 6) < 1e-8).toBeTruthy();
+    expect(Math.abs(res.bustProbability - (1 / 3)) < 1e-8).toBeTruthy();
+    expect(res.turn7Probability).toBe(0);
+  });
+
+  it('computes expected score when TurnThree forces draws (single-player)', () => {
+    // hand with a 5; deck: TurnThree, 5, 5 -> any draw leads to bust
+    const hand = [numberCard('h1', '5')];
+    const deck = [actionCard('t1', 'TurnThree'), numberCard('d1', '5'), numberCard('d2', '5')];
+    const res = computeHitExpectation(hand as any, deck as any, 1);
+    expect(res.bustProbability).toBe(1);
+    expect(res.expectedScore).toBe(0);
+    expect(res.turn7Probability).toBe(0);
   });
 });

@@ -69,4 +69,29 @@ describe('TurnSevenGame component', () => {
     // Hit should be enabled for the next player
     expect(hitButton.disabled).toBe(false);
   });
+
+  it('shows correct expected delta and hides Turn 7 when probability is exactly zero', () => {
+    // re-mock deck so first card dealt to Player 1 is a 10 and remaining deck averages to 5
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+      { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
+      { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
+      { id: 'c7', suit: 'number', rank: '7', isFaceUp: false },
+      { id: 'c9', suit: 'number', rank: '9', isFaceUp: false },
+      { id: 'c10', suit: 'number', rank: '10', isFaceUp: false }
+    ]);
+
+    const { getByText } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    // enable odds display
+    const dice = getByText('🎲');
+    fireEvent.click(dice);
+
+    // Expect: current hand is 10, remaining deck after dealing to 3 players is [1,3,5] -> avg=3
+    // expected should be 13 (10 + 3), delta = +3
+    expect(screen.getByText(/Expected score if hit: 13 pts \(\+3\)/)).toBeInTheDocument();
+    // Should not show a Turn 7 percentage when turn7Probability is exactly zero
+    expect(screen.queryByText(/Turn 7/)).toBeNull();
+  });
 });

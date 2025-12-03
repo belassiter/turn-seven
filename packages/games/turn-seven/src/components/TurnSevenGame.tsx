@@ -3,7 +3,8 @@ import { GameBoard, GameState, ClientGameStateManager } from '@turn-seven/engine
 import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
 import { GameSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
-import { computeBustProbability } from '../logic/odds';
+import { computeBustProbability, computeHitExpectation } from '../logic/odds';
+import { computeHandScore } from '@turn-seven/engine';
 
 export const TurnSevenGame: React.FC = () => {
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
@@ -57,6 +58,7 @@ export const TurnSevenGame: React.FC = () => {
 
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
   const hasPendingActions = currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
+  const activeCount = gameState.players.filter(p => p.isActive).length;
 
   const handlePlayPendingAction = (cardId: string, targetId: string) => {
     if (!clientManager || !currentPlayer) return;
@@ -146,15 +148,25 @@ export const TurnSevenGame: React.FC = () => {
                 <button onClick={handleHit} disabled={!!currentPlayer?.hasStayed || !currentPlayer?.isActive || !!currentPlayer?.hasBusted}>Hit</button>
                 <button onClick={handleStay} disabled={!!currentPlayer?.hasStayed || !!currentPlayer?.hasBusted}>Stay</button>
                 {/* Show odds to the right of the actions when enabled */}
+                {/* expected score + probabilities shown when odds toggle enabled */}
                 {showOdds && (
                   (() => {
-                    // Simple UI-only probability calculation: what fraction of the remaining DECK
-                    // would cause a bust if drawn. Note: action cards are ignored in this estimate
-                    // (we assume they do not cause a bust). This is a simplification for now.
-                    const activeCount = gameState.players.filter(p => p.isActive).length;
-                    const prob = computeBustProbability(currentPlayer?.hand, gameState.deck, activeCount) * 100;
-                    const display = Number.isFinite(prob) ? `${Math.round(prob)}% chance of busting` : '—%';
-                    return <span style={{ marginLeft: 12, fontWeight: 600 }}>{display}</span>;
+                    // Compute expected score, bust and Turn7 probabilities for a single Hit
+                    const stats = computeHitExpectation(currentPlayer?.hand, gameState.deck, activeCount);
+                    const expected = Math.round(stats.expectedScore);
+                    // Compute current round score from hand (roundScore is only set at round end)
+                    const current = Math.round(computeHandScore(currentPlayer?.hand ?? []));
+                    const diff = Math.round(expected - current);
+                    const diffText = diff >= 0 ? `(+${diff})` : `(${diff})`;
+                    const bustPct = Math.round((stats.bustProbability ?? 0) * 100);
+                    const t7 = stats.turn7Probability ?? 0;
+                    const t7Pct = Math.round(t7 * 100);
+                    return (
+                      <span style={{ marginLeft: 12, fontWeight: 600 }}>
+                        {`Expected score if hit: ${expected} pts ${diffText}. ${bustPct}% chance of bust.`}
+                        {t7 > 0 ? ` ${t7Pct}% chance of Turn 7` : ''}
+                      </span>
+                    );
                   })()
                 )}
               </>

@@ -1,4 +1,5 @@
 import type { CardModel } from '@turn-seven/engine';
+import { computeHandScore } from '@turn-seven/engine';
 
 // Compute the probability (0..1) that drawing one card from `deck` will cause the
 // player to bust given their `hand` of cards.
@@ -106,4 +107,167 @@ export function computeBustProbability(
   // start with a single draw (queue=1)
   const overall = probBustSequential(initialHandSet, deck.slice(), false, 1, turnThreeCount);
   return overall;
+}
+
+// Compute expected final round score after one HIT and the probabilities of bust / Turn 7
+export function computeHitExpectation(
+  hand: CardModel[] | undefined,
+  deck: CardModel[] | undefined,
+  activePlayersCount?: number
+): { expectedScore: number; bustProbability: number; turn7Probability: number } {
+  if (!hand || !deck || deck.length === 0) return { expectedScore: 0, bustProbability: 0, turn7Probability: 0 };
+
+  // computeHandScore is exported and used below
+
+  // shortcut: if player has SecondChance already, no busts on duplicates => we can compute expected score simply
+  const hasSCInitial = hand.some(c => c.suit === 'action' && String(c.rank) === 'SecondChance');
+  if (hasSCInitial) {
+    // simply average final scores across all deck draws, ignoring busts (none because of SC)
+    let expected = 0;
+    let turn7Count = 0;
+    for (const c of deck) {
+      const nextHand = [...hand];
+      if (!c.suit || c.suit === 'number') {
+        // adding number
+        nextHand.push(c);
+      } else if (c.suit === 'modifier') {
+        nextHand.push(c);
+      } else if (c.suit === 'action') {
+        // if second chance drawn it's kept; otherwise action cards don't change score
+        if (String(c.rank) === 'SecondChance') nextHand.push(c);
+      }
+
+      const score = computeHandScore(nextHand);
+      expected += score / deck.length;
+      const uniqueCount = new Set(nextHand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank)).size;
+      if (uniqueCount >= 7) turn7Count += 1;
+    }
+
+    return { expectedScore: expected, bustProbability: 0, turn7Probability: turn7Count / deck.length };
+  }
+
+  // For activePlayersCount > 1, do a simple per-card expectation without TurnThree chain resolution
+  if (!activePlayersCount || activePlayersCount > 1) {
+    let expected = 0;
+    let bust = 0;
+    let turn7 = 0;
+    const handNumberRanks = new Set(hand.filter(c => !c.suit || c.suit === 'number').map(c => String(c.rank)));
+
+    for (const c of deck) {
+      const p = 1 / deck.length;
+      if (!c.suit || c.suit === 'number') {
+        const rank = String(c.rank);
+        // duplicate => bust
+        if (handNumberRanks.has(rank)) {
+          bust += p;
+          // final score is 0
+        } else {
+          // add to hand
+          const newHand = [...hand, c];
+          const score = computeHandScore(newHand);
+          expected += p * score;
+          if (new Set(newHand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank)).size >= 7) turn7 += p;
+        }
+      } else if (c.suit === 'modifier') {
+        const newHand = [...hand, c];
+        const score = computeHandScore(newHand);
+        expected += p * score;
+      } else if (c.suit === 'action') {
+        // Treat action cards as non-busting. SecondChance if kept matters, but for simplicity
+        // if drawing SecondChance and player doesn't have one, they keep it and turn ends — no immediate score change
+        const newHand = [...hand];
+        if (String(c.rank) === 'SecondChance' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'SecondChance')) {
+          newHand.push(c);
+        }
+        const score = computeHandScore(newHand);
+        expected += p * score;
+      }
+    }
+
+    return { expectedScore: expected, bustProbability: bust, turn7Probability: turn7 };
+  }
+
+  // Special-case: one active player — perform enumeration of TurnThree chains and compute expectation
+  const turnThreeCount = deck.filter(d => d.suit === 'action' && String(d.rank) === 'TurnThree').length;
+
+  function simulate(currentHand: CardModel[], currentDeck: CardModel[], hasSC: boolean, queue: number, remainingTurnThrees: number): { exp: number; bust: number; turn7: number } {
+    if (currentDeck.length === 0 || queue <= 0) {
+      const sc = computeHandScore(currentHand);
+      const isTurn7 = new Set(currentHand.filter(x => !x.suit || x.suit === 'number').map(x => x.rank)).size >= 7 ? 1 : 0;
+      return { exp: sc, bust: 0, turn7: isTurn7 };
+    }
+
+    let totalExp = 0;
+    let totalBust = 0;
+    let totalTurn7 = 0;
+
+    for (let i = 0; i < currentDeck.length; i++) {
+      const c = currentDeck[i];
+      const p = 1 / currentDeck.length;
+      const nextDeck = currentDeck.slice(0, i).concat(currentDeck.slice(i + 1));
+
+      if (!c.suit || c.suit === 'number') {
+        const r = String(c.rank);
+        if (currentHand.some(h => (!h.suit || h.suit === 'number') && String(h.rank) === r)) {
+          // duplicate
+          if (!hasSC) {
+            totalBust += p; // immediate bust: score 0
+            continue;
+          } else {
+            // consume second chance: duplicate removed and SC consumed
+            // (we don't add the duplicate to hand)
+            const nextHasSC = false;
+            // consume the SC card from hand if present
+            const nextHand = currentHand.filter(h => !(h.suit === 'action' && String(h.rank) === 'SecondChance'));
+            const res = simulate(nextHand, nextDeck, nextHasSC, queue - 1, remainingTurnThrees);
+            totalExp += p * res.exp;
+            totalBust += p * res.bust;
+            totalTurn7 += p * res.turn7;
+          }
+        } else {
+          // add number to hand
+          const nextHand = [...currentHand, c];
+          const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+          totalExp += p * res.exp;
+          totalBust += p * res.bust;
+          totalTurn7 += p * res.turn7;
+        }
+      } else if (c.suit === 'action') {
+        const rank = String(c.rank);
+        if (rank === 'TurnThree' && remainingTurnThrees > 0) {
+          // consume one TurnThree; queue expands by 3 draws (we've consumed 1 already)
+          const res = simulate(currentHand, nextDeck, hasSC, queue - 1 + 3, remainingTurnThrees - 1);
+          totalExp += p * res.exp;
+          totalBust += p * res.bust;
+          totalTurn7 += p * res.turn7;
+        } else if (rank === 'SecondChance') {
+          // immediate second chance applied
+          const nextHand = currentHand.concat(c);
+          const res = simulate(nextHand, nextDeck, true, queue - 1, remainingTurnThrees);
+          totalExp += p * res.exp;
+          totalBust += p * res.bust;
+          totalTurn7 += p * res.turn7;
+        } else {
+          // other action or exhausted TurnThree pool: non-busting, just continue
+          const nextHand = currentHand.concat(c);
+          const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+          totalExp += p * res.exp;
+          totalBust += p * res.bust;
+          totalTurn7 += p * res.turn7;
+        }
+      } else {
+        // modifier
+        const nextHand = [...currentHand, c];
+        const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+        totalExp += p * res.exp;
+        totalBust += p * res.bust;
+        totalTurn7 += p * res.turn7;
+      }
+    }
+
+    return { exp: totalExp, bust: totalBust, turn7: totalTurn7 };
+  }
+
+  const res = simulate([...hand], deck.slice(), false, 1, turnThreeCount);
+  return { expectedScore: res.exp, bustProbability: res.bust, turn7Probability: res.turn7 };
 }

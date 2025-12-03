@@ -60,7 +60,8 @@ describe('TurnSevenLogic', () => {
       currentPlayerId: 'p1',
       deck: [{ id: 'c2', suit: 'number', rank: '5', isFaceUp: false }],
       discardPile: [],
-      gamePhase: 'playing'
+      gamePhase: 'playing',
+      roundNumber: 1
     };
 
     const after = logic.performAction(state, { type: 'HIT' });
@@ -82,7 +83,8 @@ describe('TurnSevenLogic', () => {
       currentPlayerId: 'p1',
       deck: [],
       discardPile: [],
-      gamePhase: 'playing'
+      gamePhase: 'playing',
+      roundNumber: 1
     };
 
     const after = logic.performAction(state, { type: 'STAY' });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlayerHand } from './PlayerHand';
+import { computeHandScore } from '../logic/scoring';
 import { Card, CardModel } from './Card';
 
 export interface PlayerModel {
@@ -31,35 +32,7 @@ export interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, deck, discardPile, roundNumber }) => {
-  const computeHandScore = (hand: CardModel[] = []) => {
-    let numberSum = 0;
-    let multiplierCount = 0;
-    let plusModifiers = 0;
-
-    for (const c of hand) {
-      if (!c.suit || c.suit === 'number') {
-        const v = parseInt(String(c.rank), 10);
-        if (!isNaN(v)) numberSum += v;
-      } else if (c.suit === 'modifier') {
-        const r = String(c.rank);
-        if (r.startsWith('x')) {
-          const mult = parseInt(r.slice(1), 10);
-          if (!isNaN(mult) && mult === 2) multiplierCount += 1;
-        } else if (r.startsWith('+')) {
-          const add = parseInt(r.slice(1), 10);
-          if (!isNaN(add)) plusModifiers += add;
-        }
-      }
-      // action cards do not affect scoring
-    }
-
-    const multiplier = Math.pow(2, multiplierCount);
-    let roundTotal = numberSum * multiplier + plusModifiers;
-
-    const uniqueNumbers = new Set(hand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank));
-    if (uniqueNumbers.size >= 7) roundTotal += 15;
-    return roundTotal;
-  };
+  // computeHandScore imported from engine's logic/scoring
 
   return (
     <div className="game-board">

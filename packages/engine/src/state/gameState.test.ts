@@ -8,6 +8,7 @@ describe('ClientGameStateManager', () => {
     deck: [],
     discardPile: [],
     gamePhase: 'initial',
+    roundNumber: 1,
   };
 
   it('initializes with the provided state', () => {
