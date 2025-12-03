@@ -151,7 +151,8 @@ export const TurnSevenGame: React.FC = () => {
                     // Simple UI-only probability calculation: what fraction of the remaining DECK
                     // would cause a bust if drawn. Note: action cards are ignored in this estimate
                     // (we assume they do not cause a bust). This is a simplification for now.
-                    const prob = computeBustProbability(currentPlayer?.hand, gameState.deck) * 100;
+                    const activeCount = gameState.players.filter(p => p.isActive).length;
+                    const prob = computeBustProbability(currentPlayer?.hand, gameState.deck, activeCount) * 100;
                     const display = Number.isFinite(prob) ? `${Math.round(prob)}% chance of busting` : '—%';
                     return <span style={{ marginLeft: 12, fontWeight: 600 }}>{display}</span>;
                   })()

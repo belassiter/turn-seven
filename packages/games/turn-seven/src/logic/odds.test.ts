@@ -43,4 +43,23 @@ describe('computeBustProbability', () => {
   it('handles empty deck gracefully', () => {
     expect(computeBustProbability([], [])).toBe(0);
   });
+
+  it('handles TurnThree chain causing bust when only one active player remains', () => {
+    const hand = [numberCard('h1', '5')];
+    // deck: TurnThree, 5, 5 -> top-level draw of 5 (2/3) causes bust, or drawing TurnThree (1/3)
+    // will lead to drawing 3 cards from the remaining [5,5], which guarantees a bust.
+    const deck = [actionCard('t1', 'TurnThree'), numberCard('d1', '5'), numberCard('d2', '5')];
+
+    const p = computeBustProbability(hand as any, deck as any, 1);
+    expect(Math.abs(p - 1) < 1e-8).toBeTruthy();
+  });
+
+  it('handles TurnThree chain with no bust outcomes', () => {
+    const hand = [numberCard('h1', '5')];
+    const deck = [actionCard('t1', 'TurnThree'), numberCard('d1', '6'), numberCard('d2', '7')];
+
+    // No duplicates present; even with TurnThree draws the player cannot bust
+    const p = computeBustProbability(hand as any, deck as any, 1);
+    expect(p).toBe(0);
+  });
 });
