@@ -37,7 +37,7 @@ export function computeBustProbability(
     // Only number cards can cause a duplicate (bust). Action cards are treated as non-busting
     // for now — they remain in the deck and are part of the denominator but do not increase bustCount.
     if (!c.suit || c.suit === 'number') {
-      // If the rank already exists in hand and player has no second chance, drawing it will bust
+      // If the rank already exists in hand and player has no Life Saver, drawing it will bust
       if (numberRanksInHand.has(String(c.rank)) && !hasLifeSaver) {
         bustCount += 1;
       }
@@ -87,7 +87,7 @@ export function computeBustProbability(
           continue;
         }
 
-        // otherwise, update hand (if this rank not present) and second chance (consumed on duplicate)
+        // otherwise, update hand (if this rank not present) and Life Saver (consumed on duplicate)
         const nextHasLifeSaver = hasLifeSaverFlag && currentHandSet.has(r) ? false : hasLifeSaverFlag;
         const nextHand = new Set(currentHandSet);
         if (!nextHand.has(r)) nextHand.add(r);
@@ -99,7 +99,7 @@ export function computeBustProbability(
           // This consumes one TurnThree and adds 3 draws to the queue (we consumed 1 already)
           prob += p * probBustSequential(currentHandSet, nextDeck, hasLifeSaverFlag, queue - 1 + 3, remainingTurnThrees - 1);
         } else if (rank === 'LifeSaver') {
-          // Acquire second chance immediately for subsequent draws
+          // Acquire a Life Saver immediately for subsequent draws
           prob += p * probBustSequential(currentHandSet, nextDeck, true, queue - 1, remainingTurnThrees);
         } else {
           // other action cards or exhausted TurnThree pool — non-busting, just continue
@@ -133,7 +133,7 @@ export function computeHitExpectation(
   // shortcut: if player has a Life Saver already, no busts on duplicates => we can compute expected score simply
   const hasLifeSaverInitial = hand.some(c => c.suit === 'action' && String(c.rank) === 'LifeSaver');
   if (hasLifeSaverInitial) {
-    // simply average final scores across all deck draws, ignoring busts (none because of SC)
+    // simply average final scores across all deck draws, ignoring busts (none because of Life Saver)
     let expected = 0;
     let turn7Count = 0;
     for (const c of deck) {
@@ -144,7 +144,7 @@ export function computeHitExpectation(
       } else if (c.suit === 'modifier') {
         nextHand.push(c);
       } else if (c.suit === 'action') {
-        // if second chance drawn it's kept; otherwise action cards don't change score
+        // if a Life Saver drawn it's kept; otherwise action cards don't change score
         if (String(c.rank) === 'LifeSaver') nextHand.push(c);
       }
 
@@ -264,10 +264,10 @@ export function computeHitExpectation(
             totalBust += p; // immediate bust: score 0
             continue;
             } else {
-            // consume second chance: duplicate removed and SC consumed
+            // consume Life Saver: duplicate removed and Life Saver consumed
             // (we don't add the duplicate to hand)
               const nextHasLifeSaver = false;
-            // consume the SC card from hand if present
+            // consume the Life Saver card from hand if present
               const nextHand = currentHand.filter(h => !(h.suit === 'action' && String(h.rank) === 'LifeSaver'));
             const res = simulate(nextHand, nextDeck, nextHasLifeSaver, queue - 1, remainingTurnThrees);
             totalExp += p * res.exp;
@@ -291,7 +291,7 @@ export function computeHitExpectation(
           totalBust += p * res.bust;
           totalTurn7 += p * res.turn7;
         } else if (rank === 'LifeSaver') {
-          // immediate second chance applied
+          // immediate Life Saver applied
           const nextHand = currentHand.concat(c);
           const res = simulate(nextHand, nextDeck, true, queue - 1, remainingTurnThrees);
           totalExp += p * res.exp;

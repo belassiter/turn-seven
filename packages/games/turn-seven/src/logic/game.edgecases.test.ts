@@ -127,7 +127,7 @@ describe('Turn Seven Edge Cases', () => {
     expect(state.players[1].pendingImmediateActionIds).toHaveLength(0);
   });
 
-  it('Case 24: Second Chance drawn during Turn Three saves from bust', () => {
+  it('Case 24: Life Saver drawn during Turn Three saves from bust', () => {
     const playerA = state.players[0];
     const playerB = state.players[1];
 
@@ -141,10 +141,10 @@ describe('Turn Seven Edge Cases', () => {
     // Give B a 5
     playerB.hand = [createCard('5', 'number', 'n-5-orig')];
 
-    // Stack deck: [5 (duplicate), Second Chance, 6]
-    // Pop order: 6, Second Chance, 5
-    // We want: 1. Second Chance (kept), 2. 5 (saved), 3. 6
-    // So stack: 6, 5, Second Chance
+    // Stack deck: [5 (duplicate), Life Saver, 6]
+    // Pop order: 6, Life Saver, 5
+    // We want: 1. Life Saver (kept), 2. 5 (saved), 3. 6
+    // So stack: 6, 5, Life Saver
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5-dup'));
     const sc = createCard('LifeSaver', 'action', 'sc-1');
@@ -159,13 +159,13 @@ describe('Turn Seven Edge Cases', () => {
     // B should NOT have busted
     expect(state.players[1].hasBusted).toBe(false);
     
-    // B should have 5, 6 in hand (duplicate 5 discarded, SC discarded)
+    // B should have 5, 6 in hand (duplicate 5 discarded, Life Saver discarded)
     const ranks = state.players[1].hand.map((c: any) => c.rank);
     expect(ranks).toContain('5');
     expect(ranks).toContain('6');
     expect(ranks).not.toContain('LifeSaver');
     
-    // Second Chance should be gone (used)
+    // Life Saver should be gone (used)
     expect(state.players[1].hasLifeSaver).toBe(false);
   });
 
@@ -313,9 +313,9 @@ describe('Turn Seven Edge Cases', () => {
     expect(state.turnOrderBaseId).toBeNull();
   });
 
-  it('Case 23: Second Chance Overflow', () => {
-    // A plays Turn Three on B (who has SC).
-    // B draws another SC.
+  it('Case 23: Life Saver Overflow', () => {
+    // A plays Turn Three on B (who has a Life Saver).
+    // B draws another Life Saver.
     // B must give it to C.
 
     const playerA = state.players[0];
@@ -324,7 +324,7 @@ describe('Turn Seven Edge Cases', () => {
 
     state.currentPlayerId = playerA.id;
     
-    // Give B a Second Chance
+    // Give B a Life Saver
     playerB.hasLifeSaver = true;
 
     // Give A a Turn Three
@@ -332,8 +332,8 @@ describe('Turn Seven Edge Cases', () => {
     playerA.reservedActions = [turnThree];
     playerA.hand = [turnThree];
 
-    // Stack deck for B: [SC, 5, 6]
-    // Pop order: 6, 5, SC
+    // Stack deck for B: [Life Saver, 5, 6]
+    // Pop order: 6, 5, Life Saver
     const sc2 = createCard('LifeSaver', 'action', 'sc-2');
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5'));
@@ -345,20 +345,20 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id }
     });
 
-    // B should still have SC (original)
+    // B should still have Life Saver (original)
     expect(state.players[1].hasLifeSaver).toBe(true);
     
-    // B should have pending action to give SC to someone
+    // B should have pending action to give Life Saver to someone
     // Because B already has one, the new one is queued for targeting.
     expect(state.players[1].pendingImmediateActionIds).toContain(sc2.id);
     
-    // B targets C with the new SC
+    // B targets C with the new Life Saver
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
       payload: { actorId: playerB.id, cardId: sc2.id, targetId: playerC.id }
     });
 
-    // C should have received the new SC
+    // C should have received the new Life Saver
     expect(state.players[2].hasLifeSaver).toBe(true);
     // Debug output for failing case (helps identify why the card didn't land in hand)
     // debug logs removed after verification

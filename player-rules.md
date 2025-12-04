@@ -22,7 +22,7 @@ Each Number card scores its face value; however, it also has more twins in the d
 - etc
 - One 1
 - One 0
-Higher Number cards have a better score, but are also riskier!
+Higher Number cards have a better score, but they are also riskier!
 
 ## Bonus Cards:
 - +2, +4, +6, +8, +10: Adds this many bonus points
@@ -37,28 +37,26 @@ Action cards have special effects which a player can use to their own benefit or
 
 # Getting started
 At the start of each round:
-
-The Dealer deals one card at a time to each player, including themselves.
-If a player is dealt an Action card, resolve its effect immediately before continuing to deal the next card.
-Continue dealing until every player has received at least one card.
-Due to the nature of Action cards, it’s possible that some players may receive multiple cards or none during the initial deal.
+- Each player is dealt a card
+- Action Cards are resolved before dealing the next card
+- When each player has at least one card, the round begins
 
 # Player Turns
-Starting with the player to the Dealer’s left and proceeding clockwise, each active player (i.e., a player who hasn’t busted or stayed) takes their turn.
+The player has two choices on their turn:
+1. Hit
+- Draw a card
+- An Action Card is resolved immediately
+- If the drawn card is a twin of a Number card in their hand already, bust! Turn ends and score is zero for the round.
+- If the drawn card is the 7th unique Number card, TURN 7! The round ends immediately and this player receives 15 bonus points.
+2. Stay
+- Exit the round safely.
+- Collect your score.
+- Action cards can no longer be applied to you
 
-Each turn, each active player chooses between two actions:
 
-1. Hit (Draw a Card)
-- Draw one card at a time from the deck.
-- Place any Number cards in a row in front of you. These are your scoring cards for the round.
-- Place Modifier cards above your row. They do not count toward the 7 unique Number cards.
-- Action cards are resolved immediately.
-- If you draw a Number card that matches a number already in your line, you bust and your turn ends. You score zero points for the round.
-- If you successfully collect 7 unique Number cards, you end the round immediately and receive a 15-point bonus in addition to the total value of your cards and modifiers.
-2. Stay (End Your Turn)
-- You may choose to end your turn voluntarily before drawing.
-- You keep all your cards and score the total value of your Number cards and any applicable Modifier cards.
-- Once you stay, you are out of the round and cannot draw or be targeted by Action cards.
+
+
+
 
 # Special Cards: Actions
 ## Lock

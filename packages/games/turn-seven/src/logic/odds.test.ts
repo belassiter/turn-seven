@@ -6,7 +6,7 @@ const modifierCard = (id: string, rank: string) => ({ id, suit: 'modifier', rank
 const actionCard = (id: string, rank: string) => ({ id, suit: 'action', rank, isFaceUp: false });
 
 describe('computeBustProbability', () => {
-  it('returns correct fraction when duplicates present and no second chance', () => {
+  it('returns correct fraction when duplicates present and no Life Saver', () => {
     const hand = [numberCard('h1', '5')];
     const deck = [numberCard('d1', '5'), numberCard('d2', '6'), modifierCard('m1', '+2')];
 

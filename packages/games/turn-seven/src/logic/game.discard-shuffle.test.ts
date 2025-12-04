@@ -31,7 +31,7 @@ describe('Discard & shuffle behavior', () => {
     expect(p1HandIds).not.toContain('a');
     expect(p1HandIds).not.toContain('r1');
     expect(p2HandIds).not.toContain('b');
-    // Players should also have no reserved actions or second chance carried over
+    // Players should also have no reserved actions or Life Saver carried over
     expect(next.players[0].reservedActions).toHaveLength(0);
     expect(next.players[0].hasLifeSaver).toBe(false);
   });

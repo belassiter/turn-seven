@@ -69,7 +69,7 @@ describe('Turn Three Edge Cases', () => {
     // But here we just check that it was stored.
   });
 
-  it('Turn Three draws Second Chance: equipped immediately', () => {
+  it('Turn Three draws Life Saver: equipped immediately', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
@@ -95,7 +95,7 @@ describe('Turn Three Edge Cases', () => {
     expect(p2.hand.some((c: any) => c.rank === 'LifeSaver')).toBe(true);
   });
 
-  it('Turn Three draws Second Chance then Duplicate: saves from bust', () => {
+  it('Turn Three draws Life Saver then Duplicate: saves from bust', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },

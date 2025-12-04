@@ -162,7 +162,7 @@ export class TurnSevenLogic implements IGameLogic {
           // Card stays in hand.
           // Turn ends for this player because they drew an action card?
           // Rules say "Action cards are resolved immediately".
-          // Resolving Second Chance means keeping it.
+          // Resolving Life Saver means keeping it.
           // Does turn end? User says "Play should just continue to the next player."
           // So we force turn advance.
           newState.previousTurnLog = log;
@@ -182,7 +182,7 @@ export class TurnSevenLogic implements IGameLogic {
       const duplicateCount = currentPlayer.hand.filter((h: any) => (!h.suit || h.suit === 'number') && h.rank === card.rank).length;
       if (duplicateCount > 1) {
         if (currentPlayer.hasLifeSaver) {
-          // consume second chance and discard the duplicate drawn card
+          // consume Life Saver and discard the duplicate drawn card
           currentPlayer.hand = currentPlayer.hand.filter((h: any) => h.id !== card.id);
           // Also remove the Life Saver card from hand
           const scIdx = currentPlayer.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'LifeSaver');
@@ -330,7 +330,7 @@ export class TurnSevenLogic implements IGameLogic {
             target.hand.push({ ...next, isFaceUp: true });
             if (duplicateCount > 0) {
               if (target.hasLifeSaver) {
-                // consume second chance and discard the duplicate drawn card
+                // consume Life Saver and discard the duplicate drawn card
                 target.hand = target.hand.filter((h: any) => h.id !== next.id);
                 // Also remove the Life Saver card from hand
                 const scIdx = target.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'LifeSaver');
@@ -752,7 +752,7 @@ export class TurnSevenLogic implements IGameLogic {
     return -1;
   }
 
-  // Helper: give a Second Chance to the player if they don't have one; otherwise pass to next eligible active player.
+  // Helper: give a Life Saver to the player if they don't have one; otherwise pass to next eligible active player.
   // Also places the card in the recipient's hand.
   private giveLifeSaver(state: GameState, startIdx: number, card?: CardModel) {
     const players = state.players;
@@ -897,7 +897,7 @@ export class TurnSevenLogic implements IGameLogic {
                 return; 
             }
             
-            // If not pending (e.g. Second Chance auto-resolved to someone else), check if player kept it
+            // If not pending (e.g. Life Saver auto-resolved to someone else), check if player kept it
             if (player.hand.some((h: any) => h.id === card.id)) {
                 keptCard = true;
             }

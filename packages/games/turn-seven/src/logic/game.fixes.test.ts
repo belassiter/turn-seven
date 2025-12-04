@@ -5,7 +5,7 @@ import type { GameState } from '@turn-seven/engine';
 describe('Game Logic Fixes', () => {
   const logic = new TurnSevenLogic();
 
-  it('Second Chance: if player has none, they keep it and turn ends automatically', () => {
+  it('Life Saver: if player has none, they keep it and turn ends automatically', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: false },
@@ -17,7 +17,7 @@ describe('Game Logic Fixes', () => {
       gamePhase: 'playing'
     } as any;
 
-    // P1 Hits and draws Second Chance
+    // P1 Hits and draws Life Saver
     const after = logic.performAction(state, { type: 'HIT' });
     
     const p1 = after.players.find(p => p.id === 'p1')!;
@@ -34,7 +34,7 @@ describe('Game Logic Fixes', () => {
     expect(after.currentPlayerId).toBe('p2');
   });
 
-  it('Second Chance: if player has one, it becomes pending', () => {
+  it('Life Saver: if player has one, it becomes pending', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [{ id: 'sc1', suit: 'action', rank: 'LifeSaver' }], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true },

@@ -64,9 +64,9 @@ describe('Initial Deal Edge Cases', () => {
   });
 
   it('handles Life Saver drawn on initial deal', () => {
-    // Setup: P1 draws Second Chance. Keeps it.
+    // Setup: P1 draws Life Saver. Keeps it.
     // Stack:
-    // 1. Second Chance (P1)
+    // 1. Life Saver (P1)
     // 2. 6 (P2)
     
     const restore = mockDeck([
@@ -91,7 +91,7 @@ describe('Initial Deal Edge Cases', () => {
     const p1 = nextState.players[0];
     const p2 = nextState.players[1];
 
-    // P1 should have Second Chance only
+    // P1 should have Life Saver only
     expect(p1.hand).toHaveLength(1);
     expect(p1.hand[0].rank).toBe('LifeSaver');
     expect(p1.hasLifeSaver).toBe(true);
@@ -140,61 +140,61 @@ describe('Initial Deal Edge Cases', () => {
     expect(p2.hand).toHaveLength(0);
   });
 
-  it('handles Second Chance drawn on initial deal when player already has one', () => {
-    // Setup: P1 already has a Second Chance (from previous round or just dealt? 
+  it('handles Life Saver drawn on initial deal when player already has one', () => {
+    // Setup: P1 already has a Life Saver (from previous round or just dealt? 
     // Actually, startNextRound clears hands, so it must be dealt.
-    // But wait, Second Chance is kept across rounds? No, rules say "Unused Second Chance cards are discarded at the end of the round."
+    // But wait, Life Saver is kept across rounds? No, rules say "Unused Life Saver cards are discarded at the end of the round."
     // So P1 starts with empty hand.
-    // But maybe P1 draws TWO Second Chance cards in a row?
+    // But maybe P1 draws TWO Life Saver cards in a row?
     // Stack:
-    // 1. Second Chance #1 (P1 keeps)
-    // 2. Second Chance #2 (P1 draws again? No, deal moves to next player if P1 keeps card)
-    // Wait. If P1 draws Second Chance, they keep it. That counts as their card. Deal moves to P2.
-    // So P1 cannot draw two Second Chance cards in initial deal unless P1 is targeted by someone else?
+    // 1. Life Saver #1 (P1 keeps)
+    // 2. Life Saver #2 (P1 draws again? No, deal moves to next player if P1 keeps card)
+    // Wait. If P1 draws Life Saver, they keep it. That counts as their card. Deal moves to P2.
+    // So P1 cannot draw two Life Saver cards in initial deal unless P1 is targeted by someone else?
     // Or if P1 is the only player?
-    // Let's assume P1 draws SC, keeps it. P2 draws SC, keeps it. P3 draws SC...
-    // What if P1 draws SC, keeps it. Then later in the game...
-    // The test case is "handles Second Chance drawn on initial deal when player already has one".
-    // This can happen if P1 is dealt a card, then maybe targeted by a Turn Three that gives them another SC?
-    // Or if P1 is dealt SC, then P2 is dealt Turn Three, targets P1, P1 draws SC?
+    // Let's assume P1 draws a Life Saver, keeps it. P2 draws a Life Saver, keeps it. P3 draws a Life Saver...
+    // What if P1 draws a Life Saver, keeps it. Then later in the game...
+    // The test case is "handles Life Saver drawn on initial deal when player already has one".
+    // This can happen if P1 is dealt a card, then maybe targeted by a Turn Three that gives them another Life Saver?
+    // Or if P1 is dealt a Life Saver, then P2 is dealt Turn Three, targets P1, P1 draws another Life Saver?
     // Let's simulate P1 having one already (maybe manually added to state before deal? No, startNextRound clears hands).
     // Ah, startNextRound clears hands. So P1 cannot have one "already" unless we modify startNextRound logic or simulate a mid-deal state.
     // But `startNextRound` runs the whole deal loop.
-    // If P1 draws SC, they keep it. They are done.
+    // If P1 draws a Life Saver, they keep it. They are done.
     // If P1 is targeted by P2's Turn Three later in the deal?
-    // P1 (SC) -> P2 (Turn Three -> targets P1). P1 draws SC #2.
+    // P1 (Life Saver) -> P2 (Turn Three -> targets P1). P1 draws another Life Saver.
     // This is a valid scenario.
     
     // Stack (top to bottom):
-    // 1. SC #1 (P1)
-    // 2. Turn Three (P2) -> Targets P1 (user choice, but here we want to test the pending state of the SC #2)
+    // 1. Life Saver #1 (P1)
+    // 2. Turn Three (P2) -> Targets P1 (user choice, but here we want to test the pending state of the Life Saver #2)
     // Wait, if P2 draws Turn Three, P2 gets a pending action. The deal pauses.
-    // So we can't test the "P1 gets second SC" scenario in a single `startNextRound` call if we implement the pause logic correctly!
+    // So we can't test the "P1 gets another Life Saver" scenario in a single `startNextRound` call if we implement the pause logic correctly!
     // Because `startNextRound` will return as soon as P2 draws Turn Three.
-    // So we don't need to test "P1 gets second SC during initial deal loop" because the loop breaks.
-    // We only need to test that if a player draws SC and *somehow* has one, it pauses.
+    // So we don't need to test "P1 gets another Life Saver during initial deal loop" because the loop breaks.
+    // We only need to test that if a player draws a Life Saver and *somehow* has one, it pauses.
     // But since hands are cleared, the only way to have one is if they got one earlier in the same deal.
     // And if they got one, they are skipped in the deal loop?
     // "players.forEach... if (player.hand.length > 0) return;"
-    // So P1 gets SC #1. P1 has card.
+    // So P1 gets Life Saver #1. P1 has card.
     // P2 gets Turn Three. P2 has pending action. Deal pauses.
-    // So P1 cannot get SC #2 in the same `startNextRound` execution.
-    // So the only case is: P1 draws SC #1. P1 keeps it. Deal continues.
-    // P2 draws SC #2. P2 keeps it. Deal continues.
-    // So "Second Chance drawn when player already has one" is impossible in the *initial deal loop* for the *same player* drawing it directly.
+    // So P1 cannot get a second Life Saver in the same `startNextRound` execution.
+    // So the only case is: P1 draws Life Saver #1. P1 keeps it. Deal continues.
+    // P2 draws Life Saver #2. P2 keeps it. Deal continues.
+    // So "Life Saver drawn when player already has one" is impossible in the *initial deal loop* for the *same player* drawing it directly.
     // It is only possible via targeting.
     // And targeting requires user interaction (which pauses the deal).
-    // So we don't need a specific test for "Second Chance auto-resolution failure when player has one" because the deal pauses for the *targeting action* (Turn Three) that would cause it.
+    // So we don't need a specific test for "Life Saver auto-resolution failure when player has one" because the deal pauses for the *targeting action* (Turn Three) that would cause it.
     // UNLESS: Is there a card that targets automatically? No, we said all actions target.
-    // What if P1 draws SC #1. P2 draws SC #2. P3 draws SC #3.
+    // What if P1 draws Life Saver #1. P2 draws Life Saver #2. P3 draws Life Saver #3.
     // All good.
-    // So the only "Action" that resolves automatically is Second Chance (if you don't have one).
+    // So the only "Action" that resolves automatically is Life Saver (if you don't have one).
     // And if you DO have one?
     // Can you draw a second one directly?
     // Only if you are dealt multiple cards?
     // Initial deal is 1 card per player.
     // So you can't draw two.
-    // So the "Second Chance when you have one" case is not reachable in `startNextRound`'s initial loop.
+    // So the "Life Saver when you have one" case is not reachable in `startNextRound`'s initial loop.
     // So we don't need a test for it in `initial-deal.test.ts`.
     
     // However, we DO need to ensure that `TurnThree` pauses.

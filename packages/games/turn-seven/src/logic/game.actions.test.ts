@@ -64,7 +64,7 @@ describe('Action card behavior', () => {
 
     const after = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a3', targetId: 'p2' } });
     const p2 = after.players.find(p => p.id === 'p2')!;
-    // because p2 already had a 5 and drew a duplicate 5 first, they should bust (no second chance)
+    // because p2 already had a 5 and drew a duplicate 5 first, they should bust (no Life Saver)
     expect(p2.hasBusted).toBe(true);
   });
 
@@ -146,10 +146,10 @@ describe('Action card behavior', () => {
       { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true },
     ];
     const deck: any[] = [];
-    const freezeCard = { id: 'a1', suit: 'action', rank: 'Lock' };
+    const lockCard = { id: 'a1', suit: 'action', rank: 'Lock' };
 
     // P1 draws Lock.
-    testLogic.invokeResolveActionOnDeal(players, 0, freezeCard, deck);
+    testLogic.invokeResolveActionOnDeal(players, 0, lockCard, deck);
 
     // P1 should have pending action
     expect(players[0].pendingImmediateActionIds).toContain('a1');

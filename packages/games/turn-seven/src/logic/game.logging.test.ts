@@ -5,7 +5,7 @@ import type { GameState } from '@turn-seven/engine';
 describe('Game Logging', () => {
   const logic = new TurnSevenLogic();
 
-  it('logs when a player draws and keeps a Second Chance', () => {
+  it('logs when a player draws and keeps a Life Saver', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], isActive: true, hasLifeSaver: false },
