@@ -35,9 +35,7 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
 
   return (
     <div className="game-setup">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
-        <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 48 }} />
-      </div>
+      {/* Logo removed here — kept in the outer setup wrapper (TurnSevenGame) to avoid duplication */}
       <label style={{ display: 'block', marginBottom: 12 }}>
         Number of players: {count}
       </label>

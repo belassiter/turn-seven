@@ -17,6 +17,7 @@ export const TurnSevenGame: React.FC = () => {
   const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showOdds, setShowOdds] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
@@ -63,12 +64,19 @@ export const TurnSevenGame: React.FC = () => {
   // --- Render Helpers ---
 
   if (!gameState) {
+    // Render without the header on setup — keep the footer visible at the bottom of the page.
     return (
-      <div className="turn-seven-game-setup" style={{ padding: 40, maxWidth: 600, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 72 }} />
+      <div className="turn-seven-layout">
+        <div style={{ gridArea: 'main', gridColumn: '1 / -1', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
+          <div className="turn-seven-game-setup" style={{ padding: 40, maxWidth: 600, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 144 }} />
+            </div>
+            <GameSetup onStart={handleStart} />
+          </div>
         </div>
-        <GameSetup onStart={handleStart} />
+
+        <GameFooter />
       </div>
     );
   }
@@ -168,6 +176,7 @@ export const TurnSevenGame: React.FC = () => {
         discardCount={gameState.discardPile.length}
         showOdds={showOdds}
         onToggleOdds={() => setShowOdds(s => !s)}
+        onOpenRules={() => setShowRules(true)}
       />
       
       <PlayerSidebar 
@@ -260,6 +269,17 @@ export const TurnSevenGame: React.FC = () => {
       </div>
 
       <GameFooter />
+      {showRules && (
+        <div className="overlay-container">
+          <div className="overlay-content">
+            <h2>Quick Rules</h2>
+            <p>Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number cards to score points. Action cards (Freeze, Turn Three, Second Chance) alter player turns and may require targeting other players. Modifier cards like +X and x2 affect scoring. At the end of each round, players' cards are collected into the discard; the deck is preserved across rounds and reshuffled from discard when needed.</p>
+            <div style={{ marginTop: 16 }}>
+              <button className="btn btn-secondary" onClick={() => setShowRules(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overlays for Round End / Game Over */}
       {gameState.gamePhase === 'ended' && (

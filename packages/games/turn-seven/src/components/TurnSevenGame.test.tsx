@@ -31,7 +31,9 @@ describe('TurnSevenGame component', () => {
   });
 
   it('renders the game board and actions', () => {
-    const { getByText } = render(<TurnSevenGame />);
+    const { getByText, getByTitle } = render(<TurnSevenGame />);
+    // Footer should be visible on setup
+    expect(screen.getByText(/Turn Seven/i)).toBeInTheDocument();
     // start the game via setup
     fireEvent.click(getByText('Start Game'));
     // header title removed — assert logo exists instead
@@ -77,7 +79,7 @@ describe('TurnSevenGame component', () => {
   it('handles Stay action', () => {
     // In single player, Stay keeps it on Player 1.
     // But we can verify the button is clickable and doesn't crash.
-    const { getByText } = render(<TurnSevenGame />);
+    const { getByText, getByTitle } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
     const hitButton = getByText('Hit') as HTMLButtonElement;
     const stayButton = getByText('Stay') as HTMLButtonElement;
@@ -105,11 +107,11 @@ describe('TurnSevenGame component', () => {
       { id: 'c10', suit: 'number', rank: '10', isFaceUp: false }
     ]);
 
-    const { getByText } = render(<TurnSevenGame />);
+    const { getByText, getByTitle } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
     // enable odds display
-    const dice = getByText('🎲 Odds');
+    const dice = getByTitle('Show Odds');
     fireEvent.click(dice);
 
     // Expect: current hand is 10, remaining deck after dealing to 3 players is [1,3,5] -> avg=3
@@ -234,5 +236,29 @@ describe('TurnSevenGame component', () => {
     const actorLabel = sidebar?.querySelector('.player-row .player-name')?.textContent || '';
     expect(actorLabel).toMatch(/Player 1/i);
     expect(actorLabel).toMatch(/you/);
+  });
+
+  it('header rules button opens summarized rules overlay', () => {
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
+      { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
+      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+    ] as any);
+
+    const { getByText, getByTitle } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    // Find the rules button in the header and open it
+    const rulesBtn = getByTitle('Show Rules');
+    expect(rulesBtn).toBeDefined();
+    fireEvent.click(rulesBtn);
+
+    // Overlay should be visible
+    expect(screen.getByText('Quick Rules')).toBeInTheDocument();
+
+    // Close it
+    const close = screen.getByText('Close');
+    fireEvent.click(close);
+    expect(screen.queryByText('Quick Rules')).toBeNull();
   });
 });
