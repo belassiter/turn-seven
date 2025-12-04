@@ -29,10 +29,10 @@ export const Card: React.FC<CardProps> = ({ card }) => {
   const actionImageName = (() => {
     const normalized = labelText.toLowerCase().replace(/\s+/g, '');
     if (normalized.includes('turnthree') || /t3/.test(normalized)) return '/turn3.png';
-    // support both legacy 'freeze' and new 'lock' rank names
-    if (normalized.includes('lock') || normalized.includes('freeze')) return '/lock.png';
-    // support both LifeSaver and SecondChance names and their short forms
-    if (normalized.includes('lifesaver') || normalized.includes('secondchance') || normalized.includes('2c') || normalized.includes('second')) return '/lifesaver.png';
+    // support canonical 'lock' rank name
+    if (normalized.includes('lock')) return '/lock.png';
+    // support canonical LifeSaver label
+    if (normalized.includes('lifesaver')) return '/lifesaver.png';
     return undefined;
   })();
 

@@ -146,7 +146,7 @@ export class TurnSevenLogic implements IGameLogic {
       currentPlayer.reservedActions.push({ ...card, isFaceUp: true });
       currentPlayer.hand.push({ ...card, isFaceUp: true });
       
-      // If it's Freeze or TurnThree, it must be resolved immediately (cannot HIT/STAY until done)
+      // If it's Lock or TurnThree, it must be resolved immediately (cannot HIT/STAY until done)
       const rank = String(card.rank);
       if (rank === 'Lock' || rank === 'TurnThree') {
         currentPlayer.pendingImmediateActionIds = currentPlayer.pendingImmediateActionIds || [];
@@ -184,8 +184,8 @@ export class TurnSevenLogic implements IGameLogic {
         if (currentPlayer.hasLifeSaver) {
           // consume second chance and discard the duplicate drawn card
           currentPlayer.hand = currentPlayer.hand.filter((h: any) => h.id !== card.id);
-          // Also remove the Second Chance card from hand
-          const scIdx = currentPlayer.hand.findIndex((h: any) => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'));
+          // Also remove the Life Saver card from hand
+          const scIdx = currentPlayer.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'LifeSaver');
           if (scIdx !== -1) currentPlayer.hand.splice(scIdx, 1);
           currentPlayer.hasLifeSaver = false;
         } else {
@@ -209,7 +209,7 @@ export class TurnSevenLogic implements IGameLogic {
 
     newState.previousTurnLog = log;
 
-    // If the player has pending immediate actions (e.g. Freeze/TurnThree target selection),
+    // If the player has pending immediate actions (e.g. Lock/TurnThree target selection),
     // the turn does not advance yet. They must resolve the action.
     // Otherwise, whether they busted or successfully hit, the turn passes to the next player (Round-Robin).
     if (!currentPlayer.pendingImmediateActionIds || currentPlayer.pendingImmediateActionIds.length === 0) {
@@ -271,8 +271,8 @@ export class TurnSevenLogic implements IGameLogic {
     const actor = players[actorIndex];
     const target = players[targetIndex];
 
-    // Validation: Cannot target inactive players (busted, stayed, frozen)
-    // Exception: Freeze can target self if only one left? Rules say "Target any active player".
+    // Validation: Cannot target inactive players (busted, stayed, locked)
+    // Exception: Lock can target self if only one left? Rules say "Target any active player".
     // If target is not active, action fails.
     if (!target.isActive) {
       // Action fails, but we don't consume the card? Or do we?
@@ -301,10 +301,7 @@ export class TurnSevenLogic implements IGameLogic {
     newState.previousTurnLog = log;
 
     switch (rank) {
-      case 'Lock':
-      case 'Lock':
-      case 'Lock':
-      case 'Freeze': {
+      case 'Lock': {
         // target immediately stays and becomes inactive
         target.hasStayed = true;
         target.isLocked = true;
@@ -335,8 +332,8 @@ export class TurnSevenLogic implements IGameLogic {
               if (target.hasLifeSaver) {
                 // consume second chance and discard the duplicate drawn card
                 target.hand = target.hand.filter((h: any) => h.id !== next.id);
-                // Also remove the Second Chance card from hand
-                const scIdx = target.hand.findIndex((h: any) => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'));
+                // Also remove the Life Saver card from hand
+                const scIdx = target.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'LifeSaver');
                 if (scIdx !== -1) target.hand.splice(scIdx, 1);
                 target.hasLifeSaver = false;
               } else {
@@ -367,7 +364,7 @@ export class TurnSevenLogic implements IGameLogic {
           } else if (next.suit === 'modifier') {
             target.hand.push({ ...next, isFaceUp: true });
           } else if (next.suit === 'action') {
-            if (String(next.rank) === 'LifeSaver' || String(next.rank) === 'SecondChance') {
+            if (String(next.rank) === 'LifeSaver') {
               if (!target.hasLifeSaver) {
                 target.hasLifeSaver = true;
                 target.hand.push({ ...next, isFaceUp: true });
@@ -439,9 +436,9 @@ export class TurnSevenLogic implements IGameLogic {
         newState.previousTurnLog = log;
         break;
       }
-      case 'LifeSaver':
-      case 'SecondChance': {
-        this.giveLifeSaver(players, targetIndex, card);
+      case 'LifeSaver': {
+        // giveLifeSaver may discard the card if there's no eligible recipient
+        this.giveLifeSaver(newState, targetIndex, card);
         // Playing an action card ends the actor's turn
         if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
            this.advanceTurn(newState);
@@ -591,7 +588,7 @@ export class TurnSevenLogic implements IGameLogic {
             if (!isNaN(add)) plusModifiers += add;
           }
         }
-        // action cards (Freeze, Turn Three, Second Chance) don't affect scoring here
+        // action cards (Lock, Turn Three, Life Saver) don't affect scoring here
       }
 
       // apply multipliers (each x2 doubles)
@@ -757,23 +754,29 @@ export class TurnSevenLogic implements IGameLogic {
 
   // Helper: give a Second Chance to the player if they don't have one; otherwise pass to next eligible active player.
   // Also places the card in the recipient's hand.
-  private giveLifeSaver(players: any[], startIdx: number, card?: CardModel) {
+  private giveLifeSaver(state: GameState, startIdx: number, card?: CardModel) {
+    const players = state.players;
     const p = players[startIdx];
     if (!p.hasLifeSaver) {
       p.hasLifeSaver = true;
       if (card) p.hand.push({ ...card, isFaceUp: true });
+      // assigned directly to the requested player
       return true;
     }
-    // find another active player without second chance
+    // find another active player without a Life Saver
     for (let offset = 1; offset < players.length; offset++) {
       const idx = (startIdx + offset) % players.length;
-      if (players[idx].isActive && !players[idx].hasLifeSaver) {
+        if (players[idx].isActive && !players[idx].hasLifeSaver) {
         players[idx].hasLifeSaver = true;
-        if (card) players[idx].hand.push({ ...card, isFaceUp: true });
+          if (card) players[idx].hand.push({ ...card, isFaceUp: true });
+          // assigned to next eligible player
         return true;
       }
     }
-    // no eligible player
+    // no eligible player — discard the card to prevent it from being lost
+    state.discardPile = state.discardPile || [];
+    if (card) state.discardPile.push({ ...card, isFaceUp: true });
+    // discarded because no eligible players
     return false;
   }
 
@@ -799,8 +802,7 @@ export class TurnSevenLogic implements IGameLogic {
     const drawer = players[drawerIdx];
 
     switch (rank) {
-      case 'Lock':
-      case 'Freeze': {
+      case 'Lock': {
         // Queue for user targeting
         drawer.reservedActions = drawer.reservedActions || [];
         drawer.reservedActions.push({ ...card, isFaceUp: true });
@@ -818,8 +820,7 @@ export class TurnSevenLogic implements IGameLogic {
         drawer.pendingImmediateActionIds.push(card.id);
         break;
       }
-      case 'LifeSaver':
-      case 'SecondChance': {
+      case 'LifeSaver': {
         // If drawer doesn't have one, keep it.
         if (!drawer.hasLifeSaver) {
              drawer.hasLifeSaver = true;
@@ -861,7 +862,7 @@ export class TurnSevenLogic implements IGameLogic {
     }
 
     // Find first active player with empty hand (and no reserved actions that count as "having cards"?)
-    // Actually, if they have reserved actions (like a queued Freeze), they technically have a card.
+    // Actually, if they have reserved actions (like a queued Lock), they technically have a card.
     // But if they just resolved it (played it), they might have 0 cards again.
     // So we check for empty hand AND empty reserved actions.
     const playerIndex = state.players.findIndex(p => p.isActive && p.hand.length === 0 && (!p.reservedActions || p.reservedActions.length === 0));

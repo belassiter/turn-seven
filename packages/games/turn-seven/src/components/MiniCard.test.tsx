@@ -22,14 +22,14 @@ describe('MiniCard', () => {
     expect(screen.getByText('T3')).toBeDefined();
   });
 
-  it('abbreviates Freeze/Lock to lock emoji', () => {
-    const card: CardModel = { id: '3', rank: 'Freeze', suit: 'action' };
+  it('abbreviates Lock to lock emoji', () => {
+    const card: CardModel = { id: '3', rank: 'Lock', suit: 'action' };
     render(<MiniCard card={card} />);
     expect(screen.getByText('🔒')).toBeDefined();
   });
 
-  it('abbreviates Second Chance/Life Saver to ring-buoy emoji', () => {
-    const card: CardModel = { id: '4', rank: 'Second Chance', suit: 'action' };
+  it('abbreviates Life Saver to ring-buoy emoji', () => {
+    const card: CardModel = { id: '4', rank: 'Life Saver', suit: 'action' };
     render(<MiniCard card={card} />);
     expect(screen.getByText('🛟')).toBeDefined();
   });

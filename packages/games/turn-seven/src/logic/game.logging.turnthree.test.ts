@@ -48,7 +48,7 @@ describe('Turn Three Logging', () => {
   });
 
   it('logs chained action execution', () => {
-    // P1 plays Turn Three on P2. P2 reveals Freeze. P2 plays Freeze on P1.
+    // P1 plays Turn Three on P2. P2 reveals Lock. P2 plays Lock on P1.
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], isActive: true, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] },
@@ -68,11 +68,11 @@ describe('Turn Three Logging', () => {
     let next = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
     expect(next.previousTurnLog).toBe('P1 played Turn Three on P2.');
     
-    // P2 should have pending Freeze
-    const freezeId = next.players[1].pendingImmediateActionIds![0];
+    // P2 should have pending Lock
+    const lockId = next.players[1].pendingImmediateActionIds![0];
 
-    // 2. P2 plays Freeze on P1
-    next = logic.performAction(next, { type: 'PLAY_ACTION', payload: { actorId: 'p2', cardId: freezeId, targetId: 'p1' } });
+    // 2. P2 plays Lock on P1
+    next = logic.performAction(next, { type: 'PLAY_ACTION', payload: { actorId: 'p2', cardId: lockId, targetId: 'p1' } });
     expect(next.previousTurnLog).toBe('P2 played Lock on P1.');
   });
 

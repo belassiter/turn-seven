@@ -14,7 +14,7 @@ describe('Action card behavior', () => {
   const logic = new TurnSevenLogic();
   const testLogic = new TestableTurnSevenLogic();
 
-  it('plays Freeze against target and forces them to stay', () => {
+  it('plays Lock against target and forces them to stay', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true }] as any },
@@ -32,7 +32,7 @@ describe('Action card behavior', () => {
     expect(p2.isActive).toBe(false);
   });
 
-  it('plays SecondChance to give a target second chance', () => {
+  it('plays LifeSaver to give a target a Life Saver', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a2', suit: 'action', rank: 'LifeSaver', isFaceUp: true }] as any },
@@ -49,7 +49,7 @@ describe('Action card behavior', () => {
     expect(p2.hasLifeSaver).toBe(true);
   });
 
-  it('TurnThree forces target to draw up to 3 cards and honors SecondChance', () => {
+  it('TurnThree forces target to draw up to 3 cards and honors Life Saver', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a3', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
@@ -75,7 +75,7 @@ describe('Action card behavior', () => {
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false },
       ],
       currentPlayerId: 'p1',
-      // Deck has a Freeze card on top
+      // Deck has a Lock card on top
       deck: [{ id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false } as any],
       discardPile: [],
       gamePhase: 'playing'
@@ -84,8 +84,8 @@ describe('Action card behavior', () => {
     const after = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
     const p2 = after.players.find(p => p.id === 'p2')!;
     
-    // Should have the Freeze card in hand AND reservedActions
-    // Hand has 2 cards: TurnThree (played) + Freeze (revealed)
+    // Should have the Lock card in hand AND reservedActions
+    // Hand has 2 cards: TurnThree (played) + Lock (revealed)
     expect(p2.hand).toHaveLength(2);
     expect(p2.hand.some((c: any) => c.rank === 'Lock')).toBe(true);
     expect(p2.hand.some((c: any) => c.rank === 'TurnThree')).toBe(true);
@@ -93,10 +93,10 @@ describe('Action card behavior', () => {
     expect(p2.reservedActions![0].rank).toBe('Lock');
   });
 
-  it('SecondChance passes to next eligible player if target already has one', () => {
+  it('Life Saver passes to next eligible player if target already has one', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'LifeSaver', isFaceUp: true }] as any },
+        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true, reservedActions: [{ id: 'a1', suit: 'action', rank: 'LifeSaver', isFaceUp: true }] as any },
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true }, // Already has one
         { id: 'p3', name: 'P3', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: false }, // Needs one
       ],
@@ -114,7 +114,33 @@ describe('Action card behavior', () => {
     expect(p3.hasLifeSaver).toBe(true); // Received the passed one
   });
 
-  it('resolveActionOnDeal: Freeze queues action for drawer', () => {
+  it('Life Saver is discarded if no eligible player exists', () => {
+    const state: GameState = {
+      players: [
+        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true, reservedActions: [{ id: 'a1', suit: 'action', rank: 'LifeSaver', isFaceUp: true }] as any },
+        { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true }, // Already has one
+        { id: 'p3', name: 'P3', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true }, // Already has one
+      ],
+      currentPlayerId: 'p1',
+      deck: [],
+      discardPile: [],
+      gamePhase: 'playing'
+    } as any;
+
+    const after = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
+
+    // No change to p2/p3 -- they still have LifeSaver
+    const p2 = after.players.find(p => p.id === 'p2')!;
+    const p3 = after.players.find(p => p.id === 'p3')!;
+    expect(p2.hasLifeSaver).toBe(true);
+    expect(p3.hasLifeSaver).toBe(true);
+
+    // The LifeSaver card should be on the discard pile
+    
+    expect(after.discardPile.some((c: any) => c.id === 'a1')).toBe(true);
+  });
+
+  it('resolveActionOnDeal: Lock queues action for drawer', () => {
     const players = [
       { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, reservedActions: [], pendingImmediateActionIds: [] },
       { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true },
@@ -122,14 +148,14 @@ describe('Action card behavior', () => {
     const deck: any[] = [];
     const freezeCard = { id: 'a1', suit: 'action', rank: 'Lock' };
 
-    // P1 draws Freeze.
+    // P1 draws Lock.
     testLogic.invokeResolveActionOnDeal(players, 0, freezeCard, deck);
 
     // P1 should have pending action
     expect(players[0].pendingImmediateActionIds).toContain('a1');
     expect(players[0].reservedActions).toHaveLength(1);
     
-    // P2 should NOT be frozen
+    // P2 should NOT be locked
     expect(players[1].hasStayed).toBe(false);
   });
 
@@ -207,7 +233,7 @@ describe('Action card behavior', () => {
       gamePhase: 'playing'
     } as any;
 
-    // 1. HIT to draw Freeze
+    // 1. HIT to draw Lock
     let after = logic.performAction(state, { type: 'HIT' });
     let p1 = after.players[0];
     expect(p1.reservedActions).toHaveLength(1);
@@ -237,7 +263,7 @@ describe('Action card behavior', () => {
     after = logic.performAction(after, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p1' } });
     p1 = after.players[0];
     expect(p1.pendingImmediateActionIds).not.toContain('a1');
-    // Since p1 targeted themselves with Freeze, they stayed.
+    // Since p1 targeted themselves with Lock, they stayed.
     expect(p1.hasStayed).toBe(true);
   });
 });

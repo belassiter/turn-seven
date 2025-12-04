@@ -8,9 +8,9 @@ describe('Chained Action Resolution', () => {
   it('queues and resolves chained actions correctly', () => {
     // Setup: P1, P2, P3.
     // P1 plays Turn Three on P2.
-    // P2 draws: 8, Freeze, 9.
-    // P2 must then resolve Freeze.
-    // After Freeze is resolved, turn should pass to P2 (player after P1).
+    // P2 draws: 8, Lock, 9.
+    // P2 must then resolve Lock.
+    // After Lock is resolved, turn should pass to P2 (player after P1).
     
     const state: GameState = {
       players: [
@@ -19,7 +19,7 @@ describe('Chained Action Resolution', () => {
         { id: 'p3', name: 'P3', hand: [], isActive: true },
       ],
       currentPlayerId: 'p1',
-      // Deck: 9, Freeze, 8 (popped in reverse: 8, Freeze, 9)
+      // Deck: 9, Lock, 8 (popped in reverse: 8, Lock, 9)
       deck: [
         { id: 'n9', suit: 'number', rank: '9', isFaceUp: false },
         { id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false },
@@ -38,15 +38,15 @@ describe('Chained Action Resolution', () => {
     const p2 = nextState.players[1];
     
     // P2 should have drawn 3 cards
-    expect(p2.hand).toHaveLength(4); // TurnThree + 8 + Freeze + 9
+    expect(p2.hand).toHaveLength(4); // TurnThree + 8 + Lock + 9
     
-    // P2 should have pending action (Freeze)
+    // P2 should have pending action (Lock)
     expect(p2.pendingImmediateActionIds).toContain('a2');
     
-    // Current player should be P2 (to resolve Freeze)
+    // Current player should be P2 (to resolve Lock)
     expect(nextState.currentPlayerId).toBe('p2');
     
-    // 2. P2 resolves Freeze on P3
+    // 2. P2 resolves Lock on P3
     nextState = logic.performAction(nextState, {
       type: 'PLAY_ACTION',
       payload: { actorId: 'p2', cardId: 'a2', targetId: 'p3' }

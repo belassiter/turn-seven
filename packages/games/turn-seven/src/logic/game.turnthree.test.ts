@@ -5,7 +5,7 @@ import type { GameState } from '@turn-seven/engine';
 describe('Turn Three Edge Cases', () => {
   const logic = new TurnSevenLogic();
 
-  it('Turn Three draws a Freeze card: added to reserved, not resolved immediately', () => {
+  it('Turn Three draws a Lock card: added to reserved, not resolved immediately', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
@@ -25,14 +25,14 @@ describe('Turn Three Edge Cases', () => {
     const after = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
     const p2 = after.players.find((p: any) => p.id === 'p2')!;
 
-    // P2 should have 4 cards: TurnThree (played on them), Freeze, 5, 6
+    // P2 should have 4 cards: TurnThree (played on them), Lock, 5, 6
     expect(p2.hand).toHaveLength(4);
     
-    // Freeze should be in reservedActions
+    // Lock should be in reservedActions
     expect(p2.reservedActions).toHaveLength(1);
     expect(p2.reservedActions![0].rank).toBe('Lock');
 
-    // P2 should NOT be stayed (Freeze was not resolved)
+    // P2 should NOT be stayed (Lock was not resolved)
     expect(p2.hasStayed).toBe(false);
     expect(p2.isActive).toBe(true);
   });

@@ -121,9 +121,9 @@ describe('TurnSevenGame component', () => {
     expect(screen.queryByText(/Turn 7/)).toBeNull();
   });
 
-  it('handles Freeze assigned during initial deal (UI-level)', () => {
+  it('handles Lock assigned during initial deal (UI-level)', () => {
     // MIN_PLAYERS is 3 so we test a 3-player initial deal
-    // Stack (top to bottom): Freeze (P1->P2), 5 (P1 replacement), 6 (P2 initial)
+    // Stack (top to bottom): Lock (P1->P2), 5 (P1 replacement), 6 (P2 initial)
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
@@ -136,7 +136,7 @@ describe('TurnSevenGame component', () => {
     const playerRows = container.querySelectorAll('.player-row');
     expect(playerRows.length).toBeGreaterThanOrEqual(2);
 
-    // Player 1 (index 0) should have the Freeze card pending
+    // Player 1 (index 0) should have the Lock card pending
     // And should see targeting UI (e.g. "Choose a target")
     // We simulate clicking Player 2 to target them.
     
@@ -146,19 +146,19 @@ describe('TurnSevenGame component', () => {
     fireEvent.click(player2InSidebar);
 
     // Now Player 2 should be locked
-    // Player 2 (index 1) should only have the Freeze card (1 card) and be frozen
+    // Player 2 (index 1) should only have the Lock card (1 card) and be locked
     // In the sidebar, we check for mini-cards
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
     expect(p2MiniCards).toHaveLength(1);
     
-    // Check for frozen icon in the sidebar row
+    // Check for locked icon in the sidebar row
     const p2Status = playerRows[1].querySelector('.player-status-icons');
     expect(p2Status?.textContent).toContain('🔒');
   });
 
   it('handles TurnThree initial-deal chain (UI-level)', () => {
     // 3-player stack top->bottom:
-    // TurnThree (P1->P2), 8, Freeze, 9, 5 (P1 replacement), 6 (P2 initial)
+    // TurnThree (P1->P2), 8, Lock, 9, 5 (P1 replacement), 6 (P2 initial)
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
@@ -181,7 +181,7 @@ describe('TurnSevenGame component', () => {
 
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
-    // Expect Player 2 to have TurnThree + 8 + Freeze + 9 (4 cards)
+    // Expect Player 2 to have TurnThree + 8 + Lock + 9 (4 cards)
     expect(p2MiniCards).toHaveLength(4);
     const ranks = Array.from(p2MiniCards).map(c => c.textContent || '');
     // normalize whitespace when checking for 'TurnThree' because the card renderer
@@ -194,7 +194,7 @@ describe('TurnSevenGame component', () => {
   });
 
   it('pending-action UI allows actor to target themselves', () => {
-    // Similar to Freeze initial deal test but actor will target themselves
+    // Similar to Lock initial deal test but actor will target themselves
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
@@ -204,7 +204,7 @@ describe('TurnSevenGame component', () => {
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
-    // Actor (Player 1) should have a pending Freeze and see targeting UI
+    // Actor (Player 1) should have a pending Lock and see targeting UI
     // Choose Player 1 from the sidebar (actor should be able to self-target via sidebar)
     const sidebar3 = container.querySelector('.player-sidebar');
     const player1InSidebar = within(sidebar3 as Element).getByText(/Player 1/i);

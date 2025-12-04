@@ -138,8 +138,8 @@ describe('Round Termination Scenarios', () => {
     // P2 active.
     state.currentPlayerId = 'p2';
 
-    // P2 plays Freeze on themselves (or maybe P1 played it earlier? No, P1 is inactive).
-    // Let's say P2 draws Freeze and targets themselves (Case 13: must assign to self if only one left).
+    // P2 plays Lock on themselves (or maybe P1 played it earlier? No, P1 is inactive).
+    // Let's say P2 draws Lock and targets themselves (Case 13: must assign to self if only one left).
     // But here we simulate PLAY_ACTION directly.
     state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true }];
 
@@ -164,10 +164,10 @@ describe('Round Termination Scenarios', () => {
     state.currentPlayerId = 'p2';
     state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }];
 
-    // Deck: Freeze, 8, 9.
-    // Stack: 9, 8, Freeze.
-    // P2 draws Freeze (queued), 8, 9.
-    // Then Freeze resolves on P2 (since P2 is only active player).
+    // Deck: Lock, 8, 9.
+    // Stack: 9, 8, Lock.
+    // P2 draws Lock (queued), 8, 9.
+    // Then Lock resolves on P2 (since P2 is only active player).
     state.deck = [
       { id: 'n9', suit: 'number', rank: '9', isFaceUp: false },
       { id: 'n8', suit: 'number', rank: '8', isFaceUp: false },
@@ -180,12 +180,12 @@ describe('Round Termination Scenarios', () => {
       payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' } 
     });
 
-    // P2 should have drawn Freeze, 8, 9.
-    // Freeze should be in pendingImmediateActionIds.
+    // P2 should have drawn Lock, 8, 9.
+    // Lock should be in pendingImmediateActionIds.
     expect(nextState.players[1].pendingImmediateActionIds).toContain('a2');
     expect(nextState.gamePhase).toBe('playing'); // Not ended yet, pending action
 
-    // 2. Resolve Freeze (P2 targets P2)
+    // 2. Resolve Lock (P2 targets P2)
     nextState = logic.performAction(nextState, {
       type: 'PLAY_ACTION',
       payload: { actorId: 'p2', cardId: 'a2', targetId: 'p2' }

@@ -61,7 +61,7 @@ The work will be divided between building the engine and implementing the game.
 
 3.  **Advanced Rules (Completed):**
     - [x] **Turn Seven:** Implement the logic for `+` and `x2` cards.
-    - [x] **Turn Seven:** Implement the logic for all remaining action cards (Freeze, Turn Three, Second Chance).
+    - [x] **Turn Seven:** Implement the logic for all remaining action cards (Lock, Turn Three, Life Saver).
     - [x] **Turn Seven:** Implement "Instant Win" (7 unique cards) condition.
     - [x] **Turn Seven:** Implement immediate resolution for Action cards drawn via HIT.
 
@@ -84,11 +84,11 @@ The work will be divided between building the engine and implementing the game.
 ### Fix Card Text Truncation
 - [x] Refactor `Card.tsx` to use dynamic font scaling instead of static `compact-label` class.
 - [x] Remove `compact-label` styles from `styles.css` as they will be obsolete.
-- [x] Verify "Turn Three" and "Second Chance" fit correctly within the card boundaries without ellipsis.
+- [x] Verify "Turn Three" and "Life Saver" fit correctly within the card boundaries without ellipsis.
 - [x] Ensure Action card text is split onto two lines (e.g., "Turn\nThree").
 
 ### Action Card Logic & Tests
-- [x] Add unit tests for action card behavior (`Freeze`, `TurnThree`, `SecondChance`).
+- [x] Add unit tests for action card behavior (`Lock`, `TurnThree`, `LifeSaver`).
 - [x] Fix bug where revealed action cards were not added to `reservedActions`.
 - [x] Ensure number cards retain large font size (fixed regression).
 - [x] Implement immediate round end for "Turn Three" 7-unique bonus.

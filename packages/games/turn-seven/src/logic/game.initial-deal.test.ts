@@ -21,7 +21,7 @@ describe('Initial Deal Edge Cases', () => {
   };
 
   it('handles Lock drawn on initial deal', () => {
-    // Setup: P1 draws Freeze.
+    // Setup: P1 draws Lock.
     // Should pause deal and wait for P1 to target.
     
     const restore = mockDeck([
@@ -47,9 +47,9 @@ describe('Initial Deal Edge Cases', () => {
     const p1 = nextState.players[0];
     const p2 = nextState.players[1];
 
-    // P1 should have Freeze pending
+    // P1 should have Lock pending
     expect(p1.pendingImmediateActionIds).toContain('a1');
-    // P1 should have Freeze in hand/reserved
+    // P1 should have Lock in hand/reserved
     expect(p1.hand.some(c => c.id === 'a1') || p1.reservedActions?.some(c => c.id === 'a1')).toBe(true);
     
     // Deal should be paused, so P1 hasn't drawn replacement '5' yet

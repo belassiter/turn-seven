@@ -17,7 +17,7 @@ export function computeBustProbability(
   const numberRanksInHand = new Set<string>();
   let hasLifeSaver = false;
   for (const c of hand) {
-    if (c.suit === 'action' && (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance')) {
+    if (c.suit === 'action' && String(c.rank) === 'LifeSaver') {
       hasLifeSaver = true;
     }
     if (!c.suit || c.suit === 'number') {
@@ -25,7 +25,7 @@ export function computeBustProbability(
     }
   }
 
-  // If a player has a Second Chance, they cannot bust on the next duplicate — probability is 0.
+  // If a player has a Life Saver, they cannot bust on the next duplicate — probability is 0.
   if (hasLifeSaver) return 0;
 
   // Denominator: consider the full remaining deck size (per requested behavior)
@@ -68,7 +68,7 @@ export function computeBustProbability(
   // Returns probability (0..1) that at least one bust occurs during these draws.
   // (turnThreeCount already computed above)
 
-  function probBustSequential(currentHandSet: Set<string>, currentDeck: CardModel[], hasSC: boolean, queue: number, remainingTurnThrees: number): number {
+  function probBustSequential(currentHandSet: Set<string>, currentDeck: CardModel[], hasLifeSaverFlag: boolean, queue: number, remainingTurnThrees: number): number {
     if (queue <= 0) return 0;
     if (currentDeck.length === 0) return 0;
 
@@ -81,33 +81,33 @@ export function computeBustProbability(
 
       if (!c.suit || c.suit === 'number') {
         const r = String(c.rank);
-        if (currentHandSet.has(r) && !hasSC) {
+        if (currentHandSet.has(r) && !hasLifeSaverFlag) {
           // immediate bust
           prob += p * 1;
           continue;
         }
 
         // otherwise, update hand (if this rank not present) and second chance (consumed on duplicate)
-        const nextHasSC = hasSC && currentHandSet.has(r) ? false : hasSC;
+        const nextHasLifeSaver = hasLifeSaverFlag && currentHandSet.has(r) ? false : hasLifeSaverFlag;
         const nextHand = new Set(currentHandSet);
         if (!nextHand.has(r)) nextHand.add(r);
 
-        prob += p * probBustSequential(nextHand, nextDeck, nextHasSC, queue - 1, remainingTurnThrees);
+        prob += p * probBustSequential(nextHand, nextDeck, nextHasLifeSaver, queue - 1, remainingTurnThrees);
       } else if (c.suit === 'action') {
         const rank = String(c.rank);
         if (rank === 'TurnThree' && remainingTurnThrees > 0) {
           // This consumes one TurnThree and adds 3 draws to the queue (we consumed 1 already)
-          prob += p * probBustSequential(currentHandSet, nextDeck, hasSC, queue - 1 + 3, remainingTurnThrees - 1);
-        } else if (rank === 'LifeSaver' || rank === 'SecondChance') {
+          prob += p * probBustSequential(currentHandSet, nextDeck, hasLifeSaverFlag, queue - 1 + 3, remainingTurnThrees - 1);
+        } else if (rank === 'LifeSaver') {
           // Acquire second chance immediately for subsequent draws
           prob += p * probBustSequential(currentHandSet, nextDeck, true, queue - 1, remainingTurnThrees);
         } else {
           // other action cards or exhausted TurnThree pool — non-busting, just continue
-          prob += p * probBustSequential(currentHandSet, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+          prob += p * probBustSequential(currentHandSet, nextDeck, hasLifeSaverFlag, queue - 1, remainingTurnThrees);
         }
       } else {
         // modifier cards — do not bust
-        prob += p * probBustSequential(currentHandSet, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+        prob += p * probBustSequential(currentHandSet, nextDeck, hasLifeSaverFlag, queue - 1, remainingTurnThrees);
       }
     }
 
@@ -130,9 +130,9 @@ export function computeHitExpectation(
 
   // computeHandScore is exported and used below
 
-  // shortcut: if player has SecondChance already, no busts on duplicates => we can compute expected score simply
-  const hasSCInitial = hand.some(c => c.suit === 'action' && (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance'));
-  if (hasSCInitial) {
+  // shortcut: if player has a Life Saver already, no busts on duplicates => we can compute expected score simply
+  const hasLifeSaverInitial = hand.some(c => c.suit === 'action' && String(c.rank) === 'LifeSaver');
+  if (hasLifeSaverInitial) {
     // simply average final scores across all deck draws, ignoring busts (none because of SC)
     let expected = 0;
     let turn7Count = 0;
@@ -145,7 +145,7 @@ export function computeHitExpectation(
         nextHand.push(c);
       } else if (c.suit === 'action') {
         // if second chance drawn it's kept; otherwise action cards don't change score
-        if (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') nextHand.push(c);
+        if (String(c.rank) === 'LifeSaver') nextHand.push(c);
       }
 
       const score = computeHandScore(nextHand);
@@ -184,10 +184,10 @@ export function computeHitExpectation(
         const score = computeHandScore(newHand);
         expected += p * score;
       } else if (c.suit === 'action') {
-        // Treat action cards as non-busting. SecondChance if kept matters, but for simplicity
-        // if drawing SecondChance and player doesn't have one, they keep it and turn ends — no immediate score change
+        // Treat action cards as non-busting. LifeSaver if kept matters, but for simplicity
+        // if drawing LifeSaver and player doesn't have one, they keep it and turn ends — no immediate score change
         const newHand = [...hand];
-        if ((String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') && !hand.some(h => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'))) {
+        if (String(c.rank) === 'LifeSaver' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'LifeSaver')) {
           newHand.push(c);
         }
         const score = computeHandScore(newHand);
@@ -229,7 +229,7 @@ export function computeHitExpectation(
         expected += p * score;
       } else if (c.suit === 'action') {
         const newHand = [...hand];
-        if ((String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') && !hand.some(h => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'))) {
+        if (String(c.rank) === 'LifeSaver' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'LifeSaver')) {
           newHand.push(c);
         }
         const score = computeHandScore(newHand);
@@ -240,7 +240,7 @@ export function computeHitExpectation(
     return { expectedScore: expected, bustProbability: bust, turn7Probability: turn7 };
   }
 
-  function simulate(currentHand: CardModel[], currentDeck: CardModel[], hasSC: boolean, queue: number, remainingTurnThrees: number): { exp: number; bust: number; turn7: number } {
+  function simulate(currentHand: CardModel[], currentDeck: CardModel[], hasLifeSaverFlag: boolean, queue: number, remainingTurnThrees: number): { exp: number; bust: number; turn7: number } {
     if (currentDeck.length === 0 || queue <= 0) {
       const sc = computeHandScore(currentHand);
       const isTurn7 = new Set(currentHand.filter(x => !x.suit || x.suit === 'number').map(x => x.rank)).size >= 7 ? 1 : 0;
@@ -260,16 +260,16 @@ export function computeHitExpectation(
         const r = String(c.rank);
         if (currentHand.some(h => (!h.suit || h.suit === 'number') && String(h.rank) === r)) {
           // duplicate
-          if (!hasSC) {
+          if (!hasLifeSaverFlag) {
             totalBust += p; // immediate bust: score 0
             continue;
-          } else {
+            } else {
             // consume second chance: duplicate removed and SC consumed
             // (we don't add the duplicate to hand)
-            const nextHasSC = false;
+              const nextHasLifeSaver = false;
             // consume the SC card from hand if present
-            const nextHand = currentHand.filter(h => !(h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance')));
-            const res = simulate(nextHand, nextDeck, nextHasSC, queue - 1, remainingTurnThrees);
+              const nextHand = currentHand.filter(h => !(h.suit === 'action' && String(h.rank) === 'LifeSaver'));
+            const res = simulate(nextHand, nextDeck, nextHasLifeSaver, queue - 1, remainingTurnThrees);
             totalExp += p * res.exp;
             totalBust += p * res.bust;
             totalTurn7 += p * res.turn7;
@@ -277,7 +277,7 @@ export function computeHitExpectation(
         } else {
           // add number to hand
           const nextHand = [...currentHand, c];
-          const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+          const res = simulate(nextHand, nextDeck, hasLifeSaverFlag, queue - 1, remainingTurnThrees);
           totalExp += p * res.exp;
           totalBust += p * res.bust;
           totalTurn7 += p * res.turn7;
@@ -286,11 +286,11 @@ export function computeHitExpectation(
         const rank = String(c.rank);
         if (rank === 'TurnThree' && remainingTurnThrees > 0) {
           // consume one TurnThree; queue expands by 3 draws (we've consumed 1 already)
-          const res = simulate(currentHand, nextDeck, hasSC, queue - 1 + 3, remainingTurnThrees - 1);
+          const res = simulate(currentHand, nextDeck, hasLifeSaverFlag, queue - 1 + 3, remainingTurnThrees - 1);
           totalExp += p * res.exp;
           totalBust += p * res.bust;
           totalTurn7 += p * res.turn7;
-        } else if (rank === 'SecondChance') {
+        } else if (rank === 'LifeSaver') {
           // immediate second chance applied
           const nextHand = currentHand.concat(c);
           const res = simulate(nextHand, nextDeck, true, queue - 1, remainingTurnThrees);
@@ -300,7 +300,7 @@ export function computeHitExpectation(
         } else {
           // other action or exhausted TurnThree pool: non-busting, just continue
           const nextHand = currentHand.concat(c);
-          const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+          const res = simulate(nextHand, nextDeck, hasLifeSaverFlag, queue - 1, remainingTurnThrees);
           totalExp += p * res.exp;
           totalBust += p * res.bust;
           totalTurn7 += p * res.turn7;
@@ -308,7 +308,7 @@ export function computeHitExpectation(
       } else {
         // modifier
         const nextHand = [...currentHand, c];
-        const res = simulate(nextHand, nextDeck, hasSC, queue - 1, remainingTurnThrees);
+        const res = simulate(nextHand, nextDeck, hasLifeSaverFlag, queue - 1, remainingTurnThrees);
         totalExp += p * res.exp;
         totalBust += p * res.bust;
         totalTurn7 += p * res.turn7;

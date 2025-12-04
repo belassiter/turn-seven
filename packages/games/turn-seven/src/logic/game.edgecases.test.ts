@@ -46,11 +46,11 @@ describe('Turn Seven Edge Cases', () => {
     playerA.hand = [turnThree];
 
     // Stack deck for C's draw: [Lock, 5, 6] (popped in reverse order)
-    // Deck is a stack, so push 6, then 5, then Freeze
+    // Deck is a stack, so push 6, then 5, then Lock
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5'));
-    const freeze = createCard('Lock', 'action', 'f-1');
-    state.deck.push(freeze);
+    const lock = createCard('Lock', 'action', 'f-1');
+    state.deck.push(lock);
 
     // A plays Turn Three on C
     state = logic.performAction(state, {
@@ -60,7 +60,7 @@ describe('Turn Seven Edge Cases', () => {
 
     // C should now be the current player (to resolve Lock)
     expect(state.currentPlayerId).toBe(playerC.id);
-    expect(state.players[2].pendingImmediateActionIds).toContain(freeze.id);
+    expect(state.players[2].pendingImmediateActionIds).toContain(lock.id);
     
     // Verify turnOrderBaseId is set to A
     expect(state.turnOrderBaseId).toBe(playerA.id);
@@ -68,10 +68,10 @@ describe('Turn Seven Edge Cases', () => {
     // C plays Lock on D
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerC.id, cardId: freeze.id, targetId: playerD.id }
+      payload: { actorId: playerC.id, cardId: lock.id, targetId: playerD.id }
     });
 
-    // D should be frozen
+    // D should be locked
     expect(state.players[3].hasStayed).toBe(true);
 
     // Turn should advance to B (A's neighbor), NOT D's neighbor (which would be A) or C's neighbor (D)
@@ -96,13 +96,13 @@ describe('Turn Seven Edge Cases', () => {
     playerB.hand = [createCard('5', 'number', 'n-5-orig')];
 
     // Stack deck: [6, 5 (duplicate), Lock]
-    // Pop order: Freeze, 5 (duplicate), 6
+    // Pop order: Lock, 5 (duplicate), 6
     // 1. Pop -> Lock (Set aside)
     // 2. Pop -> 5 (Bust!)
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5-dup'));
-    const freeze = createCard('Lock', 'action', 'f-1');
-    state.deck.push(freeze);
+    const lock = createCard('Lock', 'action', 'f-1');
+    state.deck.push(lock);
 
     // A plays Turn Three on B
     state = logic.performAction(state, {
@@ -116,8 +116,8 @@ describe('Turn Seven Edge Cases', () => {
     expect(state.players[1].hasBusted).toBe(true);
 
     // Lock should be in discard pile
-    const discardedFreeze = state.discardPile.find((c: any) => c.id === freeze.id);
-    expect(discardedFreeze).toBeDefined();
+    const discardedLock = state.discardPile.find((c: any) => c.id === lock.id);
+    expect(discardedLock).toBeDefined();
 
     // Turn Three should be in discard pile
     const discardedT3 = state.discardPile.find((c: any) => c.id === turnThree.id);
@@ -230,10 +230,10 @@ describe('Turn Seven Edge Cases', () => {
     expect(cRanks).toContain('9');
   });
 
-  it('Case 16: Multiple Actions (Freeze + Turn Three)', () => {
+  it('Case 16: Multiple Actions (Lock + Turn Three)', () => {
     // A plays Turn Three on B.
-    // B draws Freeze AND Turn Three.
-    // B must resolve them in order (Freeze then Turn Three).
+    // B draws Lock AND Turn Three.
+    // B must resolve them in order (Lock then Turn Three).
     
     const playerA = state.players[0];
     const playerB = state.players[1];
@@ -247,17 +247,17 @@ describe('Turn Seven Edge Cases', () => {
     playerA.reservedActions = [turnThree1];
     playerA.hand = [turnThree1];
 
-    // Stack deck for B: [TurnThree, Freeze, 6]
-    // Pop order: 6, Freeze, TurnThree
+    // Stack deck for B: [TurnThree, Lock, 6]
+    // Pop order: 6, Lock, TurnThree
     // Wait, "revealed actions are set aside".
     // Order of resolution: "Assign in order flipped".
-    // If popped: 6, Freeze, TurnThree.
-    // Freeze is flipped 2nd. TurnThree is flipped 3rd.
-    // So Freeze resolved first, then TurnThree.
+    // If popped: 6, Lock, TurnThree.
+    // Lock is flipped 2nd. TurnThree is flipped 3rd.
+    // So Lock resolved first, then TurnThree.
     
     // Stack:
     // Top -> TurnThree (3rd)
-    //        Freeze (2nd)
+    //        Lock (2nd)
     //        6 (1st)
     // Stack for C (target of T3-2): [7, 8, 9]
     // Pushed FIRST (bottom of stack)
@@ -265,17 +265,17 @@ describe('Turn Seven Edge Cases', () => {
     state.deck.push(createCard('8', 'number', 'n-8'));
     state.deck.push(createCard('7', 'number', 'n-7'));
 
-    // Stack deck for B: [TurnThree, Freeze, 6]
-    // Pop order: 6, Freeze, TurnThree
+    // Stack deck for B: [TurnThree, Lock, 6]
+    // Pop order: 6, Lock, TurnThree
     // Pushed LAST (top of stack)
     const turnThree2 = createCard('TurnThree', 'action', 't3-2');
-    const freeze = createCard('Freeze', 'action', 'f-1');
+    const lock = createCard('Lock', 'action', 'f-1');
     
     // We need to push in REVERSE pop order.
-    // We want pop: 6, Freeze, TurnThree.
-    // So push: TurnThree, Freeze, 6.
+    // We want pop: 6, Lock, TurnThree.
+    // So push: TurnThree, Lock, 6.
     state.deck.push(turnThree2);
-    state.deck.push(freeze);
+    state.deck.push(lock);
     state.deck.push(createCard('6', 'number', 'n-6'));
 
     // A plays Turn Three on B
@@ -284,17 +284,17 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id }
     });
 
-    // B should have pending actions: Freeze, then TurnThree
+    // B should have pending actions: Lock, then TurnThree
     expect(state.currentPlayerId).toBe(playerB.id);
-    expect(state.players[1].pendingImmediateActionIds).toEqual([freeze.id, turnThree2.id]);
+    expect(state.players[1].pendingImmediateActionIds).toEqual([lock.id, turnThree2.id]);
 
-    // B resolves Freeze on C
+    // B resolves Lock on C
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerB.id, cardId: freeze.id, targetId: playerC.id }
+      payload: { actorId: playerB.id, cardId: lock.id, targetId: playerC.id }
     });
 
-    // C is frozen
+    // C is locked
     expect(state.players[2].hasStayed).toBe(true);
 
     // B still has pending TurnThree
@@ -361,7 +361,7 @@ describe('Turn Seven Edge Cases', () => {
     // C should have received the new SC
     expect(state.players[2].hasLifeSaver).toBe(true);
     // Debug output for failing case (helps identify why the card didn't land in hand)
-    // console.log('DEBUG playerC.hand=', state.players[2].hand.map((c:any)=>c.id));
+    // debug logs removed after verification
     expect(state.players[2].hand.some((c: any) => c.id === sc2.id)).toBe(true);
     
     // Turn resumes from A's neighbor -> B
