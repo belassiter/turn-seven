@@ -29,8 +29,8 @@ describe('Turn Seven Edge Cases', () => {
   it('Case 19: Turn order resumes from original actor after complex chain', () => {
     // Setup: A -> B -> C -> D
     // A plays Turn Three on C.
-    // C draws a Freeze.
-    // C plays Freeze on D.
+    // C draws a Lock.
+    // C plays Lock on D.
     // Next turn should be B (A's neighbor).
 
     const playerA = state.players[0];
@@ -45,11 +45,11 @@ describe('Turn Seven Edge Cases', () => {
     playerA.reservedActions = [turnThree];
     playerA.hand = [turnThree];
 
-    // Stack deck for C's draw: [Freeze, 5, 6] (popped in reverse order)
+    // Stack deck for C's draw: [Lock, 5, 6] (popped in reverse order)
     // Deck is a stack, so push 6, then 5, then Freeze
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5'));
-    const freeze = createCard('Freeze', 'action', 'f-1');
+    const freeze = createCard('Lock', 'action', 'f-1');
     state.deck.push(freeze);
 
     // A plays Turn Three on C
@@ -58,14 +58,14 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerC.id }
     });
 
-    // C should now be the current player (to resolve Freeze)
+    // C should now be the current player (to resolve Lock)
     expect(state.currentPlayerId).toBe(playerC.id);
     expect(state.players[2].pendingImmediateActionIds).toContain(freeze.id);
     
     // Verify turnOrderBaseId is set to A
     expect(state.turnOrderBaseId).toBe(playerA.id);
 
-    // C plays Freeze on D
+    // C plays Lock on D
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
       payload: { actorId: playerC.id, cardId: freeze.id, targetId: playerD.id }
@@ -95,13 +95,13 @@ describe('Turn Seven Edge Cases', () => {
     // Give B a 5
     playerB.hand = [createCard('5', 'number', 'n-5-orig')];
 
-    // Stack deck: [6, 5 (duplicate), Freeze]
+    // Stack deck: [6, 5 (duplicate), Lock]
     // Pop order: Freeze, 5 (duplicate), 6
-    // 1. Pop -> Freeze (Set aside)
+    // 1. Pop -> Lock (Set aside)
     // 2. Pop -> 5 (Bust!)
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5-dup'));
-    const freeze = createCard('Freeze', 'action', 'f-1');
+    const freeze = createCard('Lock', 'action', 'f-1');
     state.deck.push(freeze);
 
     // A plays Turn Three on B
@@ -115,7 +115,7 @@ describe('Turn Seven Edge Cases', () => {
     expect(state.players[1].hasBusted).toBe(true);
     expect(state.players[1].hasBusted).toBe(true);
 
-    // Freeze should be in discard pile
+    // Lock should be in discard pile
     const discardedFreeze = state.discardPile.find((c: any) => c.id === freeze.id);
     expect(discardedFreeze).toBeDefined();
 
@@ -147,7 +147,7 @@ describe('Turn Seven Edge Cases', () => {
     // So stack: 6, 5, Second Chance
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5-dup'));
-    const sc = createCard('SecondChance', 'action', 'sc-1');
+    const sc = createCard('LifeSaver', 'action', 'sc-1');
     state.deck.push(sc);
 
     // A plays Turn Three on B
@@ -163,10 +163,10 @@ describe('Turn Seven Edge Cases', () => {
     const ranks = state.players[1].hand.map((c: any) => c.rank);
     expect(ranks).toContain('5');
     expect(ranks).toContain('6');
-    expect(ranks).not.toContain('SecondChance');
+    expect(ranks).not.toContain('LifeSaver');
     
     // Second Chance should be gone (used)
-    expect(state.players[1].hasSecondChance).toBe(false);
+    expect(state.players[1].hasLifeSaver).toBe(false);
   });
 
   it('Case 14: Chained Turn Three (Success)', () => {
@@ -325,7 +325,7 @@ describe('Turn Seven Edge Cases', () => {
     state.currentPlayerId = playerA.id;
     
     // Give B a Second Chance
-    playerB.hasSecondChance = true;
+    playerB.hasLifeSaver = true;
 
     // Give A a Turn Three
     const turnThree = createCard('TurnThree', 'action', 't3-1');
@@ -334,7 +334,7 @@ describe('Turn Seven Edge Cases', () => {
 
     // Stack deck for B: [SC, 5, 6]
     // Pop order: 6, 5, SC
-    const sc2 = createCard('SecondChance', 'action', 'sc-2');
+    const sc2 = createCard('LifeSaver', 'action', 'sc-2');
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5'));
     state.deck.push(sc2);
@@ -346,7 +346,7 @@ describe('Turn Seven Edge Cases', () => {
     });
 
     // B should still have SC (original)
-    expect(state.players[1].hasSecondChance).toBe(true);
+    expect(state.players[1].hasLifeSaver).toBe(true);
     
     // B should have pending action to give SC to someone
     // Because B already has one, the new one is queued for targeting.
@@ -359,7 +359,7 @@ describe('Turn Seven Edge Cases', () => {
     });
 
     // C should have received the new SC
-    expect(state.players[2].hasSecondChance).toBe(true);
+    expect(state.players[2].hasLifeSaver).toBe(true);
     // Debug output for failing case (helps identify why the card didn't land in hand)
     // console.log('DEBUG playerC.hand=', state.players[2].hand.map((c:any)=>c.id));
     expect(state.players[2].hand.some((c: any) => c.id === sc2.id)).toBe(true);

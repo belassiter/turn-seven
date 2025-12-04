@@ -221,7 +221,7 @@ export const TurnSevenGame: React.FC = () => {
               <h2>{currentPlayer.name}'s Turn</h2>
               <div className="current-score">
                 Round Score: {computeHandScore(currentPlayer.hand)}
-                {currentPlayer.isFrozen && <span style={{ marginLeft: 10 }}>❄️ Frozen</span>}
+                {currentPlayer.isLocked && <span style={{ marginLeft: 10 }}>🔒 Locked</span>}
               </div>
             </div>
 
@@ -273,7 +273,7 @@ export const TurnSevenGame: React.FC = () => {
         <div className="overlay-container">
           <div className="overlay-content">
             <h2>Quick Rules</h2>
-            <p>Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number cards to score points. Action cards (Freeze, Turn Three, Second Chance) alter player turns and may require targeting other players. Modifier cards like +X and x2 affect scoring. At the end of each round, players' cards are collected into the discard; the deck is preserved across rounds and reshuffled from discard when needed.</p>
+            <p>Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number cards to score points. Action cards (Lock, Turn Three, Life Saver) alter player turns and may require targeting other players. Modifier cards like +X and x2 affect scoring. At the end of each round, players' cards are collected into the discard; the deck is preserved across rounds and reshuffled from discard when needed.</p>
             <div style={{ marginTop: 16 }}>
               <button className="btn btn-secondary" onClick={() => setShowRules(false)}>Close</button>
             </div>

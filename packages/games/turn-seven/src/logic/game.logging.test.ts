@@ -8,17 +8,17 @@ describe('Game Logging', () => {
   it('logs when a player draws and keeps a Second Chance', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [], isActive: true, hasSecondChance: false },
+        { id: 'p1', name: 'P1', hand: [], isActive: true, hasLifeSaver: false },
         { id: 'p2', name: 'P2', hand: [], isActive: true },
       ],
       currentPlayerId: 'p1',
-      deck: [{ id: 'sc', suit: 'action', rank: 'SecondChance', isFaceUp: false }],
+      deck: [{ id: 'sc', suit: 'action', rank: 'LifeSaver', isFaceUp: false }],
       discardPile: [],
       gamePhase: 'playing'
     } as any;
 
     const next = logic.performAction(state, { type: 'HIT' });
-    expect(next.previousTurnLog).toBe('P1 hit: drew Second Chance.');
+    expect(next.previousTurnLog).toBe('P1 hit: drew Life Saver.');
   });
 
   it('logs when a player hits and busts', () => {
@@ -53,10 +53,10 @@ describe('Game Logging', () => {
     expect(next.previousTurnLog).toBe('P1 stayed.');
   });
 
-  it('logs when a player plays an action (Freeze)', () => {
+  it('logs when a player plays an action (Lock)', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [], isActive: true, reservedActions: [{ id: 'a1', suit: 'action', rank: 'Freeze', isFaceUp: true }] },
+        { id: 'p1', name: 'P1', hand: [], isActive: true, reservedActions: [{ id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true }] },
         { id: 'p2', name: 'P2', hand: [], isActive: true },
       ],
       currentPlayerId: 'p1',
@@ -66,6 +66,6 @@ describe('Game Logging', () => {
     } as any;
 
     const next = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
-    expect(next.previousTurnLog).toBe('P1 played Freeze on P2.');
+    expect(next.previousTurnLog).toBe('P1 played Lock on P2.');
   });
 });

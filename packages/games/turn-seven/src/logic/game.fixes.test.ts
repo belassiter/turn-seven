@@ -8,11 +8,11 @@ describe('Game Logic Fixes', () => {
   it('Second Chance: if player has none, they keep it and turn ends automatically', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasSecondChance: false },
+        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: false },
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false },
       ],
       currentPlayerId: 'p1',
-      deck: [{ id: 'sc1', suit: 'action', rank: 'SecondChance', isFaceUp: false } as any],
+      deck: [{ id: 'sc1', suit: 'action', rank: 'LifeSaver', isFaceUp: false } as any],
       discardPile: [],
       gamePhase: 'playing'
     } as any;
@@ -22,10 +22,10 @@ describe('Game Logic Fixes', () => {
     
     const p1 = after.players.find(p => p.id === 'p1')!;
     
-    // Should have Second Chance
-    expect(p1.hasSecondChance).toBe(true);
+    // Should have Life Saver
+    expect(p1.hasLifeSaver).toBe(true);
     expect(p1.hand).toHaveLength(1);
-    expect(p1.hand[0].rank).toBe('SecondChance');
+    expect(p1.hand[0].rank).toBe('LifeSaver');
     
     // Should NOT have pending actions
     expect(p1.pendingImmediateActionIds).toBeUndefined(); // or empty
@@ -37,11 +37,11 @@ describe('Game Logic Fixes', () => {
   it('Second Chance: if player has one, it becomes pending', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [{ id: 'sc1', suit: 'action', rank: 'SecondChance' }], hasStayed: false, isActive: true, hasBusted: false, hasSecondChance: true },
+        { id: 'p1', name: 'P1', hand: [{ id: 'sc1', suit: 'action', rank: 'LifeSaver' }], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: true },
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false },
       ],
       currentPlayerId: 'p1',
-      deck: [{ id: 'sc2', suit: 'action', rank: 'SecondChance', isFaceUp: false } as any],
+      deck: [{ id: 'sc2', suit: 'action', rank: 'LifeSaver', isFaceUp: false } as any],
       discardPile: [],
       gamePhase: 'playing'
     } as any;
@@ -84,7 +84,7 @@ describe('Game Logic Fixes', () => {
   it('Play Order: Playing an action card ends the turn', () => {
     const state: GameState = {
       players: [
-        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'f1', suit: 'action', rank: 'Freeze' }] as any },
+        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'f1', suit: 'action', rank: 'Lock' }] as any },
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false },
         { id: 'p3', name: 'P3', hand: [], hasStayed: false, isActive: true, hasBusted: false },
       ],

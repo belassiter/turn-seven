@@ -57,7 +57,7 @@ describe('Turn Three Logging', () => {
       currentPlayerId: 'p1',
       deck: [
         { id: 'n1', suit: 'number', rank: '1', isFaceUp: false },
-        { id: 'a2', suit: 'action', rank: 'Freeze', isFaceUp: false },
+        { id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false },
         { id: 'n3', suit: 'number', rank: '3', isFaceUp: false },
       ].reverse(),
       discardPile: [],
@@ -73,7 +73,7 @@ describe('Turn Three Logging', () => {
 
     // 2. P2 plays Freeze on P1
     next = logic.performAction(next, { type: 'PLAY_ACTION', payload: { actorId: 'p2', cardId: freezeId, targetId: 'p1' } });
-    expect(next.previousTurnLog).toBe('P2 played Freeze on P1.');
+    expect(next.previousTurnLog).toBe('P2 played Lock on P1.');
   });
 
   it('logs Turn Three resulting in Turn 7', () => {

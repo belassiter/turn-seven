@@ -6,8 +6,8 @@ describe('Discard & shuffle behavior', () => {
     const logic = new TurnSevenLogic();
     const state: any = {
       players: [
-        { id: 'p1', name: 'P1', hand: [{ id: 'a', rank: '1' }], reservedActions: [{ id: 'r1', rank: 'Freeze' }], hasSecondChance: true, totalScore: 10 },
-        { id: 'p2', name: 'P2', hand: [{ id: 'b', rank: '2' }], reservedActions: [], hasSecondChance: false, totalScore: 20 }
+        { id: 'p1', name: 'P1', hand: [{ id: 'a', rank: '1' }], reservedActions: [{ id: 'r1', rank: 'Lock' }], hasLifeSaver: true, totalScore: 10 },
+        { id: 'p2', name: 'P2', hand: [{ id: 'b', rank: '2' }], reservedActions: [], hasLifeSaver: false, totalScore: 20 }
       ],
       deck: [{ id: 'd1', suit: 'number', rank: '3', isFaceUp: false }],
       discardPile: [{ id: 'old', rank: '0', suit: 'number' }],
@@ -33,7 +33,7 @@ describe('Discard & shuffle behavior', () => {
     expect(p2HandIds).not.toContain('b');
     // Players should also have no reserved actions or second chance carried over
     expect(next.players[0].reservedActions).toHaveLength(0);
-    expect(next.players[0].hasSecondChance).toBe(false);
+    expect(next.players[0].hasLifeSaver).toBe(false);
   });
 
   it('draw reshuffles discard into deck when deck is empty mid-round', () => {

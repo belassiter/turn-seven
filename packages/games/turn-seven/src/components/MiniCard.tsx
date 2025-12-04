@@ -17,8 +17,8 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
     // Support both spaced "Turn Three" and camelcase "TurnThree" forms used in tests
     if (displayRank === 'Turn Three') displayRank = 'T3';
     else if (displayRank === 'TurnThree') displayRank = 'T3';
-    else if (displayRank === 'Freeze') displayRank = 'F';
-    else if (displayRank === 'Second Chance') displayRank = '2C';
+    else if (displayRank === 'Freeze' || displayRank === 'Lock') displayRank = '🔒';
+    else if (displayRank === 'Second Chance' || displayRank === 'SecondChance' || displayRank === 'LifeSaver' || displayRank === 'Life Saver') displayRank = '🛟';
     else if (displayRank === 'Double Down') displayRank = 'x2'; // Assuming this exists or similar
     else {
       // Fallback: First letter

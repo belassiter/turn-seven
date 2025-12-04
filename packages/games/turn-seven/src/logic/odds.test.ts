@@ -17,7 +17,7 @@ describe('computeBustProbability', () => {
 
   it('ignores action cards entirely', () => {
     const hand = [numberCard('h1', '5')];
-    const deck = [actionCard('a1', 'Freeze'), actionCard('a2', 'SecondChance')];
+    const deck = [actionCard('a1', 'Freeze'), actionCard('a2', 'LifeSaver')];
 
     // no considered cards => zero
     expect(computeBustProbability(hand as any, deck as any)).toBe(0);
@@ -25,7 +25,7 @@ describe('computeBustProbability', () => {
 
   it('counts action cards in denominator (they are non-busting)', () => {
     const hand = [numberCard('h1', '5')];
-    const deck = [numberCard('d1', '5'), actionCard('a1', 'Freeze'), actionCard('a2', 'SecondChance')];
+    const deck = [numberCard('d1', '5'), actionCard('a1', 'Freeze'), actionCard('a2', 'LifeSaver')];
 
     // denominator should be full deck length (3), bust count 1 (the extra 5) => 1/3
     const p = computeBustProbability(hand as any, deck as any);
@@ -33,7 +33,7 @@ describe('computeBustProbability', () => {
   });
 
   it('respects a Second Chance in hand (no bust on duplicate)', () => {
-    const hand = [numberCard('h1', '5'), actionCard('sc', 'SecondChance')];
+    const hand = [numberCard('h1', '5'), actionCard('sc', 'LifeSaver')];
     const deck = [numberCard('d1', '5'), numberCard('d2', '6')];
 
     // duplicates shouldn't bust because of SecondChance

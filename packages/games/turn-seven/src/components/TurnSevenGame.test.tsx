@@ -127,7 +127,7 @@ describe('TurnSevenGame component', () => {
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
-      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
     ] as any);
 
     const { getByText, container } = render(<TurnSevenGame />);
@@ -145,7 +145,7 @@ describe('TurnSevenGame component', () => {
     const player2InSidebar = within(sidebar as Element).getByText(/Player 2/i);
     fireEvent.click(player2InSidebar);
 
-    // Now Player 2 should be frozen
+    // Now Player 2 should be locked
     // Player 2 (index 1) should only have the Freeze card (1 card) and be frozen
     // In the sidebar, we check for mini-cards
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
@@ -153,7 +153,7 @@ describe('TurnSevenGame component', () => {
     
     // Check for frozen icon in the sidebar row
     const p2Status = playerRows[1].querySelector('.player-status-icons');
-    expect(p2Status?.textContent).toContain('❄️');
+    expect(p2Status?.textContent).toContain('🔒');
   });
 
   it('handles TurnThree initial-deal chain (UI-level)', () => {
@@ -163,7 +163,7 @@ describe('TurnSevenGame component', () => {
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
       { id: 'n9', rank: '9', suit: 'number', isFaceUp: false },
-      { id: 'a2', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'a2', rank: 'Lock', suit: 'action', isFaceUp: false },
       { id: 'n8', rank: '8', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'TurnThree', suit: 'action', isFaceUp: false },
     ] as any);
@@ -190,7 +190,7 @@ describe('TurnSevenGame component', () => {
     // The current MiniCard implementation shows `rank`.
     // Accept multiple possible renderings for special card labels: either full text or abbreviated
     expect(ranks.some(t => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
-    expect(ranks.some(t => t.includes('Freeze') || t === 'F')).toBeTruthy();
+    expect(ranks.some(t => t.includes('Lock') || t.includes('🔒') || t === 'F')).toBeTruthy();
   });
 
   it('pending-action UI allows actor to target themselves', () => {
@@ -198,7 +198,7 @@ describe('TurnSevenGame component', () => {
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
-      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
     ] as any);
 
     const { getByText, container } = render(<TurnSevenGame />);
@@ -211,17 +211,17 @@ describe('TurnSevenGame component', () => {
     expect(player1InSidebar).toBeDefined();
     fireEvent.click(player1InSidebar);
 
-    // Now Player 1 should be frozen
+    // Now Player 1 should be locked
     const playerRows = container.querySelectorAll('.player-row');
     const p1Status = playerRows[0].querySelector('.player-status-icons');
-    expect(p1Status?.textContent).toContain('❄️');
+    expect(p1Status?.textContent).toContain('🔒');
   });
 
   it('sidebar shows "(you)" hint when actor is selecting targets', () => {
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
-      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
     ] as any);
 
     const { getByText, container } = render(<TurnSevenGame />);
@@ -242,7 +242,7 @@ describe('TurnSevenGame component', () => {
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
-      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+      { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
     ] as any);
 
     const { getByText, getByTitle } = render(<TurnSevenGame />);

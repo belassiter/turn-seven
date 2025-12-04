@@ -22,7 +22,7 @@ describe('Chained Action Resolution', () => {
       // Deck: 9, Freeze, 8 (popped in reverse: 8, Freeze, 9)
       deck: [
         { id: 'n9', suit: 'number', rank: '9', isFaceUp: false },
-        { id: 'a2', suit: 'action', rank: 'Freeze', isFaceUp: false },
+        { id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false },
         { id: 'n8', suit: 'number', rank: '8', isFaceUp: false },
       ],
       discardPile: [],
@@ -54,8 +54,8 @@ describe('Chained Action Resolution', () => {
 
     const p3 = nextState.players[2];
     
-    // P3 should be frozen
-    expect(p3.isFrozen).toBe(true);
+    // P3 should be locked
+    expect(p3.isLocked).toBe(true);
     expect(p3.isActive).toBe(false);
     
     // Turn should now pass to P2 (player after P1)

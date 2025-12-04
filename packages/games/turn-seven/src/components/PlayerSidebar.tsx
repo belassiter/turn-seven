@@ -51,7 +51,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
           return (
             <div 
               key={player.id} 
-              className={`player-row ${isCurrent ? 'active-turn' : ''} ${isTargetable ? 'targeting-candidate' : ''} ${isInactiveTarget ? 'inactive-target' : ''} ${player.hasBusted ? 'busted' : ''} ${player.isFrozen ? 'frozen' : ''} ${player.hasStayed ? 'stayed' : ''}`}
+              className={`player-row ${isCurrent ? 'active-turn' : ''} ${isTargetable ? 'targeting-candidate' : ''} ${isInactiveTarget ? 'inactive-target' : ''} ${player.hasBusted ? 'busted' : ''} ${player.isLocked ? 'locked' : ''} ${player.hasStayed ? 'stayed' : ''}`}
               onClick={handleClick}
             >
               <div className="player-info">
@@ -67,8 +67,8 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                   <div className="player-status-icons">
                     {player.hasBusted ? (
                       <span title="Busted">💥</span>
-                    ) : player.isFrozen ? (
-                      <span title="Frozen">❄️</span>
+                    ) : player.isLocked ? (
+                      <span title="Locked">🔒</span>
                     ) : player.hasStayed ? (
                       <span title="Stayed">🛑</span>
                     ) : null}

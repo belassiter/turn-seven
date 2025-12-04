@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { TurnSevenLogic } from './game';
 import type { GameState } from '@turn-seven/engine';
 
-describe('Turn Three vs Frozen Player', () => {
+describe('Turn Three vs Locked Player', () => {
   const logic = new TurnSevenLogic();
 
-  it('should not allow targeting a frozen player with Turn Three', () => {
+  it('should not allow targeting a locked player with Turn Three', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
-        { id: 'p2', name: 'P2', hand: [], hasStayed: true, isActive: false, isFrozen: true, hasBusted: false },
+        { id: 'p2', name: 'P2', hand: [], hasStayed: true, isActive: false, isLocked: true, hasBusted: false },
       ],
       currentPlayerId: 'p1',
       deck: [

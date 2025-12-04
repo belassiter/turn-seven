@@ -25,6 +25,17 @@ export const Card: React.FC<CardProps> = ({ card }) => {
     ? labelText.replace(/([a-z])([A-Z])/g, '$1\n$2').replace(/ /g, '\n') 
     : labelText;
 
+  // Map action card labels to supplied images (if available)
+  const actionImageName = (() => {
+    const normalized = labelText.toLowerCase().replace(/\s+/g, '');
+    if (normalized.includes('turnthree') || /t3/.test(normalized)) return '/turn3.png';
+    // support both legacy 'freeze' and new 'lock' rank names
+    if (normalized.includes('lock') || normalized.includes('freeze')) return '/lock.png';
+    // support both LifeSaver and SecondChance names and their short forms
+    if (normalized.includes('lifesaver') || normalized.includes('secondchance') || normalized.includes('2c') || normalized.includes('second')) return '/lifesaver.png';
+    return undefined;
+  })();
+
   const isModifier = normalizedSuit === 'modifier' || labelText.startsWith('+');
   const showOnlyCenter = normalizedSuit === 'number' || isAction || isModifier;
 
@@ -97,7 +108,12 @@ export const Card: React.FC<CardProps> = ({ card }) => {
               className="rank-center" 
               data-testid="rank-center"
             >
-              <span ref={textRef}>{displayLabel}</span>
+              {/* If an image exists for this action, render it centered at 80% width. */}
+              {isAction && actionImageName ? (
+                <img src={actionImageName} alt={labelText} style={{ width: '80%', display: 'block', margin: '0 auto' }} />
+              ) : (
+                <span ref={textRef}>{displayLabel}</span>
+              )}
             </span>
           ) : (
             <>

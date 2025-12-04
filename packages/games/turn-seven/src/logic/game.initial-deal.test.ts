@@ -20,14 +20,14 @@ describe('Initial Deal Edge Cases', () => {
     return () => { (logic as any).createDeck = originalCreateDeck; };
   };
 
-  it('handles Freeze drawn on initial deal', () => {
+  it('handles Lock drawn on initial deal', () => {
     // Setup: P1 draws Freeze.
     // Should pause deal and wait for P1 to target.
     
     const restore = mockDeck([
       { id: 'n6', rank: '6' },
       { id: 'n5', rank: '5' },
-      { id: 'a1', suit: 'action', rank: 'Freeze' },
+      { id: 'a1', suit: 'action', rank: 'Lock' },
     ]);
 
     const state: GameState = {
@@ -55,15 +55,15 @@ describe('Initial Deal Edge Cases', () => {
     // Deal should be paused, so P1 hasn't drawn replacement '5' yet
     expect(p1.hand.some(c => c.rank === '5')).toBe(false);
 
-    // P2 should NOT be frozen yet
-    expect(p2.isFrozen).toBe(false);
+    // P2 should NOT be locked yet
+    expect(p2.isLocked).toBe(false);
     expect(p2.hasStayed).toBe(false);
     
     // P2 should NOT have received '6' yet (deal paused)
     expect(p2.hand).toHaveLength(0);
   });
 
-  it('handles Second Chance drawn on initial deal', () => {
+  it('handles Life Saver drawn on initial deal', () => {
     // Setup: P1 draws Second Chance. Keeps it.
     // Stack:
     // 1. Second Chance (P1)
@@ -71,7 +71,7 @@ describe('Initial Deal Edge Cases', () => {
     
     const restore = mockDeck([
       { id: 'n6', rank: '6' },
-      { id: 'a1', suit: 'action', rank: 'SecondChance' },
+      { id: 'a1', suit: 'action', rank: 'LifeSaver' },
     ]);
 
     const state: GameState = {
@@ -93,8 +93,8 @@ describe('Initial Deal Edge Cases', () => {
 
     // P1 should have Second Chance only
     expect(p1.hand).toHaveLength(1);
-    expect(p1.hand[0].rank).toBe('SecondChance');
-    expect(p1.hasSecondChance).toBe(true);
+    expect(p1.hand[0].rank).toBe('LifeSaver');
+    expect(p1.hasLifeSaver).toBe(true);
 
     // P2 should have '6'
     expect(p2.hand).toHaveLength(1);

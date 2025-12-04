@@ -20,13 +20,13 @@ export class TurnSevenLogic implements IGameLogic {
       name: `Player ${index + 1}`,
       hand: [] as CardModel[],
       hasStayed: false,
-      isFrozen: false,
+      isLocked: false,
       isActive: true,
       hasBusted: false,
       roundScore: 0,
       totalScore: 0,
       pendingImmediateActionIds: [],
-      hasSecondChance: false,
+      hasLifeSaver: false,
     }));
 
     // Deal one card to each player to start, resolving Action cards immediately.
@@ -65,13 +65,13 @@ export class TurnSevenLogic implements IGameLogic {
       name: name || `Player ${index + 1}`,
       hand: [] as CardModel[],
       hasStayed: false,
-      isFrozen: false,
+      isLocked: false,
       isActive: true,
       hasBusted: false,
       roundScore: 0,
       totalScore: 0,
       pendingImmediateActionIds: [],
-      hasSecondChance: false,
+      hasLifeSaver: false,
     }));
 
     // Deal one card to each player and resolve action cards immediately.
@@ -148,14 +148,14 @@ export class TurnSevenLogic implements IGameLogic {
       
       // If it's Freeze or TurnThree, it must be resolved immediately (cannot HIT/STAY until done)
       const rank = String(card.rank);
-      if (rank === 'Freeze' || rank === 'TurnThree') {
+      if (rank === 'Lock' || rank === 'TurnThree') {
         currentPlayer.pendingImmediateActionIds = currentPlayer.pendingImmediateActionIds || [];
         currentPlayer.pendingImmediateActionIds.push(card.id);
-      } else if (rank === 'SecondChance') {
+      } else if (rank === 'LifeSaver') {
         // If player doesn't have one, they keep it automatically and turn ends (advances).
         // If they have one, it becomes pending (must give to someone else).
-        if (!currentPlayer.hasSecondChance) {
-          currentPlayer.hasSecondChance = true;
+        if (!currentPlayer.hasLifeSaver) {
+          currentPlayer.hasLifeSaver = true;
           // Remove from reservedActions since it's being kept as a passive buff, not an active action to play
           currentPlayer.reservedActions = currentPlayer.reservedActions.filter((c: any) => c.id !== card.id);
           
@@ -181,13 +181,13 @@ export class TurnSevenLogic implements IGameLogic {
       currentPlayer.hand.push({ ...card, isFaceUp: true });
       const duplicateCount = currentPlayer.hand.filter((h: any) => (!h.suit || h.suit === 'number') && h.rank === card.rank).length;
       if (duplicateCount > 1) {
-        if (currentPlayer.hasSecondChance) {
+        if (currentPlayer.hasLifeSaver) {
           // consume second chance and discard the duplicate drawn card
           currentPlayer.hand = currentPlayer.hand.filter((h: any) => h.id !== card.id);
           // Also remove the Second Chance card from hand
-          const scIdx = currentPlayer.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'SecondChance');
+          const scIdx = currentPlayer.hand.findIndex((h: any) => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'));
           if (scIdx !== -1) currentPlayer.hand.splice(scIdx, 1);
-          currentPlayer.hasSecondChance = false;
+          currentPlayer.hasLifeSaver = false;
         } else {
           currentPlayer.hasBusted = true;
           currentPlayer.isActive = false;
@@ -301,10 +301,13 @@ export class TurnSevenLogic implements IGameLogic {
     newState.previousTurnLog = log;
 
     switch (rank) {
+      case 'Lock':
+      case 'Lock':
+      case 'Lock':
       case 'Freeze': {
         // target immediately stays and becomes inactive
         target.hasStayed = true;
-        target.isFrozen = true;
+        target.isLocked = true;
         target.isActive = false;
         target.hand.push({ ...card, isFaceUp: true });
         // Playing an action card ends the actor's turn (per user request/interpretation)
@@ -329,13 +332,13 @@ export class TurnSevenLogic implements IGameLogic {
             const duplicateCount = target.hand.filter((h: any) => (!h.suit || h.suit === 'number') && h.rank === next.rank).length;
             target.hand.push({ ...next, isFaceUp: true });
             if (duplicateCount > 0) {
-              if (target.hasSecondChance) {
+              if (target.hasLifeSaver) {
                 // consume second chance and discard the duplicate drawn card
                 target.hand = target.hand.filter((h: any) => h.id !== next.id);
                 // Also remove the Second Chance card from hand
-                const scIdx = target.hand.findIndex((h: any) => h.suit === 'action' && String(h.rank) === 'SecondChance');
+                const scIdx = target.hand.findIndex((h: any) => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'));
                 if (scIdx !== -1) target.hand.splice(scIdx, 1);
-                target.hasSecondChance = false;
+                target.hasLifeSaver = false;
               } else {
                 target.hasBusted = true;
                 target.isActive = false;
@@ -364,9 +367,9 @@ export class TurnSevenLogic implements IGameLogic {
           } else if (next.suit === 'modifier') {
             target.hand.push({ ...next, isFaceUp: true });
           } else if (next.suit === 'action') {
-            if (String(next.rank) === 'SecondChance') {
-              if (!target.hasSecondChance) {
-                target.hasSecondChance = true;
+            if (String(next.rank) === 'LifeSaver' || String(next.rank) === 'SecondChance') {
+              if (!target.hasLifeSaver) {
+                target.hasLifeSaver = true;
                 target.hand.push({ ...next, isFaceUp: true });
               } else {
                 // Queue for targeting
@@ -436,8 +439,9 @@ export class TurnSevenLogic implements IGameLogic {
         newState.previousTurnLog = log;
         break;
       }
+      case 'LifeSaver':
       case 'SecondChance': {
-        this.giveSecondChance(players, targetIndex, card);
+        this.giveLifeSaver(players, targetIndex, card);
         // Playing an action card ends the actor's turn
         if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
            this.advanceTurn(newState);
@@ -682,14 +686,14 @@ export class TurnSevenLogic implements IGameLogic {
       name: p.name,
       hand: [],
       hasStayed: false,
-      isFrozen: false,
+      isLocked: false,
       isActive: true,
       hasBusted: false,
       roundScore: 0,
       totalScore: p.totalScore ?? 0,
       pendingImmediateActionIds: [],
       reservedActions: [],
-      hasSecondChance: false,
+      hasLifeSaver: false,
     }));
 
     // Deal one card to each player (face up). If a player was already dealt a
@@ -729,8 +733,8 @@ export class TurnSevenLogic implements IGameLogic {
       deck.push({ id: `card-${idCounter++}`, suit: 'modifier', rank: mod, isFaceUp: false });
     }
 
-    // Add action cards: Freeze, TurnThree, SecondChance (3 copies each)
-    const actions = ['Freeze', 'TurnThree', 'SecondChance'];
+    // Add action cards: Lock, TurnThree, LifeSaver (3 copies each)
+    const actions = ['Lock', 'TurnThree', 'LifeSaver'];
     for (const action of actions) {
       for (let i = 0; i < 3; i++) {
         deck.push({ id: `card-${idCounter++}`, suit: 'action', rank: action, isFaceUp: false });
@@ -753,18 +757,18 @@ export class TurnSevenLogic implements IGameLogic {
 
   // Helper: give a Second Chance to the player if they don't have one; otherwise pass to next eligible active player.
   // Also places the card in the recipient's hand.
-  private giveSecondChance(players: any[], startIdx: number, card?: CardModel) {
+  private giveLifeSaver(players: any[], startIdx: number, card?: CardModel) {
     const p = players[startIdx];
-    if (!p.hasSecondChance) {
-      p.hasSecondChance = true;
+    if (!p.hasLifeSaver) {
+      p.hasLifeSaver = true;
       if (card) p.hand.push({ ...card, isFaceUp: true });
       return true;
     }
     // find another active player without second chance
     for (let offset = 1; offset < players.length; offset++) {
       const idx = (startIdx + offset) % players.length;
-      if (players[idx].isActive && !players[idx].hasSecondChance) {
-        players[idx].hasSecondChance = true;
+      if (players[idx].isActive && !players[idx].hasLifeSaver) {
+        players[idx].hasLifeSaver = true;
         if (card) players[idx].hand.push({ ...card, isFaceUp: true });
         return true;
       }
@@ -795,6 +799,7 @@ export class TurnSevenLogic implements IGameLogic {
     const drawer = players[drawerIdx];
 
     switch (rank) {
+      case 'Lock':
       case 'Freeze': {
         // Queue for user targeting
         drawer.reservedActions = drawer.reservedActions || [];
@@ -813,10 +818,11 @@ export class TurnSevenLogic implements IGameLogic {
         drawer.pendingImmediateActionIds.push(card.id);
         break;
       }
+      case 'LifeSaver':
       case 'SecondChance': {
         // If drawer doesn't have one, keep it.
-        if (!drawer.hasSecondChance) {
-             drawer.hasSecondChance = true;
+        if (!drawer.hasLifeSaver) {
+             drawer.hasLifeSaver = true;
              drawer.hand.push({ ...card, isFaceUp: true });
         } else {
              // Drawer has one. Must give away.

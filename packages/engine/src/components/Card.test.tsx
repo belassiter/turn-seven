@@ -45,11 +45,10 @@ describe('Card component', () => {
     expect(container.querySelector('.action-card')).toBeTruthy();
     const center = container.querySelector('[data-testid="rank-center"]');
     expect(center).toBeTruthy();
-    // The display label might be split by newline for CamelCase; ensure something from the rank appears
-    expect(center?.textContent).toMatch(/Turn|T3/);
-    const innerAction = center?.querySelector('span') as HTMLElement | null;
-    expect(innerAction).toBeTruthy();
-    expect(innerAction?.style.width).toBe('90%');
+    // The display label now shows an image for TurnThree; ensure the image is present and sized to 80%.
+    const actionImg = center?.querySelector('img') as HTMLImageElement | null;
+    expect(actionImg).toBeTruthy();
+    expect(actionImg?.style.width).toBe('80%');
   });
 
   it('modifier +10 and x2 should also use 90% center width to prevent overflow', () => {

@@ -9,11 +9,11 @@ export interface PlayerModel {
   hand: CardModel[];
   // Optional flags useful for games: whether the player has chosen to stay or is active
   hasStayed?: boolean;
-  isFrozen?: boolean;
+  isLocked?: boolean;
   isActive?: boolean;
   hasBusted?: boolean;
-  // Whether the player is holding a Second Chance action
-  hasSecondChance?: boolean;
+  // Whether the player is holding a Life Saver action
+  hasLifeSaver?: boolean;
   // Action cards held for later play (action cards drawn during play)
   reservedActions?: CardModel[];
   // IDs of action cards that must be resolved immediately (cannot HIT or STAY until resolved)
@@ -44,7 +44,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, 
               {player.hasBusted ? (
                 <span>{` - Busted!`}</span>
               ) : (
-                <span>{` - ${computeHandScore(player.hand)}${player.isFrozen ? ' (Frozen)' : ''}`}</span>
+                <span>{` - ${computeHandScore(player.hand)}${player.isLocked ? ' (Locked)' : ''}`}</span>
               )}
             </h2>
             <PlayerHand

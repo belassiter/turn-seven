@@ -14,13 +14,20 @@ describe('Card label scaling', () => {
     // We no longer use compact-label class
     expect(el && el.classList.contains('compact-label')).toBe(false);
 
-    // The center rank should render the full label (we scale the font-size to fit)
+    // The center rank should render either the label text (for unmapped actions)
+    // or an image for action labels that have dedicated icons (Turn Three -> turn3.png)
     const centerEl = screen.getByTestId('rank-center');
-    const centerText = centerEl?.textContent || '';
-    
-    // Note: we replace spaces with newlines for action cards in display
-    const expectedText = longLabel.replace(/ /g, '\n');
-    expect(centerText).toBe(expectedText);
+    const img = centerEl.querySelector('img') as HTMLImageElement | null;
+    if (img) {
+      // For mapped images (Turn Three, etc.) expect the image to be present and sized by our layout
+      expect(img.src).toContain('turn3.png');
+      expect(img.style.width).toBe('80%');
+    } else {
+      const centerText = centerEl?.textContent || '';
+      // Note: we replace spaces with newlines for action cards in display
+      const expectedText = longLabel.replace(/ /g, '\n');
+      expect(centerText).toBe(expectedText);
+    }
     
     // In JSDOM, layout measurements are 0, so our loop might not run or might behave predictably.
     // Our current implementation checks clientWidth/Height and returns if 0.

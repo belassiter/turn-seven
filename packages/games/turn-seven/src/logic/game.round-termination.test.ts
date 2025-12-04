@@ -12,13 +12,13 @@ describe('Round Termination Scenarios', () => {
       name: `Player ${i + 1}`,
       hand: [],
       hasStayed: false,
-      isFrozen: false,
+      isLocked: false,
       isActive: true,
       hasBusted: false,
       roundScore: 0,
       totalScore: 0,
       pendingImmediateActionIds: [],
-      hasSecondChance: false,
+      hasLifeSaver: false,
     }));
     return {
       players,
@@ -129,7 +129,7 @@ describe('Round Termination Scenarios', () => {
     expect(nextState.gamePhase).toBe('ended');
   });
 
-  it('ends round when last active player is Frozen', () => {
+  it('ends round when last active player is Locked', () => {
     const state = createBaseState(2);
     // P1 stayed
     state.players[0].hasStayed = true;
@@ -141,20 +141,20 @@ describe('Round Termination Scenarios', () => {
     // P2 plays Freeze on themselves (or maybe P1 played it earlier? No, P1 is inactive).
     // Let's say P2 draws Freeze and targets themselves (Case 13: must assign to self if only one left).
     // But here we simulate PLAY_ACTION directly.
-    state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'Freeze', isFaceUp: true }];
+    state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true }];
 
     const nextState = logic.performAction(state, { 
       type: 'PLAY_ACTION', 
       payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' } 
     });
 
-    expect(nextState.players[1].isFrozen).toBe(true);
+    expect(nextState.players[1].isLocked).toBe(true);
     expect(nextState.players[1].hasStayed).toBe(true);
     expect(nextState.players[1].isActive).toBe(false);
     expect(nextState.gamePhase).toBe('ended');
   });
 
-  it('ends round when last active player is Frozen via Turn Three chain', () => {
+  it('ends round when last active player is Locked via Turn Three chain', () => {
     const state = createBaseState(2);
     // P1 stayed
     state.players[0].hasStayed = true;
@@ -171,7 +171,7 @@ describe('Round Termination Scenarios', () => {
     state.deck = [
       { id: 'n9', suit: 'number', rank: '9', isFaceUp: false },
       { id: 'n8', suit: 'number', rank: '8', isFaceUp: false },
-      { id: 'a2', suit: 'action', rank: 'Freeze', isFaceUp: false },
+      { id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false },
     ];
 
     // 1. Play Turn Three
@@ -191,7 +191,7 @@ describe('Round Termination Scenarios', () => {
       payload: { actorId: 'p2', cardId: 'a2', targetId: 'p2' }
     });
 
-    expect(nextState.players[1].isFrozen).toBe(true);
+    expect(nextState.players[1].isLocked).toBe(true);
     expect(nextState.players[1].isActive).toBe(false);
     expect(nextState.gamePhase).toBe('ended');
   });

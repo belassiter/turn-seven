@@ -15,10 +15,10 @@ export function computeBustProbability(
 
   // collect ranks of number cards already in player's hand
   const numberRanksInHand = new Set<string>();
-  let hasSecondChance = false;
+  let hasLifeSaver = false;
   for (const c of hand) {
-    if (c.suit === 'action' && String(c.rank) === 'SecondChance') {
-      hasSecondChance = true;
+    if (c.suit === 'action' && (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance')) {
+      hasLifeSaver = true;
     }
     if (!c.suit || c.suit === 'number') {
       numberRanksInHand.add(String(c.rank));
@@ -26,7 +26,7 @@ export function computeBustProbability(
   }
 
   // If a player has a Second Chance, they cannot bust on the next duplicate — probability is 0.
-  if (hasSecondChance) return 0;
+  if (hasLifeSaver) return 0;
 
   // Denominator: consider the full remaining deck size (per requested behavior)
   // numerator only counts cards that would cause a bust (duplicates of existing number ranks).
@@ -38,7 +38,7 @@ export function computeBustProbability(
     // for now — they remain in the deck and are part of the denominator but do not increase bustCount.
     if (!c.suit || c.suit === 'number') {
       // If the rank already exists in hand and player has no second chance, drawing it will bust
-      if (numberRanksInHand.has(String(c.rank)) && !hasSecondChance) {
+      if (numberRanksInHand.has(String(c.rank)) && !hasLifeSaver) {
         bustCount += 1;
       }
     }
@@ -98,7 +98,7 @@ export function computeBustProbability(
         if (rank === 'TurnThree' && remainingTurnThrees > 0) {
           // This consumes one TurnThree and adds 3 draws to the queue (we consumed 1 already)
           prob += p * probBustSequential(currentHandSet, nextDeck, hasSC, queue - 1 + 3, remainingTurnThrees - 1);
-        } else if (rank === 'SecondChance') {
+        } else if (rank === 'LifeSaver' || rank === 'SecondChance') {
           // Acquire second chance immediately for subsequent draws
           prob += p * probBustSequential(currentHandSet, nextDeck, true, queue - 1, remainingTurnThrees);
         } else {
@@ -131,7 +131,7 @@ export function computeHitExpectation(
   // computeHandScore is exported and used below
 
   // shortcut: if player has SecondChance already, no busts on duplicates => we can compute expected score simply
-  const hasSCInitial = hand.some(c => c.suit === 'action' && String(c.rank) === 'SecondChance');
+  const hasSCInitial = hand.some(c => c.suit === 'action' && (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance'));
   if (hasSCInitial) {
     // simply average final scores across all deck draws, ignoring busts (none because of SC)
     let expected = 0;
@@ -145,7 +145,7 @@ export function computeHitExpectation(
         nextHand.push(c);
       } else if (c.suit === 'action') {
         // if second chance drawn it's kept; otherwise action cards don't change score
-        if (String(c.rank) === 'SecondChance') nextHand.push(c);
+        if (String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') nextHand.push(c);
       }
 
       const score = computeHandScore(nextHand);
@@ -187,7 +187,7 @@ export function computeHitExpectation(
         // Treat action cards as non-busting. SecondChance if kept matters, but for simplicity
         // if drawing SecondChance and player doesn't have one, they keep it and turn ends — no immediate score change
         const newHand = [...hand];
-        if (String(c.rank) === 'SecondChance' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'SecondChance')) {
+        if ((String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') && !hand.some(h => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'))) {
           newHand.push(c);
         }
         const score = computeHandScore(newHand);
@@ -229,7 +229,7 @@ export function computeHitExpectation(
         expected += p * score;
       } else if (c.suit === 'action') {
         const newHand = [...hand];
-        if (String(c.rank) === 'SecondChance' && !hand.some(h => h.suit === 'action' && String(h.rank) === 'SecondChance')) {
+        if ((String(c.rank) === 'LifeSaver' || String(c.rank) === 'SecondChance') && !hand.some(h => h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance'))) {
           newHand.push(c);
         }
         const score = computeHandScore(newHand);
@@ -268,7 +268,7 @@ export function computeHitExpectation(
             // (we don't add the duplicate to hand)
             const nextHasSC = false;
             // consume the SC card from hand if present
-            const nextHand = currentHand.filter(h => !(h.suit === 'action' && String(h.rank) === 'SecondChance'));
+            const nextHand = currentHand.filter(h => !(h.suit === 'action' && (String(h.rank) === 'LifeSaver' || String(h.rank) === 'SecondChance')));
             const res = simulate(nextHand, nextDeck, nextHasSC, queue - 1, remainingTurnThrees);
             totalExp += p * res.exp;
             totalBust += p * res.bust;

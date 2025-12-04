@@ -90,7 +90,7 @@ body, html {
 
 /* Status Coloring */
 .player-row.busted { background-color: rgba(239, 68, 68, 0.15); }
-.player-row.frozen { background-color: rgba(59, 182, 246, 0.15); }
+.player-row.locked { background-color: rgba(59, 182, 246, 0.15); }
 .player-row.stayed { background-color: rgba(107, 114, 128, 0.15); }
 
 .player-row.targeting-candidate { cursor: pointer; }

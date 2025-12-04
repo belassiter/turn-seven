@@ -26,7 +26,7 @@ describe('Round end and startNextRound behavior', () => {
     expect(after.currentPlayerId).toBeNull();
   });
 
-  it('startNextRound resets isFrozen and sets currentPlayerId to first player', () => {
+  it('startNextRound resets isLocked and sets currentPlayerId to first player', () => {
     const logic = new TurnSevenLogic();
     
     // Mock createDeck to return simple number cards to avoid action card side effects (flakiness)

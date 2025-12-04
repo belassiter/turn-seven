@@ -12,11 +12,11 @@ describe('Turn Three Edge Cases', () => {
         { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false },
       ],
       currentPlayerId: 'p1',
-      // Deck: Top is Freeze, then Number 5, then Number 6
+      // Deck: Top is Lock, then Number 5, then Number 6
       deck: [
         { id: 'n2', suit: 'number', rank: '6', isFaceUp: false } as any,
         { id: 'n1', suit: 'number', rank: '5', isFaceUp: false } as any,
-        { id: 'a2', suit: 'action', rank: 'Freeze', isFaceUp: false } as any,
+        { id: 'a2', suit: 'action', rank: 'Lock', isFaceUp: false } as any,
       ],
       discardPile: [],
       gamePhase: 'playing'
@@ -30,7 +30,7 @@ describe('Turn Three Edge Cases', () => {
     
     // Freeze should be in reservedActions
     expect(p2.reservedActions).toHaveLength(1);
-    expect(p2.reservedActions![0].rank).toBe('Freeze');
+    expect(p2.reservedActions![0].rank).toBe('Lock');
 
     // P2 should NOT be stayed (Freeze was not resolved)
     expect(p2.hasStayed).toBe(false);
@@ -73,14 +73,14 @@ describe('Turn Three Edge Cases', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
-        { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasSecondChance: false },
+        { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: false },
       ],
       currentPlayerId: 'p1',
-      // Deck: Top is SecondChance, then Number 5, then Number 6
+      // Deck: Top is LifeSaver, then Number 5, then Number 6
       deck: [
         { id: 'n2', suit: 'number', rank: '6', isFaceUp: false } as any,
         { id: 'n1', suit: 'number', rank: '5', isFaceUp: false } as any,
-        { id: 'a2', suit: 'action', rank: 'SecondChance', isFaceUp: false } as any,
+        { id: 'a2', suit: 'action', rank: 'LifeSaver', isFaceUp: false } as any,
       ],
       discardPile: [],
       gamePhase: 'playing'
@@ -89,24 +89,24 @@ describe('Turn Three Edge Cases', () => {
     const after = logic.performAction(state, { type: 'PLAY_ACTION', payload: { actorId: 'p1', cardId: 'a1', targetId: 'p2' } });
     const p2 = after.players.find((p: any) => p.id === 'p2')!;
 
-    // P2 should have Second Chance
-    expect(p2.hasSecondChance).toBe(true);
-    // Hand should contain the Second Chance card
-    expect(p2.hand.some((c: any) => c.rank === 'SecondChance')).toBe(true);
+    // P2 should have Life Saver
+    expect(p2.hasLifeSaver).toBe(true);
+    // Hand should contain the Life Saver card
+    expect(p2.hand.some((c: any) => c.rank === 'LifeSaver')).toBe(true);
   });
 
   it('Turn Three draws Second Chance then Duplicate: saves from bust', () => {
     const state: GameState = {
       players: [
         { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, reservedActions: [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }] as any },
-        { id: 'p2', name: 'P2', hand: [{ id: 'n0', suit: 'number', rank: '5', isFaceUp: true } as any], hasStayed: false, isActive: true, hasBusted: false, hasSecondChance: false },
+        { id: 'p2', name: 'P2', hand: [{ id: 'n0', suit: 'number', rank: '5', isFaceUp: true } as any], hasStayed: false, isActive: true, hasBusted: false, hasLifeSaver: false },
       ],
       currentPlayerId: 'p1',
-      // Deck: Top is SecondChance, then Duplicate 5, then Number 6
+      // Deck: Top is LifeSaver, then Duplicate 5, then Number 6
       deck: [
         { id: 'n2', suit: 'number', rank: '6', isFaceUp: false } as any,
         { id: 'n1', suit: 'number', rank: '5', isFaceUp: false } as any,
-        { id: 'a2', suit: 'action', rank: 'SecondChance', isFaceUp: false } as any,
+        { id: 'a2', suit: 'action', rank: 'LifeSaver', isFaceUp: false } as any,
       ],
       discardPile: [],
       gamePhase: 'playing'
@@ -117,10 +117,10 @@ describe('Turn Three Edge Cases', () => {
 
     // P2 should NOT have busted
     expect(p2.hasBusted).toBe(false);
-    // Second Chance should be consumed
-    expect(p2.hasSecondChance).toBe(false);
-    // Hand should NOT contain Second Chance card (consumed)
-    expect(p2.hand.some((c: any) => c.rank === 'SecondChance')).toBe(false);
+    // Life Saver should be consumed
+    expect(p2.hasLifeSaver).toBe(false);
+    // Hand should NOT contain Life Saver card (consumed)
+    expect(p2.hand.some((c: any) => c.rank === 'LifeSaver')).toBe(false);
     // Hand should NOT contain the duplicate 5 (discarded)
     // Hand should contain: Original 5, TurnThree (played on them), 6
     // The duplicate 5 was drawn and discarded.
