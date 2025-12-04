@@ -135,7 +135,7 @@ export class TurnSevenLogic implements IGameLogic {
       return newState;
     }
 
-    const card = newState.deck.pop();
+    const card = this.drawOne(newState);
     if (!card) return newState;
 
     let log = `${currentPlayer.name} hit: drew ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}.`;
@@ -323,7 +323,7 @@ export class TurnSevenLogic implements IGameLogic {
         const revealedActions: CardModel[] = [];
 
         for (let i = 0; i < 3; i++) {
-          const next = deck.pop();
+            const next = this.drawOne(newState);
           if (!next) break;
           if (!next.suit || next.suit === 'number') {
             const duplicateCount = target.hand.filter((h: any) => (!h.suit || h.suit === 'number') && h.rank === next.rank).length;
@@ -651,10 +651,28 @@ export class TurnSevenLogic implements IGameLogic {
       }
     });
 
-    // Reset per-round fields but keep totalScore
-    const deck = this.createDeck();
-    newState.deck = deck;
-    newState.discardPile = [];
+    // Move all cards from players (hands, reserved actions) into the discard pile for the finished round
+    newState.discardPile = newState.discardPile || [];
+    newState.players.forEach((p: any) => {
+      if (p.hand && p.hand.length > 0) {
+        newState.discardPile.push(...p.hand.map((c: any) => ({ ...c, isFaceUp: true })));
+      }
+      if (p.reservedActions && p.reservedActions.length > 0) {
+        newState.discardPile.push(...p.reservedActions.map((c: any) => ({ ...c, isFaceUp: true })));
+      }
+    });
+
+    // Do not shuffle discarded cards back into the deck immediately at the start of a round.
+    // Per rules: collect all cards into the discard pile. Preserve the current deck and discard
+    // piles rather than creating a fresh deck so the leftover cards at the end of a round
+    // carry over into the next round. If there is no deck array present (shouldn't normally
+    // happen), initialize it as an empty array.
+    if (!newState.deck) newState.deck = [];
+    // If after carrying over the deck we find it empty, create a fresh deck so the
+    // new round's initial dealing can proceed.
+    if (newState.deck.length === 0) {
+      newState.deck = this.createDeck();
+    }
     newState.gamePhase = 'playing';
     newState.roundNumber = (state.roundNumber || 1) + 1;
     newState.previousTurnLog = undefined;
@@ -670,6 +688,8 @@ export class TurnSevenLogic implements IGameLogic {
       roundScore: 0,
       totalScore: p.totalScore ?? 0,
       pendingImmediateActionIds: [],
+      reservedActions: [],
+      hasSecondChance: false,
     }));
 
     // Deal one card to each player (face up). If a player was already dealt a
@@ -753,6 +773,21 @@ export class TurnSevenLogic implements IGameLogic {
     return false;
   }
 
+  // Draw one card from deck, reshuffling discard into deck if the deck is empty
+  // Returns undefined if there are no cards available at all.
+  private drawOne(state: GameState): CardModel | undefined {
+    if (!state.deck) state.deck = [];
+    if (!state.discardPile) state.discardPile = [];
+
+    if (state.deck.length === 0 && state.discardPile.length > 0) {
+      // Shuffle the discard pile into the deck and empty discard
+      state.deck = this.shuffle(state.discardPile);
+      state.discardPile = [];
+    }
+
+    return state.deck.pop();
+  }
+
   // Resolve an action card that was dealt or drawn. `drawerIdx` is index of the player who caused the reveal.
   // `deck` is the deck array (top = end of array via pop()).
   private resolveActionOnDeal(players: any[], drawerIdx: number, card: CardModel, deck: CardModel[]) {
@@ -801,6 +836,8 @@ export class TurnSevenLogic implements IGameLogic {
 
   private continueDealing(state: GameState) {
     // If deck is empty, we can't deal.
+    // DEBUG: track deck/discard counts when troubleshooting large-player deals
+    // (no-op) debug logs removed
     if (state.deck.length === 0) {
         // Ensure we have a valid current player if possible
         if (!state.currentPlayerId) {
@@ -837,9 +874,12 @@ export class TurnSevenLogic implements IGameLogic {
     const player = state.players[playerIndex];
     state.currentPlayerId = player.id;
 
+    // dealing to playerIndex
     let keptCard = false;
-    while (!keptCard && state.deck.length > 0) {
-        const card = state.deck.pop();
+    while (!keptCard) {
+      const card = this.drawOne(state);
+      // drew a card
+      if (!card) break; // no cards left even after reshuffling
         if (!card) break;
         
         if (card.suit === 'action') {

@@ -111,6 +111,7 @@ describe('Turn Seven Edge Cases', () => {
     });
 
     // B should have busted
+    // (previously debugged the scenario; now assert expected state)
     expect(state.players[1].hasBusted).toBe(true);
     expect(state.players[1].hasBusted).toBe(true);
 
@@ -359,6 +360,8 @@ describe('Turn Seven Edge Cases', () => {
 
     // C should have received the new SC
     expect(state.players[2].hasSecondChance).toBe(true);
+    // Debug output for failing case (helps identify why the card didn't land in hand)
+    // console.log('DEBUG playerC.hand=', state.players[2].hand.map((c:any)=>c.id));
     expect(state.players[2].hand.some((c: any) => c.id === sc2.id)).toBe(true);
     
     // Turn resumes from A's neighbor -> B

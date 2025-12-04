@@ -336,7 +336,7 @@ body, html {
 .turn-seven-game-setup h1 { font-size: 2.5rem; color: #15803d; margin-bottom: 32px; }
 .game-setup label { display: block; margin-bottom: 24px; font-weight: 600; color: #374151; }
 .game-setup input { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; margin-left: 10px; }
-.player-names { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; text-align: left; }
+.player-names { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; text-align: left; }
 .player-input { display: flex; flex-direction: column; gap: 4px; }
 .player-input label { margin-bottom: 0; font-size: 0.875rem; color: #6b7280; }
 .player-input input { margin-left: 0; width: 100%; }

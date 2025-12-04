@@ -36,10 +36,15 @@ export const Card: React.FC<CardProps> = ({ card }) => {
 
     if (!textEl || !containerEl || !showOnlyCenter) return;
 
-    // Only scale action cards. Number and modifier cards fit fine with default CSS.
-    if (!isAction) return;
+    // Scale action and modifier cards so the centered rank doesn't take more than 90% of the card width.
+    // Number cards already fit the layout, but modifiers (e.g. +10, x2) may need scaling too.
+    if (!isAction && !isModifier) return;
 
-    // If in JSDOM/test environment with no layout, skip resizing
+    // Always set a width cap to keep the text element from overflowing. Even in JSDOM (no layout)
+    // this ensures tests can assert the intended restriction.
+    textEl.style.width = '90%';
+
+    // If in JSDOM/test environment with no layout, we can't measure, so skip the resize loop.
     if (containerEl.clientWidth === 0 && containerEl.clientHeight === 0) return;
 
     // Reset to base size to start measurement
@@ -50,7 +55,8 @@ export const Card: React.FC<CardProps> = ({ card }) => {
     textEl.style.display = 'inline-block'; // Ensure correct width measurement
     textEl.style.textAlign = 'center';
     textEl.style.whiteSpace = 'pre'; // Respect newlines, don't wrap otherwise
-    textEl.style.width = '100%'; // Ensure it can take full width if needed
+    // Restrict the visible rank span to at most 90% of the card width so very wide labels don't overflow.
+    textEl.style.width = '90%';
     
     const minSize = 10;
 
@@ -70,14 +76,15 @@ export const Card: React.FC<CardProps> = ({ card }) => {
       currentSize -= 1; // finer grain decrement
       textEl.style.fontSize = `${currentSize}px`;
     }
-  }, [displayLabel, showOnlyCenter, isAction]);
+  }, [displayLabel, showOnlyCenter, isAction, isModifier]);
 
   const cardClasses = [
     'card',
     isFaceUp ? 'face-up' : 'face-down',
     `suit-${normalizedSuit}`,
     `rank-${String(rank).toLowerCase()}`,
-    normalizedSuit === 'number' ? 'number-card' : '',
+    // Provide explicit helper classes for styling: number-card, action-card, modifier-card
+    normalizedSuit === 'number' ? 'number-card' : (normalizedSuit === 'action' ? 'action-card' : (normalizedSuit === 'modifier' ? 'modifier-card' : '')),
   ].join(' ');
 
   return (

@@ -65,7 +65,9 @@ export const TurnSevenGame: React.FC = () => {
   if (!gameState) {
     return (
       <div className="turn-seven-game-setup" style={{ padding: 40, maxWidth: 600, margin: '0 auto' }}>
-        <h1>Turn Seven</h1>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 72 }} />
+        </div>
         <GameSetup onStart={handleStart} />
       </div>
     );
@@ -117,18 +119,8 @@ export const TurnSevenGame: React.FC = () => {
       <div className="pending-action-ui">
         <h3>⚠️ Action Required</h3>
         <p>Choose a player to receive the <strong>{cardName}</strong></p>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          {gameState.players
-            .filter(p => p.id !== currentPlayer.id)
-            .map(p => (
-              <button key={p.id} className="btn btn-secondary" onClick={() => handlePlayPendingAction(pendingId, p.id)}>
-                {p.name}
-              </button>
-            ))}
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <button className="btn btn-secondary" onClick={() => {/* TODO: maybe cancel */}}>Cancel</button>
-        </div>
+        {/* Targeting should be done via the sidebar only — don't render per-player buttons here */}
+        {/* Targets are chosen from the sidebar; a Cancel button here served no purpose so it's removed */}
       </div>
     );
   };

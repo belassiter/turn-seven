@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, cleanup, within } from '@testing-library/react';
 
 afterEach(() => {
   cleanup();
@@ -138,10 +138,10 @@ describe('TurnSevenGame component', () => {
     // And should see targeting UI (e.g. "Choose a target")
     // We simulate clicking Player 2 to target them.
     
-    // The pending action UI renders buttons for each player.
-    // We need to find the button for Player 2.
-    const player2Button = screen.getByRole('button', { name: /Player 2/i });
-    fireEvent.click(player2Button);
+    // The pending action UI should only allow targeting via the sidebar. Find Player 2 in the sidebar and click.
+    const sidebar = container.querySelector('.player-sidebar');
+    const player2InSidebar = within(sidebar as Element).getByText(/Player 2/i);
+    fireEvent.click(player2InSidebar);
 
     // Now Player 2 should be frozen
     // Player 2 (index 1) should only have the Freeze card (1 card) and be frozen
@@ -172,8 +172,10 @@ describe('TurnSevenGame component', () => {
     const playerRows = container.querySelectorAll('.player-row');
     
     // Player 1 has TurnThree pending. Target Player 2.
-    const player2Button = screen.getByRole('button', { name: /Player 2/i });
-    fireEvent.click(player2Button);
+    // Click the Player 2 entry in the sidebar
+    const sidebar2 = container.querySelector('.player-sidebar');
+    const player2InSidebar2 = within(sidebar2 as Element).getByText(/Player 2/i);
+    fireEvent.click(player2InSidebar2);
 
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
@@ -187,5 +189,50 @@ describe('TurnSevenGame component', () => {
     // Accept multiple possible renderings for special card labels: either full text or abbreviated
     expect(ranks.some(t => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
     expect(ranks.some(t => t.includes('Freeze') || t === 'F')).toBeTruthy();
+  });
+
+  it('pending-action UI allows actor to target themselves', () => {
+    // Similar to Freeze initial deal test but actor will target themselves
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
+      { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
+      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+    ] as any);
+
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    // Actor (Player 1) should have a pending Freeze and see targeting UI
+    // Choose Player 1 from the sidebar (actor should be able to self-target via sidebar)
+    const sidebar3 = container.querySelector('.player-sidebar');
+    const player1InSidebar = within(sidebar3 as Element).getByText(/Player 1/i);
+    expect(player1InSidebar).toBeDefined();
+    fireEvent.click(player1InSidebar);
+
+    // Now Player 1 should be frozen
+    const playerRows = container.querySelectorAll('.player-row');
+    const p1Status = playerRows[0].querySelector('.player-status-icons');
+    expect(p1Status?.textContent).toContain('❄️');
+  });
+
+  it('sidebar shows "(you)" hint when actor is selecting targets', () => {
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
+      { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
+      { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
+      { id: 'a1', rank: 'Freeze', suit: 'action', isFaceUp: false },
+    ] as any);
+
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    // Pending action UI is visible
+    expect(container.querySelector('.pending-action-ui')).toBeTruthy();
+
+    // Sidebar should show the actor with hint (you)
+    const sidebar = container.querySelector('.player-sidebar');
+    expect(sidebar).toBeTruthy();
+    const actorLabel = sidebar?.querySelector('.player-row .player-name')?.textContent || '';
+    expect(actorLabel).toMatch(/Player 1/i);
+    expect(actorLabel).toMatch(/you/);
   });
 });

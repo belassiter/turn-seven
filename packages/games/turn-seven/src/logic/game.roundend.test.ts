@@ -54,4 +54,29 @@ describe('Round end and startNextRound behavior', () => {
     const next = logic.startNextRound(state);
     expect(next.currentPlayerId).toBe(next.players[0].id);
   });
+
+  it('startNextRound should *preserve* the previous deck (not replace it) when it is non-empty', () => {
+    const logic = new TurnSevenLogic();
+
+    // If there is an existing deck, startNextRound should not replace it with a fresh deck.
+    // We assert that createDeck is NOT called in this case.
+    const spy = vi.spyOn(logic as any, 'createDeck');
+
+    const state: any = {
+      players: [
+        { id: 'p1', name: 'P1', hand: [], hasStayed: false, isActive: true, hasBusted: false, pendingImmediateActionIds: [] },
+        { id: 'p2', name: 'P2', hand: [], hasStayed: false, isActive: true, hasBusted: false, pendingImmediateActionIds: [] }
+      ],
+      deck: [{ id: 'leftover', suit: 'number', rank: '1', isFaceUp: false }],
+      discardPile: [],
+      currentPlayerId: 'p1',
+      gamePhase: 'ended',
+      roundNumber: 1
+    };
+
+    const next = logic.startNextRound(state);
+
+    // createDeck should not have been called because a non-empty deck was present
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

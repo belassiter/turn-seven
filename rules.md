@@ -104,6 +104,10 @@ If you stayed or were forced to Freeze, score the total value of your Number car
 If you turned 7 unique Number cards, add the 15-point bonus to your total for the round.
 Unused Second Chance cards are discarded.
 
+# STARTING THE NEXT ROUND
+- Set all cards from the round in the discard pile. Do not shuffle them back into the deck. 
+- When the deck runs out, shuffle all the discarded cards to form a new deck. If you need to reshuffle mid-round, leave all cards in front of players where they are, even if that player has busted and is out of the round.
+
 # End of Game
 - The game ends when at least one player’s total score reaches 200 or more points at the end of a round.
 - Ties can be broken with a sudden-death tiebreaker round.

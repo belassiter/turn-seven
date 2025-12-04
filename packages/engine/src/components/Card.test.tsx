@@ -25,4 +25,46 @@ describe('Card component', () => {
     const matches = screen.queryAllByText('7');
     expect(matches.length).toBeGreaterThan(0);
   });
+
+  it('renders modifier card with modifier-card class and centered rank', () => {
+    const modCard = { id: 'm1', suit: 'modifier', rank: '+4', isFaceUp: true } as any;
+    const { container } = render(<Card card={modCard} />);
+    expect(container.querySelector('.modifier-card')).toBeTruthy();
+    const center = container.querySelector('[data-testid="rank-center"]');
+    expect(center).toBeTruthy();
+    expect(center?.textContent).toContain('+4');
+    // The inner text span should be restricted to at most 90% width to avoid overflow in UI
+    const inner = center?.querySelector('span') as HTMLElement | null;
+    expect(inner).toBeTruthy();
+    expect(inner?.style.width).toBe('90%');
+  });
+
+  it('renders action card with action-card class and shows a centered rank element', () => {
+    const actionCard = { id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true } as any;
+    const { container } = render(<Card card={actionCard} />);
+    expect(container.querySelector('.action-card')).toBeTruthy();
+    const center = container.querySelector('[data-testid="rank-center"]');
+    expect(center).toBeTruthy();
+    // The display label might be split by newline for CamelCase; ensure something from the rank appears
+    expect(center?.textContent).toMatch(/Turn|T3/);
+    const innerAction = center?.querySelector('span') as HTMLElement | null;
+    expect(innerAction).toBeTruthy();
+    expect(innerAction?.style.width).toBe('90%');
+  });
+
+  it('modifier +10 and x2 should also use 90% center width to prevent overflow', () => {
+    const plus10 = { id: 'mod10', suit: 'modifier', rank: '+10', isFaceUp: true } as any;
+    const x2 = { id: 'modx2', suit: 'modifier', rank: 'x2', isFaceUp: true } as any;
+    const { container } = render(<Card card={plus10} />);
+    const plusCenter = container.querySelector('[data-testid="rank-center"]');
+    const innerPlus = plusCenter?.querySelector('span') as HTMLElement | null;
+    expect(innerPlus).toBeTruthy();
+    expect(innerPlus?.style.width).toBe('90%');
+
+    const { container: c2 } = render(<Card card={x2} />);
+    const x2Center = c2.querySelector('[data-testid="rank-center"]');
+    const innerX2 = x2Center?.querySelector('span') as HTMLElement | null;
+    expect(innerX2).toBeTruthy();
+    expect(innerX2?.style.width).toBe('90%');
+  });
 });

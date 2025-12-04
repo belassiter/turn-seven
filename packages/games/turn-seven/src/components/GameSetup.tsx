@@ -35,11 +35,13 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
 
   return (
     <div className="game-setup">
-      <h2>Game Setup</h2>
-      <label>
-        Number of players ({MIN_PLAYERS}-{MAX_PLAYERS}):
-        <input type="number" value={count} min={MIN_PLAYERS} max={MAX_PLAYERS} onChange={e => handleCountChange(Number(e.target.value))} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
+        <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 48 }} />
+      </div>
+      <label style={{ display: 'block', marginBottom: 12 }}>
+        Number of players: {count}
       </label>
+      <input type="range" value={count} min={MIN_PLAYERS} max={MAX_PLAYERS} onChange={e => handleCountChange(Number(e.target.value))} />
       <div className="player-names">
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="player-input">

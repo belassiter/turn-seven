@@ -16,7 +16,7 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
   if (isAction) {
     // Support both spaced "Turn Three" and camelcase "TurnThree" forms used in tests
     if (displayRank === 'Turn Three') displayRank = 'T3';
-    else if (displayRank === 'TurnThree') displayRank = 'TurnThree';
+    else if (displayRank === 'TurnThree') displayRank = 'T3';
     else if (displayRank === 'Freeze') displayRank = 'F';
     else if (displayRank === 'Second Chance') displayRank = '2C';
     else if (displayRank === 'Double Down') displayRank = 'x2'; // Assuming this exists or similar
@@ -26,10 +26,13 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
     }
   }
 
+  // Ensure the right helper classes exist so CSS rules apply consistently for number, action and modifier mini-cards
+  const helperClass = isNumber ? 'mini-card-number' : (suit === 'action' ? 'mini-card-action' : 'mini-card-modifier');
+
   const classes = [
     'mini-card',
     `mini-card-${suit}`,
-    isNumber ? 'mini-card-number' : 'mini-card-special'
+    helperClass
   ].join(' ');
 
   return (

@@ -57,6 +57,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
               <div className="player-info">
                 <span className="player-name">
                   {player.name}
+                    {isSelf && <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 6 }}>(you)</span>}
                   {isCurrent && <span className="turn-indicator"> (Turn)</span>}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
