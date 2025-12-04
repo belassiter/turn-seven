@@ -2,7 +2,6 @@
   "files": [],
   "references": [
     { "path": "packages/engine" },
-    { "path": "packages/games/turn-seven" },
-    { "path": "packages/games/flip-seven" }
+    { "path": "packages/games/turn-seven" }
   ]
 }

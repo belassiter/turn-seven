@@ -50,13 +50,21 @@ export const Card: React.FC<CardProps> = ({ card }) => {
     textEl.style.display = 'inline-block'; // Ensure correct width measurement
     textEl.style.textAlign = 'center';
     textEl.style.whiteSpace = 'pre'; // Respect newlines, don't wrap otherwise
+    textEl.style.width = '100%'; // Ensure it can take full width if needed
     
     const minSize = 10;
 
     // Iteratively reduce font size until it fits
     while (currentSize > minSize) {
       // Check if the text fits within the container
-      if (textEl.offsetWidth <= containerEl.clientWidth && textEl.offsetHeight <= containerEl.clientHeight) {
+      // Use scrollWidth/scrollHeight to detect overflow
+      // Also check if width is roughly 80% of container width to satisfy "span ~80%" requirement
+      // But we want it to be AS LARGE AS POSSIBLE without overflowing.
+      // The user said "span ~80% of the card". This might mean they want it WIDER.
+      // If the text is short, it won't span 80%.
+      // If the text is long, it will be scaled down.
+      // Let's just ensure it fits.
+      if (textEl.scrollWidth <= containerEl.clientWidth && textEl.scrollHeight <= containerEl.clientHeight) {
         break;
       }
       currentSize -= 1; // finer grain decrement

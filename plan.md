@@ -98,4 +98,5 @@ The work will be divided between building the engine and implementing the game.
 - [x] Add UI hook for action-card targeting (`useActionTargeting`).
 - [x] Refactor `TurnSevenGame` to use the new hook.
 - [x] Add unit tests for `useActionTargeting`.
+- [x] Integrate game logo into Header and Card backs.
 

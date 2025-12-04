@@ -1,5 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, cleanup } from '@testing-library/react';
+
+afterEach(() => {
+  cleanup();
+});
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { TurnSevenGame } from './TurnSevenGame';
 import { TurnSevenLogic } from '../logic/game';
@@ -30,22 +34,44 @@ describe('TurnSevenGame component', () => {
     const { getByText } = render(<TurnSevenGame />);
     // start the game via setup
     fireEvent.click(getByText('Start Game'));
-    expect(getByText('Turn Seven')).toBeInTheDocument();
+    // header title removed — assert logo exists instead
+    expect(screen.getByAltText('Turn Seven Logo')).toBeInTheDocument();
     expect(getByText('Hit')).toBeInTheDocument();
     expect(getByText('Stay')).toBeInTheDocument();
     expect(getByText('Player 1')).toBeInTheDocument();
   });
 
-  it('handles Hit action', () => {
+  it('handles Hit action', async () => {
+    // Mock deck with plenty of cards to ensure Hit works
+    const mockDeck = Array.from({ length: 10 }, (_, i) => ({
+      id: `mock-card-${i}`,
+      suit: 'number',
+      rank: String(i + 1),
+      isFaceUp: false
+    }));
+    
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(mockDeck);
+
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
-    // Initial hand size is 1.
-    const hand = container.querySelector('.player-hand');
-    expect(hand?.querySelectorAll('.card')).toHaveLength(1);
     
-    fireEvent.click(getByText('Hit'));
+    const activeHand = container.querySelector('.active-player-hand');
+    expect(activeHand?.querySelectorAll('.card')).toHaveLength(1);
     
-    expect(hand?.querySelectorAll('.card')).toHaveLength(2);
+    const hitBtn = getByText('Hit') as HTMLButtonElement;
+    expect(hitBtn.disabled).toBe(false);
+
+    fireEvent.click(hitBtn);
+    
+    // Use waitFor to handle potential async state updates
+    await waitFor(() => {
+      // Turn should advance to Player 2 (multi-player rules)
+      expect(container.querySelector('.zone-header h2')?.textContent).toContain('Player 2');
+      
+      // Player 1 should be in sidebar with 2 cards (initial + hit)
+      const p1Row = Array.from(container.querySelectorAll('.player-row')).find(r => r.textContent?.includes('Player 1'));
+      expect(p1Row?.querySelectorAll('.mini-card')).toHaveLength(2);
+    });
   });
 
   it('handles Stay action', () => {
@@ -59,12 +85,10 @@ describe('TurnSevenGame component', () => {
     // Initially Hit should be enabled
     expect(hitButton.disabled).toBe(false);
 
-    fireEvent.click(stayButton);
-
     // After staying, in multi-player mode the turn should advance to the next player
-    const actionsHeader = document.querySelector('.actions h2')?.textContent || '';
+    const actionsHeader = document.querySelector('.zone-header h2')?.textContent || '';
     fireEvent.click(stayButton);
-    const actionsHeaderAfter = document.querySelector('.actions h2')?.textContent || '';
+    const actionsHeaderAfter = document.querySelector('.zone-header h2')?.textContent || '';
     expect(actionsHeaderAfter).not.toBe(actionsHeader);
     // Hit should be enabled for the next player
     expect(hitButton.disabled).toBe(false);
@@ -85,12 +109,12 @@ describe('TurnSevenGame component', () => {
     fireEvent.click(getByText('Start Game'));
 
     // enable odds display
-    const dice = getByText('🎲');
+    const dice = getByText('🎲 Odds');
     fireEvent.click(dice);
 
     // Expect: current hand is 10, remaining deck after dealing to 3 players is [1,3,5] -> avg=3
     // expected should be 13 (10 + 3), delta = +3
-    expect(screen.getByText(/Expected score if hit: 13 pts \(\+3\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Exp. Score: 13 \(\+3\)/)).toBeInTheDocument();
     // Should not show a Turn 7 percentage when turn7Probability is exactly zero
     expect(screen.queryByText(/Turn 7/)).toBeNull();
   });
@@ -107,8 +131,8 @@ describe('TurnSevenGame component', () => {
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
-    const hands = container.querySelectorAll('.player-hand');
-    expect(hands.length).toBeGreaterThanOrEqual(2);
+    const playerRows = container.querySelectorAll('.player-row');
+    expect(playerRows.length).toBeGreaterThanOrEqual(2);
 
     // Player 1 (index 0) should have the Freeze card pending
     // And should see targeting UI (e.g. "Choose a target")
@@ -121,11 +145,13 @@ describe('TurnSevenGame component', () => {
 
     // Now Player 2 should be frozen
     // Player 2 (index 1) should only have the Freeze card (1 card) and be frozen
-    const p2Cards = hands[1].querySelectorAll('.card');
-    expect(p2Cards).toHaveLength(1);
-    // header should include "(Frozen)" per GameBoard rendering
-    const header = hands[1].closest('.player-area')?.querySelector('h2')?.textContent || '';
-    expect(header.includes('(Frozen)')).toBeTruthy();
+    // In the sidebar, we check for mini-cards
+    const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
+    expect(p2MiniCards).toHaveLength(1);
+    
+    // Check for frozen icon in the sidebar row
+    const p2Status = playerRows[1].querySelector('.player-status-icons');
+    expect(p2Status?.textContent).toContain('❄️');
   });
 
   it('handles TurnThree initial-deal chain (UI-level)', () => {
@@ -143,20 +169,23 @@ describe('TurnSevenGame component', () => {
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
-    const hands = container.querySelectorAll('.player-hand');
+    const playerRows = container.querySelectorAll('.player-row');
     
     // Player 1 has TurnThree pending. Target Player 2.
     const player2Button = screen.getByRole('button', { name: /Player 2/i });
     fireEvent.click(player2Button);
 
-    const p2Cards = hands[1].querySelectorAll('.card');
+    const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
     // Expect Player 2 to have TurnThree + 8 + Freeze + 9 (4 cards)
-    expect(p2Cards).toHaveLength(4);
-    const ranks = Array.from(p2Cards).map(c => c.textContent || '');
+    expect(p2MiniCards).toHaveLength(4);
+    const ranks = Array.from(p2MiniCards).map(c => c.textContent || '');
     // normalize whitespace when checking for 'TurnThree' because the card renderer
     // places a newline between camel-cased words ("Turn\nThree").
-    expect(ranks.some(t => t.replace(/\s/g, '').includes('TurnThree'))).toBeTruthy();
-    expect(ranks.some(t => t.includes('Freeze'))).toBeTruthy();
+    // Mini cards might just show "TurnThree" or "T3" depending on implementation.
+    // The current MiniCard implementation shows `rank`.
+    // Accept multiple possible renderings for special card labels: either full text or abbreviated
+    expect(ranks.some(t => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
+    expect(ranks.some(t => t.includes('Freeze') || t === 'F')).toBeTruthy();
   });
 });

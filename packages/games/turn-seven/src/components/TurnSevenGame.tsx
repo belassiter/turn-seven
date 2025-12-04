@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { GameBoard, GameState, ClientGameStateManager } from '@turn-seven/engine';
-import { TurnSevenLogic, MIN_PLAYERS } from '../logic/game';
+import { GameState, ClientGameStateManager, Card } from '@turn-seven/engine';
+import { TurnSevenLogic } from '../logic/game';
 import { GameSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
-import { computeBustProbability, computeHitExpectation } from '../logic/odds';
+import { computeHitExpectation } from '../logic/odds';
 import { computeHandScore } from '@turn-seven/engine';
+
+// Layout Components
+import { GameHeader } from './GameHeader';
+import { GameFooter } from './GameFooter';
+import { PlayerSidebar } from './PlayerSidebar';
+import { ActivePlayerHand } from './ActivePlayerHand';
 
 export const TurnSevenGame: React.FC = () => {
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
@@ -12,8 +18,7 @@ export const TurnSevenGame: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showOdds, setShowOdds] = useState(false);
 
-  // Memoize potentially expensive odds/expectation calculation so it doesn't run every render
-  // Must be called unconditionally (hooks rule), so compute null when gameState is not present.
+  // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
     if (!showOdds || !gameState) return null;
     const current = gameState.players.find(p => p.id === gameState.currentPlayerId);
@@ -55,22 +60,21 @@ export const TurnSevenGame: React.FC = () => {
     setClientManager(mgr);
   };
 
+  // --- Render Helpers ---
+
   if (!gameState) {
     return (
-      <div className="turn-seven-game">
+      <div className="turn-seven-game-setup" style={{ padding: 40, maxWidth: 600, margin: '0 auto' }}>
         <h1>Turn Seven</h1>
         <GameSetup onStart={handleStart} />
       </div>
     );
   }
 
-
   const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
   const hasPendingActions = currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
-  const activeCount = gameState.players.filter(p => p.isActive).length;
-
-  // hitStats already declared earlier (top-level) — use that.
-
+  
+  // Action Handlers
   const handlePlayPendingAction = (cardId: string, targetId: string) => {
     if (!clientManager || !currentPlayer) return;
     const currentState = clientManager.getState();
@@ -85,182 +89,234 @@ export const TurnSevenGame: React.FC = () => {
     clientManager.setState(newState);
   };
 
+  // If we are in targeting mode (either from reserved action or pending action), 
+  // clicking a player in the sidebar should trigger this.
+  const handleSidebarTargetClick = (targetPlayerId: string) => {
+    if (targetingState) {
+      confirmTarget(targetPlayerId);
+    } else if (hasPendingActions && currentPlayer) {
+      // If we have a pending action, we are implicitly targeting for it.
+      // However, the current UI for pending actions uses specific buttons.
+      // We can adapt this to work with the sidebar if we track "pending action selection" state.
+      // For now, let's keep the pending action UI explicit in the main area, 
+      // but we could wire this up later for better UX.
+      const pendingId = currentPlayer.pendingImmediateActionIds![0];
+      handlePlayPendingAction(pendingId, targetPlayerId);
+    }
+  };
+
   const renderPendingActionUI = () => {
     if (!hasPendingActions || !currentPlayer) return null;
     const pendingId = currentPlayer.pendingImmediateActionIds![0];
     const pendingCard = currentPlayer.reservedActions?.find(c => c.id === pendingId);
     
     if (!pendingCard) return null;
-
     const cardName = String(pendingCard.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
 
     return (
       <div className="pending-action-ui">
-        <h3>Action Required</h3>
-        <p>Choose an active player to receive the <strong>{cardName}</strong></p>
-        <div className="player-selection">
-          {gameState.players.map(p => {
-             if (!p.isActive) return null;
-             return (
-               <button key={p.id} onClick={() => handlePlayPendingAction(pendingId, p.id)}>
-                 {p.name}{p.id === currentPlayer.id ? ' (self)' : ''}
-               </button>
-             );
-          })}
+        <h3>⚠️ Action Required</h3>
+        <p>Choose a player to receive the <strong>{cardName}</strong></p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          {gameState.players
+            .filter(p => p.id !== currentPlayer.id)
+            .map(p => (
+              <button key={p.id} className="btn btn-secondary" onClick={() => handlePlayPendingAction(pendingId, p.id)}>
+                {p.name}
+              </button>
+            ))}
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <button className="btn btn-secondary" onClick={() => {/* TODO: maybe cancel */}}>Cancel</button>
         </div>
       </div>
     );
   };
 
   const renderReservedActions = () => {
-    if (hasPendingActions) return null; // Hide normal reserved actions if pending action exists
+    if (hasPendingActions) return null;
     if (!currentPlayer || !currentPlayer.reservedActions || currentPlayer.reservedActions.length === 0) return null;
     return (
-      <div className="reserved-actions">
-        <h3>Reserved Actions</h3>
-        {currentPlayer.reservedActions.map(a => (
-          <div key={a.id} className="reserved-action">
-            <span>{String(a.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
-            <button onClick={() => startTargeting(a.id, currentPlayer.id)}>Play</button>
-          </div>
-        ))}
+      <div className="reserved-actions" style={{ marginTop: 10 }}>
+        <h4 style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#6b7280' }}>Reserved Actions</h4>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {currentPlayer.reservedActions.map(a => (
+            <button key={a.id} className="btn btn-secondary" onClick={() => startTargeting(a.id, currentPlayer.id)}>
+              Play {String(a.rank)}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderOdds = () => {
+    if (!showOdds) return null;
+    const stats = hitStats ?? { expectedScore: 0, bustProbability: 0, turn7Probability: 0 };
+    const expected = Math.round(stats.expectedScore);
+    const current = Math.round(computeHandScore(currentPlayer?.hand ?? []));
+    const diff = Math.round(expected - current);
+    const diffText = diff >= 0 ? `(+${diff})` : `(${diff})`;
+    const bustPct = Math.round((stats.bustProbability ?? 0) * 100);
+    const t7 = stats.turn7Probability ?? 0;
+    const t7Pct = Math.round(t7 * 100);
+    
+    return (
+      <div className="odds-display">
+        <strong>Stats:</strong> Exp. Score: {expected} {diffText} | Bust: {bustPct}% {t7 > 0 ? `| Turn 7: ${t7Pct}%` : ''}
       </div>
     );
   };
 
   return (
-    <div className="turn-seven-game">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0 }}>Turn Seven</h1>
-        {/* Dice toggle to show bust odds for the current player. Gray=off, green=on. */}
-        <button
-          aria-pressed={showOdds}
-          onClick={() => setShowOdds(s => !s)}
-          title={showOdds ? 'Hide bust odds' : 'Show bust odds'}
-          style={{
-            background: showOdds ? '#16a34a' : '#9ca3af',
-            color: 'white',
-            borderRadius: 6,
-            border: 'none',
-            padding: '6px 10px',
-            cursor: 'pointer',
-            fontSize: 18,
-          }}
-        >
-          🎲
-        </button>
-      </div>
-      <div className="actions">
-        {gameState.gamePhase === 'playing' && (
-          <>
-            <h2>{currentPlayer?.name}'s Turn</h2>
-            {!hasPendingActions && (
-              <>
-                <button onClick={handleHit} disabled={!!currentPlayer?.hasStayed || !currentPlayer?.isActive || !!currentPlayer?.hasBusted}>Hit</button>
-                <button onClick={handleStay} disabled={!!currentPlayer?.hasStayed || !!currentPlayer?.hasBusted}>Stay</button>
-                {/* Show odds to the right of the actions when enabled */}
-                {/* expected score + probabilities shown when odds toggle enabled */}
-                {showOdds && (
-                  (() => {
-                    // Compute expected score, bust and Turn7 probabilities for a single Hit
-                    const stats = hitStats ?? { expectedScore: 0, bustProbability: 0, turn7Probability: 0 };
-                    const expected = Math.round(stats.expectedScore);
-                    // Compute current round score from hand (roundScore is only set at round end)
-                    const current = Math.round(computeHandScore(currentPlayer?.hand ?? []));
-                    const diff = Math.round(expected - current);
-                    const diffText = diff >= 0 ? `(+${diff})` : `(${diff})`;
-                    const bustPct = Math.round((stats.bustProbability ?? 0) * 100);
-                    const t7 = stats.turn7Probability ?? 0;
-                    const t7Pct = Math.round(t7 * 100);
-                    return (
-                      <span style={{ marginLeft: 12, fontWeight: 600 }}>
-                        {`Expected score if hit: ${expected} pts ${diffText}. ${bustPct}% chance of bust.`}
-                        {t7 > 0 ? ` ${t7Pct}% chance of Turn 7` : ''}
-                      </span>
-                    );
-                  })()
-                )}
-              </>
-            )}
-            {hasPendingActions ? renderPendingActionUI() : renderReservedActions()}
-            {targetingState && (
-              <div className="action-targeting">
-                <h4>Select target for action</h4>
-                {gameState.players.map(p => (
-                  <button key={p.id} onClick={() => confirmTarget(p.id)} disabled={!p.isActive && p.id !== targetingState.actorId}>
-                    {p.name}{p.id === targetingState.actorId ? ' (self)' : ''}
-                  </button>
-                ))}
-                <button onClick={cancelTargeting}>Cancel</button>
+    <div className="turn-seven-layout">
+      <GameHeader 
+        roundNumber={gameState.roundNumber} 
+        deckCount={gameState.deck.length} 
+        discardCount={gameState.discardPile.length}
+        showOdds={showOdds}
+        onToggleOdds={() => setShowOdds(s => !s)}
+      />
+      
+      <PlayerSidebar 
+        players={gameState.players} 
+        currentPlayerId={gameState.currentPlayerId ?? undefined}
+        isTargetingMode={!!targetingState || hasPendingActions}
+        targetingActorId={currentPlayer?.id}
+        onTargetPlayer={handleSidebarTargetClick}
+      />
+
+      <div className="game-main-area">
+        {/* Top Status Bar */}
+        <div className="game-status-bar">
+          <div className="status-bar-left">
+            <span className="round-badge-large">Round {gameState.roundNumber}</span>
+          </div>
+          
+          <div className="deck-discard-group">
+            <div className="pile">
+              <div className="card-back"><span className="back-label" style={{ fontSize: '1.5rem' }}>T7</span></div>
+              <span>Deck ({gameState.deck.length})</span>
+            </div>
+            <div className="pile">
+              {gameState.discardPile.length > 0 ? (
+                <Card card={{ ...gameState.discardPile[gameState.discardPile.length - 1], isFaceUp: true }} />
+              ) : (
+                <div className="card-placeholder"></div>
+              )}
+              <span>Discard ({gameState.discardPile.length})</span>
+            </div>
+          </div>
+          
+          <div className="last-action-log">
+            <p>{gameState.previousTurnLog || "Game started. Good luck!"}</p>
+          </div>
+        </div>
+
+        {/* Active Player Zone */}
+        {gameState.gamePhase === 'playing' && currentPlayer && (
+          <div className="active-player-zone">
+            <div className="zone-header">
+              <h2>{currentPlayer.name}'s Turn</h2>
+              <div className="current-score">
+                Round Score: {computeHandScore(currentPlayer.hand)}
+                {currentPlayer.isFrozen && <span style={{ marginLeft: 10 }}>❄️ Frozen</span>}
               </div>
-            )}
-          </>
+            </div>
+
+            {/* Hand */}
+            <ActivePlayerHand hand={currentPlayer.hand} />
+
+            {/* Controls */}
+            <div className="controls-area" style={{ marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 20 }}>
+              {hasPendingActions ? (
+                renderPendingActionUI()
+              ) : (
+                <>
+                  <div className="action-bar">
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={handleHit} 
+                      disabled={!!currentPlayer.hasStayed || !currentPlayer.isActive || !!currentPlayer.hasBusted}
+                    >
+                      Hit
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={handleStay} 
+                      disabled={!!currentPlayer.hasStayed || !!currentPlayer.hasBusted}
+                    >
+                      Stay
+                    </button>
+                    
+                    {renderOdds()}
+                  </div>
+                  
+                  {renderReservedActions()}
+                  
+                  {targetingState && (
+                    <div className="action-targeting" style={{ marginTop: 10, padding: 10, background: '#fffbeb', borderRadius: 6 }}>
+                      <strong>Select a target from the sidebar...</strong>
+                      <button className="btn btn-secondary" style={{ marginLeft: 10 }} onClick={cancelTargeting}>Cancel</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
-      <GameBoard
-        players={gameState.players}
-        currentPlayerId={gameState.currentPlayerId ?? undefined}
-        deck={gameState.deck}
-        discardPile={gameState.discardPile}
-        roundNumber={gameState.roundNumber}
-      />
+
+      <GameFooter />
+
+      {/* Overlays for Round End / Game Over */}
       {gameState.gamePhase === 'ended' && (
-        <div className="round-results">
-          <h2>Round Results</h2>
-          <ul>
-            {gameState.players.map(p => {
-              const numberRanks = p.hand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank);
-              const uniqueCount = new Set(numberRanks).size;
-              const isTurnSeven = uniqueCount >= 7;
-              return (
-                <li key={p.id}>{p.name}: Round {p.roundScore ?? 0} pts — Total {p.totalScore ?? 0} pts {p.hasBusted ? '(Busted)' : ''}{isTurnSeven ? ' (Turn 7)' : ''}</li>
-              );
-            })}
-          </ul>
-          <button onClick={() => {
-            const next = gameLogic.startNextRound(gameState);
-            if (clientManager) clientManager.setState(next);
-          }}>Next Round</button>
-        </div>
-      )}
-      {gameState.gamePhase === 'gameover' && (
-        <div className="game-over">
-          <h2>Game Over</h2>
-          <p>
-            Winner: { (gameState as any).winnerId ? gameState.players.find(p => p.id === (gameState as any).winnerId)?.name : '—' }
-          </p>
-          <p>Final Scores:</p>
-          <ul>
-            {gameState.players.map(p => (
-              <li key={p.id}>{p.name}: {p.totalScore ?? 0} pts</li>
-            ))}
-          </ul>
-          <button onClick={() => {
-            const reset = gameLogic.resetGame(gameState);
-            if (clientManager) clientManager.setState(reset);
-          }}>Restart Game</button>
-        </div>
-      )}
-      {gameState.gamePhase === 'playing' && gameState.roundNumber > 1 && gameState.previousRoundScores && (
-        <div className="previous-round-scores">
-          <h3>Scores from Previous Round</h3>
-          <ul>
-            {Object.entries(gameState.previousRoundScores).map(([id, data]) => {
-              const player = gameState.players.find(p => p.id === id);
-              // @ts-ignore
-              const { score, resultType } = data;
-              return <li key={id}>{player?.name || id}: {score} {resultType === 'turn-seven' ? '(Turn 7)' : ''}</li>;
-            })}
-          </ul>
+        <div className="overlay-container">
+          <div className="overlay-content">
+            <h2>Round Results</h2>
+            <ul>
+              {gameState.players.map(p => {
+                const numberRanks = p.hand.filter(h => !h.suit || h.suit === 'number').map(h => h.rank);
+                const uniqueCount = new Set(numberRanks).size;
+                const isTurnSeven = uniqueCount >= 7;
+                return (
+                  <li key={p.id}>
+                    <strong>{p.name}</strong>: {p.roundScore ?? 0} pts 
+                    {p.hasBusted ? ' (Busted)' : ''}
+                    {isTurnSeven ? ' (Turn 7!)' : ''}
+                  </li>
+                );
+              })}
+            </ul>
+            <button className="btn btn-primary" onClick={() => {
+              const next = gameLogic.startNextRound(gameState);
+              if (clientManager) clientManager.setState(next);
+            }}>Start Next Round</button>
+          </div>
         </div>
       )}
 
-      {gameState.previousTurnLog && (
-        <div className="previous-turn-log">
-          <h3>Last Action</h3>
-          <p>{gameState.previousTurnLog}</p>
+      {gameState.gamePhase === 'gameover' && (
+        <div className="overlay-container">
+          <div className="overlay-content">
+            <h2>Game Over!</h2>
+            <p>
+              Winner: <strong>{ (gameState as any).winnerId ? gameState.players.find(p => p.id === (gameState as any).winnerId)?.name : '—' }</strong>
+            </p>
+            <h3>Final Scores</h3>
+            <ul>
+              {gameState.players.map(p => (
+                <li key={p.id}>{p.name}: {p.totalScore ?? 0} pts</li>
+              ))}
+            </ul>
+            <button className="btn btn-primary" onClick={() => {
+              const reset = gameLogic.resetGame(gameState);
+              if (clientManager) clientManager.setState(reset);
+            }}>Play Again</button>
+          </div>
         </div>
       )}
     </div>
   );
+
 };

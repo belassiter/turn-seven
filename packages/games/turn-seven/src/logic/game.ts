@@ -271,6 +271,16 @@ export class TurnSevenLogic implements IGameLogic {
     const actor = players[actorIndex];
     const target = players[targetIndex];
 
+    // Validation: Cannot target inactive players (busted, stayed, frozen)
+    // Exception: Freeze can target self if only one left? Rules say "Target any active player".
+    // If target is not active, action fails.
+    if (!target.isActive) {
+      // Action fails, but we don't consume the card? Or do we?
+      // If UI prevents it, this shouldn't happen.
+      // If it happens, we should probably just return state unchanged.
+      return newState;
+    }
+
     actor.reservedActions = actor.reservedActions || [];
     const idx = actor.reservedActions.findIndex((c: any) => c.id === payload.cardId);
     if (idx === -1) return newState;

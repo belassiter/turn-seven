@@ -10,8 +10,13 @@ describe('Turn Seven Edge Cases', () => {
     logic = new TurnSevenLogic();
     state = logic.createInitialStateFromNames(['A', 'B', 'C', 'D']);
     // Clear hands for easier setup
-    state.players.forEach((p: any) => p.hand = []);
+    state.players.forEach((p: any) => {
+      p.hand = [];
+      p.pendingImmediateActionIds = [];
+      p.reservedActions = [];
+    });
     state.deck = []; // Clear deck
+    state.discardPile = [];
   });
 
   const createCard = (rank: string, suit: 'number' | 'action' | 'modifier' = 'number', id: string): CardModel => ({
@@ -106,6 +111,7 @@ describe('Turn Seven Edge Cases', () => {
     });
 
     // B should have busted
+    expect(state.players[1].hasBusted).toBe(true);
     expect(state.players[1].hasBusted).toBe(true);
 
     // Freeze should be in discard pile
