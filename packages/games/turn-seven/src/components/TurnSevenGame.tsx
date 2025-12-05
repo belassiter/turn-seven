@@ -210,7 +210,7 @@ export const TurnSevenGame: React.FC = () => {
           </div>
           
           <div className="last-action-log">
-            <p>{gameState.previousTurnLog || "Game started. Good luck!"}</p>
+            {gameState.previousTurnLog ? <p>{gameState.previousTurnLog}</p> : null}
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export const TurnSevenGame: React.FC = () => {
             <div className="zone-header">
               <h2>{currentPlayer.name}'s Turn</h2>
               <div className="current-score">
-                Round Score: {computeHandScore(currentPlayer.hand)}
+                Hand Score: {computeHandScore(currentPlayer.hand)}
                 {currentPlayer.isLocked && <span style={{ marginLeft: 10 }}>🔒 Locked</span>}
               </div>
             </div>

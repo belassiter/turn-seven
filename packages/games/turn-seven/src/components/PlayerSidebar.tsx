@@ -32,17 +32,17 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
             }
           };
 
-          // Sort hand: Actions -> +X (asc) -> x2 -> Numbers (asc)
+          // Sort hand: Numbers (asc) -> +X (asc) -> x2 -> Actions
           const sortedHand = [...player.hand].sort((a, b) => {
             // Helper to get sort weight
             const getWeight = (c: typeof a) => {
-              if (c.suit === 'action') return 0;
+              if (c.suit === 'number') return 0 + parseInt(String(c.rank));
               if (c.suit === 'modifier') {
                 if (String(c.rank).startsWith('+')) return 100 + parseInt(String(c.rank).slice(1));
                 if (String(c.rank) === 'x2') return 200;
                 return 150;
               }
-              if (c.suit === 'number') return 300 + parseInt(String(c.rank));
+              if (c.suit === 'action') return 300;
               return 999;
             };
             return getWeight(a) - getWeight(b);

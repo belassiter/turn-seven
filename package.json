@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "pnpm --filter turn-seven dev",
     "build": "pnpm --filter turn-seven build",
-    "test": "vitest",
+    "test": "vitest --run",
     "test:ui": "vitest --ui",
     "lint": "eslint --ext .ts,.tsx,.js --max-warnings=0 .",
     "format": "prettier --write .",

@@ -43,6 +43,29 @@ describe('TurnSevenGame component', () => {
     expect(getByText('Player 1')).toBeInTheDocument();
   });
 
+  it('does not show the default startup message in the last action log', () => {
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    const lastAction = container.querySelector('.last-action-log');
+    // Should not contain the "Game started. Good luck!" text — it should be empty before any actions
+    expect(lastAction?.querySelector('p')).toBeNull();
+    expect(lastAction?.textContent?.trim()).toBe('');
+  });
+
+  it('displays "Hand Score" label for the active player', async () => {
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([ // deterministic deck
+      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+    ].reverse());
+
+    const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Start Game'));
+
+    // The active player's current-score should contain 'Hand Score'
+    const currentScore = container.querySelector('.current-score');
+    expect(currentScore?.textContent).toMatch(/Hand Score:/);
+  });
+
   it('handles Hit action', async () => {
     // Mock deck with plenty of cards to ensure Hit works
     const mockDeck = Array.from({ length: 10 }, (_, i) => ({
