@@ -8,7 +8,8 @@
     "test:ui": "vitest --ui",
     "lint": "eslint --ext .ts,.tsx,.js --max-warnings=0 .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify:ai": "node ./scripts/verify-ai.js"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

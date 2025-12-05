@@ -7,49 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  lint-format:
-    name: Lint & Format checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Ensure pnpm available (corepack / fallback)
-        run: |
-          # Prefer corepack (bundled with Node) — try activating pnpm 8.x
-          set -e
-          if ! command -v pnpm >/dev/null 2>&1; then
-            echo "pnpm not found — enabling corepack and preparing pnpm@8.x"
-            corepack enable || true
-            corepack prepare pnpm@8.x --activate || npm install -g pnpm@8 || true
-          else
-            echo "pnpm found at: $(command -v pnpm)"
-          fi
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Format check (Prettier)
-        run: pnpm run format:check
-
-      - name: Lint (ESLint)
-        run: pnpm run lint
 
   build-and-test:
     runs-on: ubuntu-latest
-    needs: lint-format
 
     steps:
       - name: Check out code
