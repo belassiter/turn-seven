@@ -2,6 +2,13 @@
 
 If an automated assistant (Copilot, CI agent, or other automation) edits this repository it MUST follow this verification flow before reporting a task as completed.
 
+IMPORTANT: To make verification explicit and foolproof for automated assistants, run the repository-wide post-edit checker after every code change. Prefer one of the following:
+
+- node ./scripts/ai-post-edit-check.js
+- pnpm -w run check
+
+The post-edit checker runs formatting, lint, tests and workspace build and it will exit non-zero if any step fails. The assistant MUST NOT report a task as completed until the post-edit checker succeeds.
+
 1. If the project provides a `pnpm verify:ai` script, run it. That script will attempt to:
 
    - Format changed files with Prettier

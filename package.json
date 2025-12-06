@@ -9,7 +9,9 @@
     "lint": "eslint --ext .ts,.tsx,.js --max-warnings=0 .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify:ai": "node ./scripts/verify-ai.js"
+    "verify:ai": "node ./scripts/verify-ai.js",
+    "build:all": "pnpm -w -r run build",
+    "check": "pnpm -w -s run format:check && pnpm -w -s run lint && pnpm test && pnpm -w -s run build:all"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

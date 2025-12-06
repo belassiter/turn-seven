@@ -8,6 +8,7 @@ describe('ClientGameStateManager', () => {
     deck: [],
     discardPile: [],
     gamePhase: 'initial',
+    ledger: [],
     roundNumber: 1,
   };
 

@@ -66,22 +66,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
               onClick={handleClick}
             >
               <div className="player-info">
-                <span className="player-name">
-                  {player.name}
-                  {isSelf && (
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 6 }}>
-                      (you)
-                    </span>
-                  )}
-                  {isCurrent && <span className="turn-indicator"> (Turn)</span>}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span
-                    className="player-score-info"
-                    style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 500 }}
-                  >
-                    {player.totalScore ?? 0} points
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div className="player-status-icons">
                     {player.hasBusted ? (
                       <span title="Busted">💥</span>
@@ -91,7 +76,22 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                       <span title="Stayed">🛑</span>
                     ) : null}
                   </div>
+                  <span className="player-name">
+                    {player.name}
+                    {isSelf && (
+                      <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 6 }}>
+                        (you)
+                      </span>
+                    )}
+                    {isCurrent && <span className="turn-indicator"> (Turn)</span>}
+                  </span>
                 </div>
+                <span
+                  className="player-score-info"
+                  style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 500 }}
+                >
+                  {player.totalScore ?? 0} points
+                </span>
               </div>
               <div className="player-mini-hand">
                 {sortedHand.map((card) => (

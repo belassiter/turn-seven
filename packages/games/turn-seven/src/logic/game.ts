@@ -50,6 +50,7 @@ export class TurnSevenLogic implements IGameLogic {
       discardPile: [],
       currentPlayerId:
         players.find((p) => p.pendingImmediateActionIds?.length > 0)?.id || playerIds[0] || null,
+      roundStarterId: playerIds[0] || null,
       gamePhase: 'playing',
       roundNumber: 1,
       previousTurnLog: undefined,
@@ -96,6 +97,7 @@ export class TurnSevenLogic implements IGameLogic {
       discardPile: [],
       currentPlayerId:
         players.find((p) => p.pendingImmediateActionIds?.length > 0)?.id || ids[0] || null,
+      roundStarterId: ids[0] || null,
       gamePhase: 'playing',
       roundNumber: 1,
       previousTurnLog: undefined,
@@ -155,12 +157,7 @@ export class TurnSevenLogic implements IGameLogic {
       '$1 $2'
     )}.`;
 
-    this.addToLedger(
-      newState,
-      currentPlayer.name,
-      'Hit',
-      `Drew ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}`
-    );
+    let ledgerResult = `Drew ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}`;
 
     if (card.suit === 'action') {
       // Reserve action for later play and show a visible representation in hand for UI
@@ -190,6 +187,7 @@ export class TurnSevenLogic implements IGameLogic {
           // Does turn end? User says "Play should just continue to the next player."
           // So we force turn advance.
           newState.previousTurnLog = log;
+          this.addToLedger(newState, currentPlayer.name, 'Hit', ledgerResult);
           this.advanceTurn(newState);
           this.checkRoundEnd(newState);
           return newState;
@@ -245,6 +243,7 @@ export class TurnSevenLogic implements IGameLogic {
           currentPlayer.hasBusted = true;
           currentPlayer.isActive = false;
           log += ' Busted!';
+          ledgerResult += '. Busted!';
           // Flip this player's cards face-down when they bust
           if (currentPlayer.hand && currentPlayer.hand.length > 0) {
             currentPlayer.hand = currentPlayer.hand.map((c) => ({ ...c, isFaceUp: false }));
@@ -263,6 +262,7 @@ export class TurnSevenLogic implements IGameLogic {
     }
 
     newState.previousTurnLog = log;
+    this.addToLedger(newState, currentPlayer.name, 'Hit', ledgerResult);
 
     // If the player has pending immediate actions (e.g. Lock/TurnThree target selection),
     // the turn does not advance yet. They must resolve the action.
@@ -364,11 +364,25 @@ export class TurnSevenLogic implements IGameLogic {
     newState.previousTurnLog = log;
 
     let result = 'Played';
-    if (rank === 'Lock') result = 'Locked';
+    if (rank === 'Lock') result = `Locked ${target.name}`;
     else if (rank === 'LifeSaver') result = 'Given';
 
     if (rank !== 'TurnThree') {
-      this.addToLedger(newState, actor.name, 'Action', result, target.name);
+      // Attempt to merge with previous "Hit" entry if it exists and belongs to the same actor
+      const lastEntry =
+        newState.ledger && newState.ledger.length > 0
+          ? newState.ledger[newState.ledger.length - 1]
+          : null;
+      if (lastEntry && lastEntry.playerName === actor.name && lastEntry.action === 'Hit') {
+        lastEntry.result += `. ${result}`;
+        // If the hit didn't have a target, we can set it now, or just leave it in the result string.
+        // Setting targetName might be useful for UI columns.
+        if (!lastEntry.targetName) {
+          lastEntry.targetName = target.name;
+        }
+      } else {
+        this.addToLedger(newState, actor.name, 'Action', result, target.name);
+      }
     }
 
     switch (rank) {
@@ -398,6 +412,7 @@ export class TurnSevenLogic implements IGameLogic {
           const next = this.drawOne(newState);
           if (!next) break;
           drawnCardNames.push(String(next.rank).replace(/([a-z])([A-Z])/g, '$1 $2'));
+          // (debug logs removed)
 
           if (!next.suit || next.suit === 'number') {
             const duplicateCount = target.hand.filter(
@@ -444,6 +459,7 @@ export class TurnSevenLogic implements IGameLogic {
                   target.hasLifeSaver = false;
                 }
               } else {
+                // (debug logs removed)
                 target.hasBusted = true;
                 target.isActive = false;
                 log += ` ${target.name} Busted!`;
@@ -461,6 +477,15 @@ export class TurnSevenLogic implements IGameLogic {
               .map((h) => h.rank);
             const uniqueCount = new Set(numberRanks).size;
             if (uniqueCount >= 7) {
+              // Log action BEFORE computing scores (which logs Round End)
+              const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
+              this.addToLedger(
+                newState,
+                actor.name,
+                'Action',
+                `Turn 3 (on ${target.name}). Draws ${drawnString}`
+              );
+
               this.computeScores(newState);
               if (newState.gamePhase !== 'gameover') {
                 newState.gamePhase = 'ended';
@@ -543,13 +568,18 @@ export class TurnSevenLogic implements IGameLogic {
           }
         }
 
-        const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
-        this.addToLedger(
-          newState,
-          actor.name,
-          'Action',
-          `Turn 3 (on ${target.name}). Draws ${drawnString}`
-        );
+        // Only log if we haven't already logged (due to Turn 7 condition above)
+        // We can check if the ledger has this entry? Or just use a flag.
+        // Or check if gamePhase is ended.
+        if (newState.gamePhase !== 'ended' && newState.gamePhase !== 'gameover') {
+          const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
+          this.addToLedger(
+            newState,
+            actor.name,
+            'Action',
+            `Turn 3 (on ${target.name}). Draws ${drawnString}`
+          );
+        }
 
         newState.previousTurnLog = log;
         break;
@@ -829,6 +859,17 @@ export class TurnSevenLogic implements IGameLogic {
       hasLifeSaver: false,
     }));
 
+    // Determine next round starter
+    let nextStarterIndex = 0;
+    if (state.roundStarterId) {
+      const currentStarterIndex = state.players.findIndex((p) => p.id === state.roundStarterId);
+      if (currentStarterIndex !== -1) {
+        nextStarterIndex = (currentStarterIndex + 1) % state.players.length;
+      }
+    }
+    const nextStarter = newState.players[nextStarterIndex];
+    newState.roundStarterId = nextStarter.id;
+
     // Deal one card to each player (face up). If a player was already dealt a
     // card (e.g. was targeted earlier during action resolution), don't give
     // them another — that initial card counts for them.
@@ -1036,9 +1077,15 @@ export class TurnSevenLogic implements IGameLogic {
 
     if (playerIndex === -1) {
       // Everyone has cards. Deal done.
-      // Set current player to first active player to start the game.
-      // Only if currentPlayerId is not set or we want to reset it?
-      // Usually P1 starts.
+      // Set current player to the round starter if available, otherwise first active player.
+      if (state.roundStarterId) {
+        const starter = state.players.find((p) => p.id === state.roundStarterId && p.isActive);
+        if (starter) {
+          state.currentPlayerId = starter.id;
+          return;
+        }
+      }
+
       const first = state.players.find((p) => p.isActive);
       state.currentPlayerId = first ? first.id : null;
       return;

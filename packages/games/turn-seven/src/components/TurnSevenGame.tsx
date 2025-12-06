@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { GameState, ClientGameStateManager, Card } from '@turn-seven/engine';
 import { TurnSevenLogic } from '../logic/game';
 import { GameSetup } from './GameSetup';
@@ -43,19 +43,51 @@ export const TurnSevenGame: React.FC = () => {
     return () => unsubscribe();
   }, [clientManager]);
 
-  const handleHit = () => {
+  const currentPlayer = gameState?.players.find((p) => p.id === gameState.currentPlayerId);
+  const hasPendingActions =
+    currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
+
+  const handleHit = useCallback(() => {
     if (!clientManager) return;
     const currentState = clientManager.getState();
     const newState = gameLogic.performAction(currentState, { type: 'HIT' });
     clientManager.setState(newState);
-  };
+  }, [clientManager, gameLogic]);
 
-  const handleStay = () => {
+  const handleStay = useCallback(() => {
     if (!clientManager) return;
     const currentState = clientManager.getState();
     const newState = gameLogic.performAction(currentState, { type: 'STAY' });
     clientManager.setState(newState);
-  };
+  }, [clientManager, gameLogic]);
+
+  // Hotkeys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!gameState || gameState.gamePhase !== 'playing') return;
+      // Ensure we are the active player (in local multiplayer, we always are if it's our turn)
+      if (!currentPlayer || currentPlayer.id !== gameState.currentPlayerId) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key.toLowerCase() === 'h') {
+        if (
+          !currentPlayer.hasStayed &&
+          currentPlayer.isActive &&
+          !currentPlayer.hasBusted &&
+          !hasPendingActions
+        ) {
+          handleHit();
+        }
+      } else if (e.key.toLowerCase() === 's') {
+        if (!currentPlayer.hasStayed && !currentPlayer.hasBusted && !hasPendingActions) {
+          handleStay();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState, currentPlayer, hasPendingActions, handleHit, handleStay]);
 
   const handleStart = (names: string[]) => {
     const initialState = gameLogic.createInitialStateFromNames(names);
@@ -95,10 +127,6 @@ export const TurnSevenGame: React.FC = () => {
       </div>
     );
   }
-
-  const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayerId);
-  const hasPendingActions =
-    currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
 
   // Action Handlers
   const handlePlayPendingAction = (cardId: string, targetId: string) => {
@@ -424,10 +452,17 @@ export const TurnSevenGame: React.FC = () => {
                 const suffix = ['st', 'nd', 'rd'][((((rank + 90) % 100) - 10) % 10) - 1] || 'th';
                 const rankText = `${rank}${suffix}`;
 
+                const numberRanks = p.hand
+                  .filter((h) => !h.suit || h.suit === 'number')
+                  .map((h) => h.rank);
+                const uniqueCount = new Set(numberRanks).size;
+                const hasTurnSeven = uniqueCount >= 7;
+
                 return (
                   <li key={p.id}>
                     <span>
-                      <strong>{p.name}</strong> {p.hasBusted ? '(Busted)' : ''}. Scored{' '}
+                      <strong>{p.name}</strong>{' '}
+                      {p.hasBusted ? '(Busted)' : hasTurnSeven ? '(Turn 7!)' : ''}. Scored{' '}
                       {p.roundScore ?? 0}. Total score: {p.totalScore ?? 0}. {rankText} place.
                     </span>
                   </li>

@@ -16,6 +16,8 @@ export interface GameState {
   // The ID of the player whose turn initiated the current action chain.
   // Used to determine who goes next after the chain resolves.
   turnOrderBaseId?: string | null;
+  // The ID of the player who started the current round.
+  roundStarterId?: string | null;
   deck: CardModel[];
   discardPile: CardModel[];
   gamePhase: 'initial' | 'playing' | 'ended' | 'gameover';
