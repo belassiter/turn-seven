@@ -7,14 +7,11 @@ export interface PlayerHandProps {
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({ cards, isCurrentPlayer = false }) => {
-  const handClasses = [
-    'player-hand',
-    isCurrentPlayer ? 'current-player' : ''
-  ].join(' ');
+  const handClasses = ['player-hand', isCurrentPlayer ? 'current-player' : ''].join(' ');
 
   return (
     <div className={handClasses}>
-      {cards.map(card => (
+      {cards.map((card) => (
         <Card key={card.id} card={card} />
       ))}
     </div>

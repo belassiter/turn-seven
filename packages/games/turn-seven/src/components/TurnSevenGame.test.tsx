@@ -7,22 +7,26 @@ afterEach(() => {
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { TurnSevenGame } from './TurnSevenGame';
 import { TurnSevenLogic } from '../logic/game';
+import { CardModel } from '@turn-seven/engine';
 
 describe('TurnSevenGame component', () => {
   beforeEach(() => {
     // Mock createDeck to return a fixed deck to avoid flakiness and "TurnThree" surprises
-    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
-      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
-      { id: 'c2', suit: 'number', rank: '2', isFaceUp: false },
-      { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
-      { id: 'c4', suit: 'number', rank: '4', isFaceUp: false },
-      { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
-      { id: 'c6', suit: 'number', rank: '6', isFaceUp: false },
-      { id: 'c7', suit: 'number', rank: '7', isFaceUp: false },
-      { id: 'c8', suit: 'number', rank: '8', isFaceUp: false },
-      { id: 'c9', suit: 'number', rank: '9', isFaceUp: false },
-      { id: 'c10', suit: 'number', rank: '10', isFaceUp: false },
-    ].reverse()); // reverse because pop() takes from end
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(
+      [
+        { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+        { id: 'c2', suit: 'number', rank: '2', isFaceUp: false },
+        { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
+        { id: 'c4', suit: 'number', rank: '4', isFaceUp: false },
+        { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
+        { id: 'c6', suit: 'number', rank: '6', isFaceUp: false },
+        { id: 'c7', suit: 'number', rank: '7', isFaceUp: false },
+        { id: 'c8', suit: 'number', rank: '8', isFaceUp: false },
+        { id: 'c9', suit: 'number', rank: '9', isFaceUp: false },
+        { id: 'c10', suit: 'number', rank: '10', isFaceUp: false },
+      ].reverse()
+    ); // reverse because pop() takes from end
   });
 
   afterEach(() => {
@@ -31,7 +35,7 @@ describe('TurnSevenGame component', () => {
   });
 
   it('renders the game board and actions', () => {
-    const { getByText, getByTitle } = render(<TurnSevenGame />);
+    const { getByText } = render(<TurnSevenGame />);
     // Footer should be visible on setup
     expect(screen.getByText(/Turn Seven/i)).toBeInTheDocument();
     // start the game via setup
@@ -54,9 +58,13 @@ describe('TurnSevenGame component', () => {
   });
 
   it('displays "Hand Score" label for the active player', async () => {
-    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([ // deterministic deck
-      { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
-    ].reverse());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(
+      [
+        // deterministic deck
+        { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
+      ].reverse()
+    );
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
@@ -72,29 +80,32 @@ describe('TurnSevenGame component', () => {
       id: `mock-card-${i}`,
       suit: 'number',
       rank: String(i + 1),
-      isFaceUp: false
+      isFaceUp: false,
     }));
-    
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(mockDeck);
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
-    
+
     const activeHand = container.querySelector('.active-player-hand');
     expect(activeHand?.querySelectorAll('.card')).toHaveLength(1);
-    
+
     const hitBtn = getByText('Hit') as HTMLButtonElement;
     expect(hitBtn.disabled).toBe(false);
 
     fireEvent.click(hitBtn);
-    
+
     // Use waitFor to handle potential async state updates
     await waitFor(() => {
       // Turn should advance to Player 2 (multi-player rules)
       expect(container.querySelector('.zone-header h2')?.textContent).toContain('Player 2');
-      
+
       // Player 1 should be in sidebar with 2 cards (initial + hit)
-      const p1Row = Array.from(container.querySelectorAll('.player-row')).find(r => r.textContent?.includes('Player 1'));
+      const p1Row = Array.from(container.querySelectorAll('.player-row')).find((r) =>
+        r.textContent?.includes('Player 1')
+      );
       expect(p1Row?.querySelectorAll('.mini-card')).toHaveLength(2);
     });
   });
@@ -102,7 +113,7 @@ describe('TurnSevenGame component', () => {
   it('handles Stay action', () => {
     // In single player, Stay keeps it on Player 1.
     // But we can verify the button is clickable and doesn't crash.
-    const { getByText, getByTitle } = render(<TurnSevenGame />);
+    const { getByText } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
     const hitButton = getByText('Hit') as HTMLButtonElement;
     const stayButton = getByText('Stay') as HTMLButtonElement;
@@ -121,13 +132,14 @@ describe('TurnSevenGame component', () => {
 
   it('shows correct expected delta and hides Turn 7 when probability is exactly zero', () => {
     // re-mock deck so first card dealt to Player 1 is a 10 and remaining deck averages to 5
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'c1', suit: 'number', rank: '1', isFaceUp: false },
       { id: 'c3', suit: 'number', rank: '3', isFaceUp: false },
       { id: 'c5', suit: 'number', rank: '5', isFaceUp: false },
       { id: 'c7', suit: 'number', rank: '7', isFaceUp: false },
       { id: 'c9', suit: 'number', rank: '9', isFaceUp: false },
-      { id: 'c10', suit: 'number', rank: '10', isFaceUp: false }
+      { id: 'c10', suit: 'number', rank: '10', isFaceUp: false },
     ]);
 
     const { getByText, getByTitle } = render(<TurnSevenGame />);
@@ -147,11 +159,12 @@ describe('TurnSevenGame component', () => {
   it('handles Lock assigned during initial deal (UI-level)', () => {
     // MIN_PLAYERS is 3 so we test a 3-player initial deal
     // Stack (top to bottom): Lock (P1->P2), 5 (P1 replacement), 6 (P2 initial)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
-    ] as any);
+    ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
@@ -162,10 +175,10 @@ describe('TurnSevenGame component', () => {
     // Player 1 (index 0) should have the Lock card pending
     // And should see targeting UI (e.g. "Choose a target")
     // We simulate clicking Player 2 to target them.
-    
+
     // The pending action UI should only allow targeting via the sidebar. Find Player 2 in the sidebar and click.
     const sidebar = container.querySelector('.player-sidebar');
-    const player2InSidebar = within(sidebar as Element).getByText(/Player 2/i);
+    const player2InSidebar = within(sidebar as HTMLElement).getByText(/Player 2/i);
     fireEvent.click(player2InSidebar);
 
     // Now Player 2 should be locked
@@ -173,7 +186,7 @@ describe('TurnSevenGame component', () => {
     // In the sidebar, we check for mini-cards
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
     expect(p2MiniCards).toHaveLength(1);
-    
+
     // Check for locked icon in the sidebar row
     const p2Status = playerRows[1].querySelector('.player-status-icons');
     expect(p2Status?.textContent).toContain('🔒');
@@ -182,6 +195,7 @@ describe('TurnSevenGame component', () => {
   it('handles TurnThree initial-deal chain (UI-level)', () => {
     // 3-player stack top->bottom:
     // TurnThree (P1->P2), 8, Lock, 9, 5 (P1 replacement), 6 (P2 initial)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
@@ -189,40 +203,41 @@ describe('TurnSevenGame component', () => {
       { id: 'a2', rank: 'Lock', suit: 'action', isFaceUp: false },
       { id: 'n8', rank: '8', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'TurnThree', suit: 'action', isFaceUp: false },
-    ] as any);
+    ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
 
     const playerRows = container.querySelectorAll('.player-row');
-    
+
     // Player 1 has TurnThree pending. Target Player 2.
     // Click the Player 2 entry in the sidebar
     const sidebar2 = container.querySelector('.player-sidebar');
-    const player2InSidebar2 = within(sidebar2 as Element).getByText(/Player 2/i);
+    const player2InSidebar2 = within(sidebar2 as HTMLElement).getByText(/Player 2/i);
     fireEvent.click(player2InSidebar2);
 
     const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
     // Expect Player 2 to have TurnThree + 8 + Lock + 9 (4 cards)
     expect(p2MiniCards).toHaveLength(4);
-    const ranks = Array.from(p2MiniCards).map(c => c.textContent || '');
+    const ranks = Array.from(p2MiniCards).map((c) => c.textContent || '');
     // normalize whitespace when checking for 'TurnThree' because the card renderer
     // places a newline between camel-cased words ("Turn\nThree").
     // Mini cards might just show "TurnThree" or "T3" depending on implementation.
     // The current MiniCard implementation shows `rank`.
     // Accept multiple possible renderings for special card labels: either full text or abbreviated
-    expect(ranks.some(t => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
-    expect(ranks.some(t => t.includes('Lock') || t.includes('🔒') || t === 'F')).toBeTruthy();
+    expect(ranks.some((t) => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
+    expect(ranks.some((t) => t.includes('Lock') || t.includes('🔒') || t === 'F')).toBeTruthy();
   });
 
   it('pending-action UI allows actor to target themselves', () => {
     // Similar to Lock initial deal test but actor will target themselves
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
-    ] as any);
+    ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
@@ -230,7 +245,7 @@ describe('TurnSevenGame component', () => {
     // Actor (Player 1) should have a pending Lock and see targeting UI
     // Choose Player 1 from the sidebar (actor should be able to self-target via sidebar)
     const sidebar3 = container.querySelector('.player-sidebar');
-    const player1InSidebar = within(sidebar3 as Element).getByText(/Player 1/i);
+    const player1InSidebar = within(sidebar3 as HTMLElement).getByText(/Player 1/i);
     expect(player1InSidebar).toBeDefined();
     fireEvent.click(player1InSidebar);
 
@@ -241,11 +256,12 @@ describe('TurnSevenGame component', () => {
   });
 
   it('sidebar shows "(you)" hint when actor is selecting targets', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
-    ] as any);
+    ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));
@@ -262,11 +278,12 @@ describe('TurnSevenGame component', () => {
   });
 
   it('header rules button opens summarized rules overlay', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       { id: 'n6', rank: '6', suit: 'number', isFaceUp: false },
       { id: 'n5', rank: '5', suit: 'number', isFaceUp: false },
       { id: 'a1', rank: 'Lock', suit: 'action', isFaceUp: false },
-    ] as any);
+    ] as CardModel[]);
 
     const { getByText, getByTitle } = render(<TurnSevenGame />);
     fireEvent.click(getByText('Start Game'));

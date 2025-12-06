@@ -13,9 +13,7 @@ describe('GameBoard component', () => {
     { id: 'd1', suit: 'diamonds', rank: '2' },
     { id: 'd2', suit: 'clubs', rank: '3' },
   ];
-  const discardPile: CardModel[] = [
-    { id: 'dp1', suit: 'hearts', rank: '5' },
-  ];
+  const discardPile: CardModel[] = [{ id: 'dp1', suit: 'hearts', rank: '5' }];
 
   it('renders all players', () => {
     render(<GameBoard players={players} deck={deck} discardPile={discardPile} />);
@@ -36,7 +34,9 @@ describe('GameBoard component', () => {
   });
 
   it('highlights the current player', () => {
-    const { container } = render(<GameBoard players={players} currentPlayerId="p1" deck={deck} discardPile={discardPile} />);
+    const { container } = render(
+      <GameBoard players={players} currentPlayerId="p1" deck={deck} discardPile={discardPile} />
+    );
     // We need to find the player area for p1 and check if it has the class or if the PlayerHand inside it has the class.
     // The GameBoard implementation passes isCurrentPlayer to PlayerHand.
     // So we can check if there is a .current-player element.

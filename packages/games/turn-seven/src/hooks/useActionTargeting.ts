@@ -29,8 +29,8 @@ export const useActionTargeting = (
       payload: {
         actorId: targetingState.actorId,
         cardId: targetingState.cardId,
-        targetId
-      }
+        targetId,
+      },
     });
     clientManager.setState(newState);
     setTargetingState(null);
@@ -40,6 +40,6 @@ export const useActionTargeting = (
     targetingState,
     startTargeting,
     cancelTargeting,
-    confirmTarget
+    confirmTarget,
   };
 };

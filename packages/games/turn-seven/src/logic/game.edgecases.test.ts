@@ -10,7 +10,7 @@ describe('Turn Seven Edge Cases', () => {
     logic = new TurnSevenLogic();
     state = logic.createInitialStateFromNames(['A', 'B', 'C', 'D']);
     // Clear hands for easier setup
-    state.players.forEach((p: any) => {
+    state.players.forEach((p) => {
       p.hand = [];
       p.pendingImmediateActionIds = [];
       p.reservedActions = [];
@@ -19,11 +19,15 @@ describe('Turn Seven Edge Cases', () => {
     state.discardPile = [];
   });
 
-  const createCard = (rank: string, suit: 'number' | 'action' | 'modifier' = 'number', id: string): CardModel => ({
+  const createCard = (
+    rank: string,
+    suit: 'number' | 'action' | 'modifier' = 'number',
+    id: string
+  ): CardModel => ({
     id,
     rank,
     suit,
-    isFaceUp: true
+    isFaceUp: true,
   });
 
   it('Case 19: Turn order resumes from original actor after complex chain', () => {
@@ -55,20 +59,20 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on C
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerC.id }
+      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerC.id },
     });
 
     // C should now be the current player (to resolve Lock)
     expect(state.currentPlayerId).toBe(playerC.id);
     expect(state.players[2].pendingImmediateActionIds).toContain(lock.id);
-    
+
     // Verify turnOrderBaseId is set to A
     expect(state.turnOrderBaseId).toBe(playerA.id);
 
     // C plays Lock on D
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerC.id, cardId: lock.id, targetId: playerD.id }
+      payload: { actorId: playerC.id, cardId: lock.id, targetId: playerD.id },
     });
 
     // D should be locked
@@ -76,7 +80,7 @@ describe('Turn Seven Edge Cases', () => {
 
     // Turn should advance to B (A's neighbor), NOT D's neighbor (which would be A) or C's neighbor (D)
     expect(state.currentPlayerId).toBe(playerB.id);
-    
+
     // turnOrderBaseId should be cleared
     expect(state.turnOrderBaseId).toBeNull();
   });
@@ -107,7 +111,7 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id }
+      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id },
     });
 
     // B should have busted
@@ -116,11 +120,11 @@ describe('Turn Seven Edge Cases', () => {
     expect(state.players[1].hasBusted).toBe(true);
 
     // Lock should be in discard pile
-    const discardedLock = state.discardPile.find((c: any) => c.id === lock.id);
+    const discardedLock = state.discardPile.find((c: CardModel) => c.id === lock.id);
     expect(discardedLock).toBeDefined();
 
     // Turn Three should be in discard pile
-    const discardedT3 = state.discardPile.find((c: any) => c.id === turnThree.id);
+    const discardedT3 = state.discardPile.find((c: CardModel) => c.id === turnThree.id);
     expect(discardedT3).toBeDefined();
 
     // B should NOT have pending actions
@@ -153,18 +157,18 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id }
+      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id },
     });
 
     // B should NOT have busted
     expect(state.players[1].hasBusted).toBe(false);
-    
+
     // B should have 5, 6 in hand (duplicate 5 discarded, Life Saver discarded)
-    const ranks = state.players[1].hand.map((c: any) => c.rank);
+    const ranks = state.players[1].hand.map((c: CardModel) => c.rank);
     expect(ranks).toContain('5');
     expect(ranks).toContain('6');
     expect(ranks).not.toContain('LifeSaver');
-    
+
     // Life Saver should be gone (used)
     expect(state.players[1].hasLifeSaver).toBe(false);
   });
@@ -204,7 +208,7 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id }
+      payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id },
     });
 
     // B should have pending action (t3-2)
@@ -215,16 +219,16 @@ describe('Turn Seven Edge Cases', () => {
     // B plays Turn Three on C
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerB.id, cardId: turnThree2.id, targetId: playerC.id }
+      payload: { actorId: playerB.id, cardId: turnThree2.id, targetId: playerC.id },
     });
 
     // C resolves immediately (no pending actions generated from C's draw)
     // So turn should advance to A's neighbor -> B
     expect(state.currentPlayerId).toBe(playerB.id);
     expect(state.turnOrderBaseId).toBeNull();
-    
+
     // C should have 7, 8, 9
-    const cRanks = state.players[2].hand.map((c: any) => c.rank);
+    const cRanks = state.players[2].hand.map((c: CardModel) => c.rank);
     expect(cRanks).toContain('7');
     expect(cRanks).toContain('8');
     expect(cRanks).toContain('9');
@@ -234,7 +238,7 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B.
     // B draws Lock AND Turn Three.
     // B must resolve them in order (Lock then Turn Three).
-    
+
     const playerA = state.players[0];
     const playerB = state.players[1];
     const playerC = state.players[2];
@@ -254,7 +258,7 @@ describe('Turn Seven Edge Cases', () => {
     // If popped: 6, Lock, TurnThree.
     // Lock is flipped 2nd. TurnThree is flipped 3rd.
     // So Lock resolved first, then TurnThree.
-    
+
     // Stack:
     // Top -> TurnThree (3rd)
     //        Lock (2nd)
@@ -270,7 +274,7 @@ describe('Turn Seven Edge Cases', () => {
     // Pushed LAST (top of stack)
     const turnThree2 = createCard('TurnThree', 'action', 't3-2');
     const lock = createCard('Lock', 'action', 'f-1');
-    
+
     // We need to push in REVERSE pop order.
     // We want pop: 6, Lock, TurnThree.
     // So push: TurnThree, Lock, 6.
@@ -281,7 +285,7 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id }
+      payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id },
     });
 
     // B should have pending actions: Lock, then TurnThree
@@ -291,7 +295,7 @@ describe('Turn Seven Edge Cases', () => {
     // B resolves Lock on C
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerB.id, cardId: lock.id, targetId: playerC.id }
+      payload: { actorId: playerB.id, cardId: lock.id, targetId: playerC.id },
     });
 
     // C is locked
@@ -304,7 +308,7 @@ describe('Turn Seven Edge Cases', () => {
     // B resolves TurnThree on D
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerB.id, cardId: turnThree2.id, targetId: playerD.id }
+      payload: { actorId: playerB.id, cardId: turnThree2.id, targetId: playerD.id },
     });
 
     // D resolves immediately.
@@ -323,7 +327,7 @@ describe('Turn Seven Edge Cases', () => {
     const playerC = state.players[2];
 
     state.currentPlayerId = playerA.id;
-    
+
     // Give B a Life Saver
     playerB.hasLifeSaver = true;
 
@@ -342,28 +346,28 @@ describe('Turn Seven Edge Cases', () => {
     // A plays Turn Three on B
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id }
+      payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id },
     });
 
     // B should still have Life Saver (original)
     expect(state.players[1].hasLifeSaver).toBe(true);
-    
+
     // B should have pending action to give Life Saver to someone
     // Because B already has one, the new one is queued for targeting.
     expect(state.players[1].pendingImmediateActionIds).toContain(sc2.id);
-    
+
     // B targets C with the new Life Saver
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
-      payload: { actorId: playerB.id, cardId: sc2.id, targetId: playerC.id }
+      payload: { actorId: playerB.id, cardId: sc2.id, targetId: playerC.id },
     });
 
     // C should have received the new Life Saver
     expect(state.players[2].hasLifeSaver).toBe(true);
     // Debug output for failing case (helps identify why the card didn't land in hand)
     // debug logs removed after verification
-    expect(state.players[2].hand.some((c: any) => c.id === sc2.id)).toBe(true);
-    
+    expect(state.players[2].hand.some((c: CardModel) => c.id === sc2.id)).toBe(true);
+
     // Turn resumes from A's neighbor -> B
     expect(state.currentPlayerId).toBe(playerB.id);
   });

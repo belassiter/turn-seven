@@ -29,7 +29,7 @@ describe('useActionTargeting', () => {
     const logic = new TurnSevenLogic();
     const initialState = logic.createInitialState(['p1', 'p2']);
     const manager = new ClientGameStateManager(initialState);
-    
+
     // Spy on performAction
     const performActionSpy = vi.spyOn(logic, 'performAction');
     const setStateSpy = vi.spyOn(manager, 'setState');
@@ -44,17 +44,14 @@ describe('useActionTargeting', () => {
       result.current.confirmTarget('p2');
     });
 
-    expect(performActionSpy).toHaveBeenCalledWith(
-      expect.anything(), 
-      {
-        type: 'PLAY_ACTION',
-        payload: {
-          actorId: 'p1',
-          cardId: 'card-1',
-          targetId: 'p2'
-        }
-      }
-    );
+    expect(performActionSpy).toHaveBeenCalledWith(expect.anything(), {
+      type: 'PLAY_ACTION',
+      payload: {
+        actorId: 'p1',
+        cardId: 'card-1',
+        targetId: 'p2',
+      },
+    });
     expect(setStateSpy).toHaveBeenCalled();
     expect(result.current.targetingState).toBeNull();
   });

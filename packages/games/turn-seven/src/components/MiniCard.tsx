@@ -9,9 +9,9 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
   const { rank, suit } = card;
   const isNumber = suit === 'number';
   const isAction = suit === 'action';
-  
+
   let displayRank = String(rank);
-  
+
   // Abbreviate action names
   if (isAction) {
     // Support both spaced "Turn Three" and camelcase "TurnThree" forms used in tests
@@ -27,17 +27,22 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
   }
 
   // Ensure the right helper classes exist so CSS rules apply consistently for number, action and modifier mini-cards
-  const helperClass = isNumber ? 'mini-card-number' : (suit === 'action' ? 'mini-card-action' : 'mini-card-modifier');
+  const helperClass = isNumber
+    ? 'mini-card-number'
+    : suit === 'action'
+    ? 'mini-card-action'
+    : 'mini-card-modifier';
 
   const classes = [
     'mini-card',
     `mini-card-${suit}`,
-    helperClass
+    `rank-${String(rank).toLowerCase()}`,
+    helperClass,
   ].join(' ');
 
   return (
     <div className={classes} title={`${rank} (${suit})`}>
-      {displayRank}
+      <span className="mini-card-content">{displayRank}</span>
     </div>
   );
 };

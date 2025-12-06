@@ -19,15 +19,15 @@ describe('Card component', () => {
   });
 
   it('renders number card with only centered rank', () => {
-    const numCard = { id: 'n1', suit: 'number', rank: '7', isFaceUp: true } as any;
-    const { container } = render(<Card card={numCard} />);
+    const numCard: CardModel = { id: 'n1', suit: 'number', rank: '7', isFaceUp: true };
+    render(<Card card={numCard} />);
     // the rank '7' should be rendered somewhere (center or corner)
     const matches = screen.queryAllByText('7');
     expect(matches.length).toBeGreaterThan(0);
   });
 
   it('renders modifier card with modifier-card class and centered rank', () => {
-    const modCard = { id: 'm1', suit: 'modifier', rank: '+4', isFaceUp: true } as any;
+    const modCard: CardModel = { id: 'm1', suit: 'modifier', rank: '+4', isFaceUp: true };
     const { container } = render(<Card card={modCard} />);
     expect(container.querySelector('.modifier-card')).toBeTruthy();
     const center = container.querySelector('[data-testid="rank-center"]');
@@ -40,7 +40,7 @@ describe('Card component', () => {
   });
 
   it('renders action card with action-card class and shows a centered rank element', () => {
-    const actionCard = { id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true } as any;
+    const actionCard: CardModel = { id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true };
     const { container } = render(<Card card={actionCard} />);
     expect(container.querySelector('.action-card')).toBeTruthy();
     const center = container.querySelector('[data-testid="rank-center"]');
@@ -52,8 +52,8 @@ describe('Card component', () => {
   });
 
   it('modifier +10 and x2 should also use 90% center width to prevent overflow', () => {
-    const plus10 = { id: 'mod10', suit: 'modifier', rank: '+10', isFaceUp: true } as any;
-    const x2 = { id: 'modx2', suit: 'modifier', rank: 'x2', isFaceUp: true } as any;
+    const plus10: CardModel = { id: 'mod10', suit: 'modifier', rank: '+10', isFaceUp: true };
+    const x2: CardModel = { id: 'modx2', suit: 'modifier', rank: 'x2', isFaceUp: true };
     const { container } = render(<Card card={plus10} />);
     const plusCenter = container.querySelector('[data-testid="rank-center"]');
     const innerPlus = plusCenter?.querySelector('span') as HTMLElement | null;

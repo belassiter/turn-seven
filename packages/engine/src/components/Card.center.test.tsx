@@ -2,10 +2,11 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { Card } from './Card';
+import type { CardModel } from '../index';
 
 describe('Card visual expectations (centered number)', () => {
   it('number cards render only a single centered rank and no corner ranks', () => {
-    const numCard = { id: 'n1', suit: 'number', rank: '7', isFaceUp: true } as any;
+    const numCard: CardModel = { id: 'n1', suit: 'number', rank: '7', isFaceUp: true };
     const { container } = render(<Card card={numCard} />);
 
     // Expect exactly one centered rank element (use data-testid)

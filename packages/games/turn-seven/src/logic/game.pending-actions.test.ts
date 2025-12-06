@@ -8,13 +8,13 @@ describe('Pending immediate actions block HIT/STAY', () => {
     const state = logic.createInitialState(['p1', 'p2', 'p3']);
     const s: GameState = structuredClone(state);
     // give current player a pending action
-    const cp = s.players.find(p => p.id === s.currentPlayerId)!;
+    const cp = s.players.find((p) => p.id === s.currentPlayerId)!;
     cp.pendingImmediateActionIds = ['a1'];
 
     const after = logic.performAction(s, { type: 'HIT' });
     // state should be unchanged for the player hand length
-    const beforeHandLen = s.players.find(p => p.id === s.currentPlayerId)!.hand.length;
-    const afterHandLen = after.players.find(p => p.id === s.currentPlayerId)!.hand.length;
+    const beforeHandLen = s.players.find((p) => p.id === s.currentPlayerId)!.hand.length;
+    const afterHandLen = after.players.find((p) => p.id === s.currentPlayerId)!.hand.length;
     expect(afterHandLen).toBe(beforeHandLen);
   });
 
@@ -22,7 +22,7 @@ describe('Pending immediate actions block HIT/STAY', () => {
     const logic = new TurnSevenLogic();
     const state = logic.createInitialState(['p1', 'p2', 'p3']);
     const s: GameState = structuredClone(state);
-    const cp = s.players.find(p => p.id === s.currentPlayerId)!;
+    const cp = s.players.find((p) => p.id === s.currentPlayerId)!;
     cp.pendingImmediateActionIds = ['a1'];
 
     // debug: inspect state before action
@@ -30,7 +30,7 @@ describe('Pending immediate actions block HIT/STAY', () => {
     const after = logic.performAction(s, { type: 'STAY' });
     // console.debug('DEBUG after STAY', JSON.stringify(after, null, 2));
     // hasStayed should remain false
-    const stayed = after.players.find(p => p.id === s.currentPlayerId)!.hasStayed;
+    const stayed = after.players.find((p) => p.id === s.currentPlayerId)!.hasStayed;
     expect(stayed).toBe(false);
   });
 });

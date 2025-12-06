@@ -10,7 +10,7 @@ describe('Round Termination Scenarios', () => {
     const players = Array.from({ length: numPlayers }, (_, i) => ({
       id: `p${i + 1}`,
       name: `Player ${i + 1}`,
-      hand: [],
+      hand: [] as CardModel[],
       hasStayed: false,
       isLocked: false,
       isActive: true,
@@ -26,24 +26,8 @@ describe('Round Termination Scenarios', () => {
       discardPile: [],
       currentPlayerId: 'p1',
       gamePhase: 'playing',
-    } as any;
-  };
-
-  // Helper to mock deck
-  const mockDeck = (cards: Partial<CardModel>[]) => {
-    const originalCreateDeck = (logic as any).createDeck;
-    (logic as any).createDeck = () => {
-      return cards.map((c, i) => ({
-        id: c.id || `mock-${i}`,
-        suit: c.suit || 'number',
-        rank: c.rank || '1',
-        isFaceUp: false,
-        ...c
-      })) as CardModel[];
-    };
-    // We also need to inject these cards into the current state's deck if we're not calling createInitialState
-    // But for these tests we usually manipulate state.deck directly or use handleHit which pops from state.deck
-    return () => { (logic as any).createDeck = originalCreateDeck; };
+      roundNumber: 1,
+    } as GameState;
   };
 
   it('ends round when last active player busts', () => {
@@ -51,7 +35,7 @@ describe('Round Termination Scenarios', () => {
     // P1 has stayed
     state.players[0].hasStayed = true;
     state.players[0].isActive = false;
-    
+
     // P2 is active. P2 has a '5'.
     state.players[1].hand = [{ id: 'c1', suit: 'number', rank: '5', isFaceUp: true }];
     state.currentPlayerId = 'p2';
@@ -86,13 +70,13 @@ describe('Round Termination Scenarios', () => {
     const nextState = logic.performAction(state, { type: 'HIT' });
 
     // P1 should have 7 unique
-    const p1Ranks = nextState.players[0].hand.map(c => c.rank);
+    const p1Ranks = nextState.players[0].hand.map((c: CardModel) => c.rank);
     expect(new Set(p1Ranks).size).toBe(7);
 
     // Round should end immediately
     expect(nextState.gamePhase).toBe('ended');
     expect(nextState.currentPlayerId).toBeNull();
-    
+
     // P1 should get bonus (score calculation check)
     // Sum: 1+2+3+4+5+6+7 = 28. Bonus +15 = 43.
     expect(nextState.players[0].roundScore).toBe(43);
@@ -109,8 +93,10 @@ describe('Round Termination Scenarios', () => {
     state.currentPlayerId = 'p2';
 
     // P2 plays Turn Three on themselves (simulated by having it in reservedActions)
-    state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }];
-    
+    state.players[1].reservedActions = [
+      { id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true },
+    ];
+
     // Deck: 8, 5 (bust), 9 (won't be drawn)
     // Stack order (pop from end): 9, 5, 8
     state.deck = [
@@ -119,9 +105,9 @@ describe('Round Termination Scenarios', () => {
       { id: 'n8', suit: 'number', rank: '8', isFaceUp: false },
     ];
 
-    const nextState = logic.performAction(state, { 
-      type: 'PLAY_ACTION', 
-      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' } 
+    const nextState = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' },
     });
 
     expect(nextState.players[1].hasBusted).toBe(true);
@@ -143,9 +129,9 @@ describe('Round Termination Scenarios', () => {
     // But here we simulate PLAY_ACTION directly.
     state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true }];
 
-    const nextState = logic.performAction(state, { 
-      type: 'PLAY_ACTION', 
-      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' } 
+    const nextState = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' },
     });
 
     expect(nextState.players[1].isLocked).toBe(true);
@@ -162,7 +148,9 @@ describe('Round Termination Scenarios', () => {
 
     // P2 active.
     state.currentPlayerId = 'p2';
-    state.players[1].reservedActions = [{ id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true }];
+    state.players[1].reservedActions = [
+      { id: 'a1', suit: 'action', rank: 'TurnThree', isFaceUp: true },
+    ];
 
     // Deck: Lock, 8, 9.
     // Stack: 9, 8, Lock.
@@ -175,9 +163,9 @@ describe('Round Termination Scenarios', () => {
     ];
 
     // 1. Play Turn Three
-    let nextState = logic.performAction(state, { 
-      type: 'PLAY_ACTION', 
-      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' } 
+    let nextState = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: 'p2', cardId: 'a1', targetId: 'p2' },
     });
 
     // P2 should have drawn Lock, 8, 9.
@@ -188,7 +176,7 @@ describe('Round Termination Scenarios', () => {
     // 2. Resolve Lock (P2 targets P2)
     nextState = logic.performAction(nextState, {
       type: 'PLAY_ACTION',
-      payload: { actorId: 'p2', cardId: 'a2', targetId: 'p2' }
+      payload: { actorId: 'p2', cardId: 'a2', targetId: 'p2' },
     });
 
     expect(nextState.players[1].isLocked).toBe(true);

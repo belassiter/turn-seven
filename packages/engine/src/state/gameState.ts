@@ -13,7 +13,9 @@ export interface GameState {
   winnerId?: string | null;
   roundNumber: number;
   previousTurnLog?: string;
-  previousRoundScores?: { [playerId: string]: { score: number; resultType?: 'turn-seven' | 'bust' | 'normal' } };
+  previousRoundScores?: {
+    [playerId: string]: { score: number; resultType?: 'turn-seven' | 'bust' | 'normal' };
+  };
 }
 
 // A simple in-memory store for the game state.
@@ -38,11 +40,11 @@ export class ClientGameStateManager {
     this.subscribers.push(callback);
     // return an unsubscribe function
     return () => {
-      this.subscribers = this.subscribers.filter(cb => cb !== callback);
+      this.subscribers = this.subscribers.filter((cb) => cb !== callback);
     };
   }
 
   private notifySubscribers() {
-    this.subscribers.forEach(cb => cb(this.state));
+    this.subscribers.forEach((cb) => cb(this.state));
   }
 }

@@ -1,4 +1,5 @@
 # turn-seven
+
 demo implementation of the card game Turn Seven
 
 ## Development
@@ -26,13 +27,14 @@ pnpm test -- --reporter verbose
 
 ## AI-agent / automation verification
 
-If an automated agent (for example Copilot or other automation) is making changes directly in the repository, it should verify its work *before* declaring a task completed. The repository provides a cross-platform verification helper:
+If an automated agent (for example Copilot or other automation) is making changes directly in the repository, it should verify its work _before_ declaring a task completed. The repository provides a cross-platform verification helper:
 
 ```powershell
 pnpm verify:ai
 ```
 
 What `pnpm verify:ai` does:
+
 - Runs the configured formatter (Prettier) on changed files or the whole repo
 - Runs ESLint with --fix on changed files, then re-checks and writes a machine readable report to `.eslint-result.json` if problems remain
 - Runs the project's tests (one-shot non-watch run)
@@ -52,11 +54,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-vscode-global-setting
 ```
 
 Notes:
+
 - The script backs up your current settings.json before modifying it.
 - If the VS Code `code` CLI is not in your PATH, you'll be prompted to install it from the Command Palette.
 - You can also manually apply the settings via VS Code > Preferences > Settings (JSON) and install the `ESLint` and `Prettier` extensions.
 
-CI note
--------
-The GitHub Actions workflow ensures `pnpm` is available on the runner. The workflow installs or activates `pnpm` (via corepack or as a global fallback) before running any `pnpm` commands so the CI job won't fail due to a missing `pnpm` binary.
+## CI note
 
+The GitHub Actions workflow ensures `pnpm` is available on the runner. The workflow installs or activates `pnpm` (via corepack or as a global fallback) before running any `pnpm` commands so the CI job won't fail due to a missing `pnpm` binary.

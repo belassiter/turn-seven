@@ -10,15 +10,19 @@ describe('Turn Seven Solo Play (Last Player Standing)', () => {
     logic = new TurnSevenLogic();
     state = logic.createInitialStateFromNames(['A', 'B', 'C']);
     // Clear hands
-    state.players.forEach((p: any) => p.hand = []);
+    state.players.forEach((p) => (p.hand = []));
     state.deck = [];
   });
 
-  const createCard = (rank: string, suit: 'number' | 'action' | 'modifier' = 'number', id: string): CardModel => ({
+  const createCard = (
+    rank: string,
+    suit: 'number' | 'action' | 'modifier' = 'number',
+    id: string
+  ): CardModel => ({
     id,
     rank,
     suit,
-    isFaceUp: true
+    isFaceUp: true,
   });
 
   it('should allow the last active player to continue playing', () => {
@@ -51,7 +55,7 @@ describe('Turn Seven Solo Play (Last Player Standing)', () => {
     state.gamePhase = 'ended';
     const playerA = state.players[0];
     state.currentPlayerId = playerA.id;
-    
+
     // Stack deck
     state.deck.push(createCard('5', 'number', 'n-5'));
 

@@ -31,26 +31,31 @@ export interface GameBoardProps {
   roundNumber?: number;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, deck, discardPile, roundNumber }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({
+  players,
+  currentPlayerId,
+  deck,
+  discardPile,
+  roundNumber,
+}) => {
   // computeHandScore imported from engine's logic/scoring
 
   return (
     <div className="game-board">
       <div className="players-area">
-        {players.map(player => (
+        {players.map((player) => (
           <div key={player.id} className="player-area">
             <h2>
               <span className="player-name">{player.name}</span>
               {player.hasBusted ? (
                 <span>{` - Busted!`}</span>
               ) : (
-                <span>{` - ${computeHandScore(player.hand)}${player.isLocked ? ' (Locked)' : ''}`}</span>
+                <span>{` - ${computeHandScore(player.hand)}${
+                  player.isLocked ? ' (Locked)' : ''
+                }`}</span>
               )}
             </h2>
-            <PlayerHand
-              cards={player.hand}
-              isCurrentPlayer={player.id === currentPlayerId}
-            />
+            <PlayerHand cards={player.hand} isCurrentPlayer={player.id === currentPlayerId} />
           </div>
         ))}
       </div>
@@ -63,8 +68,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, 
           </div>
         </div>
         <div className="discard-pile-area">
-           <div className="card-pile">
-            {discardPile.length > 0 ? <Card card={{...discardPile[discardPile.length - 1], isFaceUp: true}} /> : <div className="card-placeholder"></div>}
+          <div className="card-pile">
+            {discardPile.length > 0 ? (
+              <Card card={{ ...discardPile[discardPile.length - 1], isFaceUp: true }} />
+            ) : (
+              <div className="card-placeholder"></div>
+            )}
             <span>Discard: {discardPile.length}</span>
           </div>
         </div>

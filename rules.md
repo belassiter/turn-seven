@@ -1,4 +1,5 @@
 # Objective of the Game
+
 Turn 7 is a push-your-luck party card game where players take turns drawing cards from a central deck, trying to collect the highest possible score each round without going bust. The main objective is to be the first player to reach 200 points across multiple rounds.
 
 Players earn points by collecting Number cards during their turn. You can stop your turn at any time and keep your accumulated cards and points, or you can keep drawing to try to earn more. However, if you draw a Number card that matches one you already have, you bust and score zero for that round.
@@ -8,6 +9,7 @@ There’s also a special bonus: if you successfully collect 7 unique Number card
 # Components
 
 ## Number Cards:
+
 Each Number card is worth its face value in points. The higher the number, the more of that card exist in the deck.
 
 - 12 cards showing the number 12
@@ -16,26 +18,30 @@ Each Number card is worth its face value in points. The higher the number, the m
 - 2 cards showing the number 2
 - 1 card showing the number 1
 - 1 card showing the number 0 (worth zero points but counts toward 7 unique numbers)
-This distribution means high numbers are more likely to appear, while low numbers are rare and risky to chase.
+  This distribution means high numbers are more likely to appear, while low numbers are rare and risky to chase.
 
 ## Modifier Cards:
+
 - +2, +4, +6, +8, +10: Adds that number of points to your total for the round
 - x2: Doubles your current score before applying other modifiers
-Modifier cards are not Number cards and do not count toward the 7-unique-card bonus.
+  Modifier cards are not Number cards and do not count toward the 7-unique-card bonus.
 
 ## Action Cards:
+
 - Lock (x3)
 - Turn Three (x3)
 - Life Saver (x3)
-These cards interrupt the normal flow of the game and introduce tactical decisions and surprise outcomes.
+  These cards interrupt the normal flow of the game and introduce tactical decisions and surprise outcomes.
 
 # Setup
+
 Shuffle all cards thoroughly to form a central draw pile.
 Choose one player to be the Dealer. This role rotates clockwise after each round.
 Works with 3-18 players
 You’re now ready to begin play.
 
 # Dealing the Cards
+
 At the start of each round:
 
 The Dealer deals one card at a time to each player, including themselves.
@@ -44,27 +50,35 @@ Continue dealing until every player has received at least one card.
 Due to the nature of Action cards, it’s possible that some players may receive multiple cards or none during the initial deal.
 
 # Player Turns
+
 Starting with the player to the Dealer’s left and proceeding clockwise, each active player (i.e., a player who hasn’t busted or stayed) takes their turn.
 
 Each turn, each active player chooses between two actions:
 
 1. Hit (Draw a Card)
+
 - Draw one card at a time from the deck.
 - Place any Number cards in a row in front of you. These are your scoring cards for the round.
 - Place Modifier cards above your row. They do not count toward the 7 unique Number cards.
 - Action cards are resolved immediately.
 - If you draw a Number card that matches a number already in your line, you bust and your turn ends. You score zero points for the round.
 - If you successfully collect 7 unique Number cards, you end the round immediately and receive a 15-point bonus in addition to the total value of your cards and modifiers.
+
 2. Stay (End Your Turn)
+
 - You may choose to end your turn voluntarily before drawing.
 - You keep all your cards and score the total value of your Number cards and any applicable Modifier cards.
 - Once you stay, you are out of the round and cannot draw or be targeted by Action cards.
 
 # Special Cards: Actions
+
 ## Lock
+
 - Target any active player (including yourself if you’re the only one left).
 - That player must immediately end their turn. They keep any cards collected so far and score as if they had chosen to Stay.
+
 ## Turn Three
+
 - Target an active player.
 - That player must immediately draw the next three cards, resolving them one at a time.
   - Number cards go into their row as usual.
@@ -73,7 +87,9 @@ Each turn, each active player chooses between two actions:
 - If the player busts during these three cards, their turn ends and they score zero.
 - If the player reaches 7 unique Number cards during this forced turn, the round ends immediately and the bonus is awarded.
 - If another Action card like Turn Three or Lock is revealed during the process, it is not resolved immediately—wait until the 3-card sequence is completed.
+
 ## Life Saver
+
 - This card protects the player from busting once.
 - If you draw a Number card that duplicates one already in your line:
   - Discard the duplicate and the Life Saver card.
@@ -83,37 +99,46 @@ Each turn, each active player chooses between two actions:
 - All unused Life Saver cards are discarded at the end of the round.
 
 # Modifier Cards
+
 Modifier cards affect scoring but do not help you reach the 7-card bonus and do not cause you to bust.
 
 ## +2 through +10
+
 - Simply add this number to your score after calculating your Number card total.
+
 ## x2 Card
+
 - Doubles the sum of your Number cards only, before adding +X modifiers.
 
 # End of Round
+
 A round ends immediately if any of the following occurs:
 
 1. A player successfully collects 7 unique Number cards
-→ That player ends the round instantly and earns a 15-point bonus
+   → That player ends the round instantly and earns a 15-point bonus
 2. All players have either busted or chosen to Stay
-→ No more actions can be taken; scoring phase begins
+   → No more actions can be taken; scoring phase begins
 
 # Scoring
+
 - If you busted, you score zero points.
-If you stayed or were forced to Lock, score the total value of your Number cards and add any Modifier cards (x2 first, then +X).
-If you turned 7 unique Number cards, add the 15-point bonus to your total for the round.
-Unused Life Saver cards are discarded.
+  If you stayed or were forced to Lock, score the total value of your Number cards and add any Modifier cards (x2 first, then +X).
+  If you turned 7 unique Number cards, add the 15-point bonus to your total for the round.
+  Unused Life Saver cards are discarded.
 
 # STARTING THE NEXT ROUND
-- Set all cards from the round in the discard pile. Do not shuffle them back into the deck. 
+
+- Set all cards from the round in the discard pile. Do not shuffle them back into the deck.
 - When the deck runs out, shuffle all the discarded cards to form a new deck. If you need to reshuffle mid-round, leave all cards in front of players where they are, even if that player has busted and is out of the round.
 
 # End of Game
+
 - The game ends when at least one player’s total score reaches 200 or more points at the end of a round.
 - Ties can be broken with a sudden-death tiebreaker round.
 - If multiple players cross 200 in the same round, the player with the highest total score wins.
 
 # Edge Cases
+
 From https://boardgamegeek.com/filepage/292492/flip-7-faq-edge-cases (v1.5)
 Case 1: You are dealt a matching number card and go bust, so you are out of the round. What do you do with your cards?
 Answer: Leave your cards in front of yourself, but turn them face-down to signify that you are out of the round. At the
@@ -215,7 +240,7 @@ Answer: You must assign the card an owner right away. You can assign the card to
 resolve the card immediately (i.e. you flip new cards until you reach three cards or you go bust). Or if you wish, you can
 assign the Flip 3 to any other active player, in which case that player resolves the card immediately. As usual, if the player
 who is drawing the cards goes bust, they are out of the round. Also as usual, if one of the newly flipped cards is itself a
-Flip 3 card, then the player should handle this second Flip 3 card as described in Case 14 above. 
+Flip 3 card, then the player should handle this second Flip 3 card as described in Case 14 above.
 Case 18: At the start of the game, you got assigned a Flip 3 card by another player before you even got dealt your initial
 card by the dealer. You did not go bust in the Flip 3 process. When the initial deal resumes and the dealer reaches you,
 must you automatically be dealt an additional card whether you want one or not, namely, must you be dealt the “initial”
@@ -270,34 +295,35 @@ You are dealt a Flip 3 card by the dealer. You can choose to assign this card to
 are the only active player left in the round, then you MUST assign the Flip 3 card to yourself.) Whoever is assigned the Flip
 3 card should then follow the procedure below. (Note that all flipped cards – even flipped action cards and orange
 modifier cards [“+2”, etc.] – count toward the target of flipping 3 cards.)
+
 1. Flip three cards, one at a time. Stop immediately if you Bust or Flip 7, and put the Flip 3 card on the discard pile. If
-you Flip 7, the round ends immediately for ALL players and you go straight to scoring the round.
+   you Flip 7, the round ends immediately for ALL players and you go straight to scoring the round.
 2. If you draw a Life Saver card, then:
-• If you don't already have one, immediately assign it to yourself.
-• If you do already have one, then immediately assign the new one to another active player. (If you are the only
-active player left, then discard it.)
-During a Flip 3 procedure, you are allowed to use a Life Saver card in your possession – whether newly drawn
-or previously owned – to neutralize a number card that would otherwise bust you.
+   • If you don't already have one, immediately assign it to yourself.
+   • If you do already have one, then immediately assign the new one to another active player. (If you are the only
+   active player left, then discard it.)
+   During a Flip 3 procedure, you are allowed to use a Life Saver card in your possession – whether newly drawn
+   or previously owned – to neutralize a number card that would otherwise bust you.
 3. Temporarily set aside any Flip 3s or Locks you draw. Discard them if you subsequently Bust or Flip 7.
 4. After flipping all three required cards without Busting or Flipping 7:
-• If no Flip 3s or Locks were set aside, discard the original Flip 3 card. The Flip 3 resolution is now complete.
-• If any Flip 3s or Locks were set-aside, then assign these in the order they were flipped, and to whichever
-active player(s) you choose. (You may assign multiple cards to the same player, or to different players at your
-discretion. If you are the only active player remaining, however, then you must assign all the cards to yourself.)
-Next, discard the original Flip 3 card; its resolution is now complete. Assigned Locks and Flip 3s then take
-effect sequentially, in the order in which you handed them out.
+   • If no Flip 3s or Locks were set aside, discard the original Flip 3 card. The Flip 3 resolution is now complete.
+   • If any Flip 3s or Locks were set-aside, then assign these in the order they were flipped, and to whichever
+   active player(s) you choose. (You may assign multiple cards to the same player, or to different players at your
+   discretion. If you are the only active player remaining, however, then you must assign all the cards to yourself.)
+   Next, discard the original Flip 3 card; its resolution is now complete. Assigned Locks and Flip 3s then take
+   effect sequentially, in the order in which you handed them out.
 5. After the original Flip 3 and any other subsequent Flip 3 and Lock cards are all resolved, the Dealer then moves
-along to the next active player clockwise from the player who got dealt the original Flip 3 by the Dealer, and asks that
-next player if they wish to "Hit or Stay?"
-6
-Some general principles to help with resolving edge cases:
-• The dealer always asks “Hit or stay?” strictly in turn order, i.e. no one’s turn is ever skipped.
-• All Lock and Flip 3 cards are assigned and fully resolved prior to the next asking of “Hit or stay?” by the dealer.
-• If you must assign a Lock or Flip 3 card, and you are the only active player left, then you must assign the card to
-yourself.
-• The assignment of a Lock card or a new Flip 3 card that is drawn during the resolution of a Flip 3 card takes place
-after the drawing of cards in the initial Flip 3 process, and only if that player did not go bust or achieve a Flip 7. By
-contrast, the assignment of a Life Saver card drawn during a Flip 3 process takes place immediately.
-• Remember: Flip 7 is a light-hearted party game meant to be played for fun. Truly confusing edge cases are rare, and
-you should feel free to depart from the official edge case solutions described in this FAQ by using your own house
-rules so long as all players agree
+   along to the next active player clockwise from the player who got dealt the original Flip 3 by the Dealer, and asks that
+   next player if they wish to "Hit or Stay?"
+   6
+   Some general principles to help with resolving edge cases:
+   • The dealer always asks “Hit or stay?” strictly in turn order, i.e. no one’s turn is ever skipped.
+   • All Lock and Flip 3 cards are assigned and fully resolved prior to the next asking of “Hit or stay?” by the dealer.
+   • If you must assign a Lock or Flip 3 card, and you are the only active player left, then you must assign the card to
+   yourself.
+   • The assignment of a Lock card or a new Flip 3 card that is drawn during the resolution of a Flip 3 card takes place
+   after the drawing of cards in the initial Flip 3 process, and only if that player did not go bust or achieve a Flip 7. By
+   contrast, the assignment of a Life Saver card drawn during a Flip 3 process takes place immediately.
+   • Remember: Flip 7 is a light-hearted party game meant to be played for fun. Truly confusing edge cases are rare, and
+   you should feel free to depart from the official edge case solutions described in this FAQ by using your own house
+   rules so long as all players agree

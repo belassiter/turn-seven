@@ -7,8 +7,14 @@ import { TurnSevenLogic } from '../logic/game';
 describe('Large game UI (18 players) — integration', () => {
   it('renders 18 players in the sidebar and does not render per-player buttons in main area', () => {
     // stub createDeck so no flakey action cards appear during initial deal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(
-      Array.from({ length: 200 }, (_, i) => ({ id: `c${i}`, suit: 'number', rank: String((i % 12) + 1), isFaceUp: false })).reverse()
+      Array.from({ length: 200 }, (_, i) => ({
+        id: `c${i}`,
+        suit: 'number',
+        rank: String((i % 12) + 1),
+        isFaceUp: false,
+      })).reverse()
     );
 
     const { container, getByText } = render(<TurnSevenGame />);

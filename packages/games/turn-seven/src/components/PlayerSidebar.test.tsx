@@ -2,23 +2,31 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { PlayerSidebar } from './PlayerSidebar';
+import type { PlayerModel, CardModel } from '@turn-seven/engine';
 
 describe('PlayerSidebar ordering', () => {
   it('orders cards left-to-right: numbers asc, then +X, then x2, then actions', () => {
-    const players = [
+    const players: PlayerModel[] = [
       {
         id: 'p1',
         name: 'P1',
         hand: [
-          { id: 'a1', suit: 'action', rank: 'Lock' },
-          { id: 'm1', suit: 'modifier', rank: '+2' },
-          { id: 'n3', suit: 'number', rank: '3' },
-          { id: 'm2', suit: 'modifier', rank: 'x2' },
-          { id: 'n1', suit: 'number', rank: '1' },
+          { id: 'a1', suit: 'action', rank: 'Lock', isFaceUp: true } as CardModel,
+          { id: 'm1', suit: 'modifier', rank: '+2', isFaceUp: true } as CardModel,
+          { id: 'n3', suit: 'number', rank: '3', isFaceUp: true } as CardModel,
+          { id: 'm2', suit: 'modifier', rank: 'x2', isFaceUp: true } as CardModel,
+          { id: 'n1', suit: 'number', rank: '1', isFaceUp: true } as CardModel,
         ],
-        isActive: true
-      }
-    ] as any;
+        isActive: true,
+        hasStayed: false,
+        hasBusted: false,
+        hasLifeSaver: false,
+        roundScore: 0,
+        totalScore: 0,
+        pendingImmediateActionIds: [],
+        reservedActions: [],
+      },
+    ];
 
     render(<PlayerSidebar players={players} />);
 

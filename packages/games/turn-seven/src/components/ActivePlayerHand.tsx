@@ -10,7 +10,7 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({ hand }) => {
     const special: CardModel[] = [];
     const numbers: CardModel[] = [];
 
-    hand.forEach(card => {
+    hand.forEach((card) => {
       if (card.suit === 'number') {
         numbers.push(card);
       } else {
@@ -37,20 +37,18 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({ hand }) => {
       {specialCards.length > 0 && (
         <div className="hand-row special-row">
           <div className="cards-container">
-            {specialCards.map(card => (
+            {specialCards.map((card) => (
               <Card key={card.id} card={{ ...card, isFaceUp: true }} />
             ))}
           </div>
         </div>
       )}
-      
+
       <div className="hand-row number-row">
         <div className="cards-container">
-          {numberCards.length > 0 ? (
-            numberCards.map(card => (
-              <Card key={card.id} card={{ ...card, isFaceUp: true }} />
-            ))
-          ) : null}
+          {numberCards.length > 0
+            ? numberCards.map((card) => <Card key={card.id} card={{ ...card, isFaceUp: true }} />)
+            : null}
         </div>
       </div>
     </div>

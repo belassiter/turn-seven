@@ -26,7 +26,7 @@ export function computeHandScore(h: CardModel[] = []): number {
   const multiplier = Math.pow(2, multiplierCount);
   let roundTotal = numberSum * multiplier + plusModifiers;
 
-  const uniqueNumbers = new Set(h.filter(x => !x.suit || x.suit === 'number').map(x => x.rank));
+  const uniqueNumbers = new Set(h.filter((x) => !x.suit || x.suit === 'number').map((x) => x.rank));
   if (uniqueNumbers.size >= 7) roundTotal += 15;
   return roundTotal;
 }
