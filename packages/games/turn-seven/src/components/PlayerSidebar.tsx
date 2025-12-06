@@ -80,7 +80,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                     className="player-score-info"
                     style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 500 }}
                   >
-                    {player.totalScore ?? 0} pts
+                    {player.totalScore ?? 0} points
                   </span>
                   <div className="player-status-icons">
                     {player.hasBusted ? (

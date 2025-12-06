@@ -4,16 +4,6 @@ import { TurnSevenGame } from './TurnSevenGame';
 import React from 'react';
 
 // Mock child components to isolate TurnSevenGame logic
-vi.mock('./GameHeader', () => ({
-  GameHeader: ({ onOpenGallery }: { onOpenGallery: () => void }) => (
-    <div data-testid="game-header">
-      <button onClick={onOpenGallery} data-testid="open-gallery-btn">
-        Open Gallery
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock('./GameFooter', () => ({
   GameFooter: () => <div data-testid="game-footer" />,
 }));
@@ -56,8 +46,8 @@ describe('TurnSevenGame Gallery Integration', () => {
     // Verify gallery is closed initially
     expect(screen.queryByTestId('card-gallery-modal')).toBeNull();
 
-    // Open gallery via header button
-    fireEvent.click(screen.getByTestId('open-gallery-btn'));
+    // Open gallery via button in status bar
+    fireEvent.click(screen.getByTitle('Card Gallery'));
     expect(screen.getByTestId('card-gallery-modal')).toBeDefined();
 
     // Close gallery via modal button

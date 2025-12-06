@@ -7,7 +7,7 @@ import { computeHitExpectation } from '../logic/odds';
 import { computeHandScore } from '@turn-seven/engine';
 
 // Layout Components
-import { GameHeader } from './GameHeader';
+// import { GameHeader } from './GameHeader'; // Removed
 import { GameFooter } from './GameFooter';
 import { PlayerSidebar } from './PlayerSidebar';
 import { ActivePlayerHand } from './ActivePlayerHand';
@@ -200,16 +200,7 @@ export const TurnSevenGame: React.FC = () => {
 
   return (
     <div className="turn-seven-layout">
-      <GameHeader
-        roundNumber={gameState.roundNumber}
-        deckCount={gameState.deck.length}
-        discardCount={gameState.discardPile.length}
-        showOdds={showOdds}
-        onToggleOdds={() => setShowOdds((s) => !s)}
-        onOpenRules={() => setShowRules(true)}
-        onOpenGallery={() => setShowGallery(true)}
-        onOpenLedger={() => setShowLedger(true)}
-      />
+      {/* Header Removed */}
 
       <PlayerSidebar
         players={gameState.players}
@@ -223,6 +214,7 @@ export const TurnSevenGame: React.FC = () => {
         {/* Top Status Bar */}
         <div className="game-status-bar">
           <div className="status-bar-left">
+            <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 80, marginBottom: 4 }} />
             <span className="round-badge-large">Round {gameState.roundNumber}</span>
           </div>
 
@@ -241,6 +233,12 @@ export const TurnSevenGame: React.FC = () => {
                   card={{
                     ...gameState.discardPile[gameState.discardPile.length - 1],
                     isFaceUp: true,
+                    // Ensure suit is present for correct styling
+                    suit:
+                      gameState.discardPile[gameState.discardPile.length - 1].suit ||
+                      (gameState.discardPile[gameState.discardPile.length - 1].rank.match(/^\d+$/)
+                        ? 'number'
+                        : 'action'),
                   }}
                 />
               ) : (
@@ -250,8 +248,64 @@ export const TurnSevenGame: React.FC = () => {
             </div>
           </div>
 
-          <div className="last-action-log">
-            {gameState.previousTurnLog ? <p>{gameState.previousTurnLog}</p> : null}
+          <div className="status-bar-right">
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                className="btn-icon-toggle"
+                onClick={() => setShowLedger(true)}
+                title="Game Ledger"
+                aria-label="Game Ledger"
+              >
+                📜
+              </button>
+              <button
+                className="btn-icon-toggle"
+                onClick={() => setShowGallery(true)}
+                title="Card Gallery"
+                aria-label="Card Gallery"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 4,
+                }}
+              >
+                <div
+                  style={{
+                    width: 28,
+                    height: 38,
+                    background: '#1a4b8c',
+                    borderRadius: 3,
+                    border: '1px solid #fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <img src="/logo.png" alt="" style={{ width: '80%', height: 'auto' }} />
+                </div>
+              </button>
+              <button
+                className={`btn-icon-toggle ${showOdds ? 'active' : ''}`}
+                onClick={() => setShowOdds((s) => !s)}
+                title={showOdds ? 'Hide Odds' : 'Show Odds'}
+                aria-label={showOdds ? 'Hide Odds' : 'Show Odds'}
+              >
+                🎲
+              </button>
+              <button
+                className="btn-icon-toggle"
+                onClick={() => setShowRules(true)}
+                title="Show Rules"
+                aria-label="Show Rules"
+              >
+                ❓
+              </button>
+            </div>
+            <div className="last-action-log">
+              {gameState.previousTurnLog ? <p>{gameState.previousTurnLog}</p> : null}
+            </div>
           </div>
         </div>
 
@@ -359,18 +413,23 @@ export const TurnSevenGame: React.FC = () => {
         <div className="overlay-container">
           <div className="overlay-content">
             <h2>Round Results</h2>
-            <ul>
+            <ul style={{ textAlign: 'left' }}>
               {gameState.players.map((p) => {
-                const numberRanks = p.hand
-                  .filter((h) => !h.suit || h.suit === 'number')
-                  .map((h) => h.rank);
-                const uniqueCount = new Set(numberRanks).size;
-                const isTurnSeven = uniqueCount >= 7;
+                // Calculate rank based on total score
+                const sorted = [...gameState.players].sort(
+                  (a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0)
+                );
+                const rankIndex = sorted.findIndex((sp) => sp.id === p.id);
+                const rank = rankIndex + 1;
+                const suffix = ['st', 'nd', 'rd'][((((rank + 90) % 100) - 10) % 10) - 1] || 'th';
+                const rankText = `${rank}${suffix}`;
+
                 return (
                   <li key={p.id}>
-                    <strong>{p.name}</strong>: {p.roundScore ?? 0} pts
-                    {p.hasBusted ? ' (Busted)' : ''}
-                    {isTurnSeven ? ' (Turn 7!)' : ''}
+                    <span>
+                      <strong>{p.name}</strong> {p.hasBusted ? '(Busted)' : ''}. Scored{' '}
+                      {p.roundScore ?? 0}. Total score: {p.totalScore ?? 0}. {rankText} place.
+                    </span>
                   </li>
                 );
               })}
@@ -390,26 +449,50 @@ export const TurnSevenGame: React.FC = () => {
 
       {gameState.gamePhase === 'gameover' && (
         <div className="overlay-container">
-          <div className="overlay-content">
+          <div className="overlay-content" style={{ position: 'relative' }}>
+            <button
+              className="btn-icon-toggle"
+              onClick={() => setShowLedger(true)}
+              title="View Ledger"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                width: 40,
+                height: 40,
+                fontSize: '1.2rem',
+              }}
+            >
+              📜
+            </button>
             <h2>Game Over!</h2>
-            <p>
+            <p style={{ fontSize: '1.25rem' }}>
               Winner:{' '}
               <strong>
                 {gameState.winnerId
                   ? gameState.players.find((p) => p.id === gameState.winnerId)?.name
                   : '—'}
-              </strong>
+              </strong>{' '}
+              🏆
             </p>
             <h3>Final Scores</h3>
             <ul>
               {[...gameState.players]
                 .sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
-                .map((p, index) => (
-                  <li key={p.id}>
-                    {index === 0 && '🏆 '}
-                    {p.name}: {p.totalScore ?? 0} pts
-                  </li>
-                ))}
+                .map((p, index) => {
+                  let medal = '';
+                  if (index === 0) medal = '🥇';
+                  else if (index === 1) medal = '🥈';
+                  else if (index === 2) medal = '🥉';
+
+                  return (
+                    <li key={p.id}>
+                      <span>
+                        {p.name}: {p.totalScore ?? 0} points {medal}
+                      </span>
+                    </li>
+                  );
+                })}
             </ul>
             <button
               className="btn btn-primary"

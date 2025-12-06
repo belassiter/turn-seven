@@ -24,7 +24,7 @@ export const LedgerModal: React.FC<LedgerModalProps> = ({ isOpen, onClose, ledge
         </div>
         <div className="modal-body">
           <table className="ledger-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
               <tr style={{ borderBottom: '2px solid #ccc' }}>
                 <th style={{ padding: '8px', textAlign: 'left' }}>Round</th>
                 <th style={{ padding: '8px', textAlign: 'left' }}>Player</th>

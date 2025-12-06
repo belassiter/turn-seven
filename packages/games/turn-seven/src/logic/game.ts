@@ -365,10 +365,11 @@ export class TurnSevenLogic implements IGameLogic {
 
     let result = 'Played';
     if (rank === 'Lock') result = 'Locked';
-    else if (rank === 'TurnThree') result = 'Draws 3';
     else if (rank === 'LifeSaver') result = 'Given';
 
-    this.addToLedger(newState, actor.name, 'Action', result, target.name);
+    if (rank !== 'TurnThree') {
+      this.addToLedger(newState, actor.name, 'Action', result, target.name);
+    }
 
     switch (rank) {
       case 'Lock': {
@@ -391,10 +392,13 @@ export class TurnSevenLogic implements IGameLogic {
 
         // Queue for actions revealed during the draw
         const revealedActions: CardModel[] = [];
+        const drawnCardNames: string[] = [];
 
         for (let i = 0; i < 3; i++) {
           const next = this.drawOne(newState);
           if (!next) break;
+          drawnCardNames.push(String(next.rank).replace(/([a-z])([A-Z])/g, '$1 $2'));
+
           if (!next.suit || next.suit === 'number') {
             const duplicateCount = target.hand.filter(
               (h) => (!h.suit || h.suit === 'number') && h.rank === next.rank
@@ -538,6 +542,15 @@ export class TurnSevenLogic implements IGameLogic {
             }
           }
         }
+
+        const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
+        this.addToLedger(
+          newState,
+          actor.name,
+          'Action',
+          `Turn 3 (on ${target.name}). Draws ${drawnString}`
+        );
+
         newState.previousTurnLog = log;
         break;
       }
@@ -720,16 +733,19 @@ export class TurnSevenLogic implements IGameLogic {
       this.addToLedger(state, p.name, 'Round End', `Score: ${roundTotal} (Total: ${p.totalScore})`);
     }
     // After computing totals, check for an overall winner.
-    for (const p of state.players) {
-      if ((p.totalScore ?? 0) >= this.WIN_SCORE) {
-        state.gamePhase = 'gameover';
-        // attach winnerId for UI
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (state as any).winnerId = p.id;
-        // When game over, clear current player so UI stops showing action controls
-        state.currentPlayerId = null;
-        return;
-      }
+    // Find all players who have crossed the win threshold
+    const winners = state.players.filter((p) => (p.totalScore ?? 0) >= this.WIN_SCORE);
+    if (winners.length > 0) {
+      // Sort by total score descending to find the highest score
+      winners.sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0));
+
+      state.gamePhase = 'gameover';
+      // attach winnerId for UI - the player with the highest score wins
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (state as any).winnerId = winners[0].id;
+      // When game over, clear current player so UI stops showing action controls
+      state.currentPlayerId = null;
+      return;
     }
   }
 
