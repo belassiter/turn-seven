@@ -11,6 +11,8 @@ import { GameHeader } from './GameHeader';
 import { GameFooter } from './GameFooter';
 import { PlayerSidebar } from './PlayerSidebar';
 import { ActivePlayerHand } from './ActivePlayerHand';
+import { CardGalleryModal } from './CardGalleryModal';
+import { LedgerModal } from './LedgerModal';
 
 export const TurnSevenGame: React.FC = () => {
   const gameLogic = useMemo(() => new TurnSevenLogic(), []);
@@ -18,6 +20,8 @@ export const TurnSevenGame: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showOdds, setShowOdds] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
 
   // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
@@ -203,6 +207,8 @@ export const TurnSevenGame: React.FC = () => {
         showOdds={showOdds}
         onToggleOdds={() => setShowOdds((s) => !s)}
         onOpenRules={() => setShowRules(true)}
+        onOpenGallery={() => setShowGallery(true)}
+        onOpenLedger={() => setShowLedger(true)}
       />
 
       <PlayerSidebar
@@ -320,6 +326,14 @@ export const TurnSevenGame: React.FC = () => {
       </div>
 
       <GameFooter />
+      {showGallery && <CardGalleryModal onClose={() => setShowGallery(false)} />}
+      {showLedger && gameState && (
+        <LedgerModal
+          isOpen={showLedger}
+          onClose={() => setShowLedger(false)}
+          ledger={gameState.ledger || []}
+        />
+      )}
       {showRules && (
         <div className="overlay-container">
           <div className="overlay-content">
@@ -388,17 +402,20 @@ export const TurnSevenGame: React.FC = () => {
             </p>
             <h3>Final Scores</h3>
             <ul>
-              {gameState.players.map((p) => (
-                <li key={p.id}>
-                  {p.name}: {p.totalScore ?? 0} pts
-                </li>
-              ))}
+              {[...gameState.players]
+                .sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
+                .map((p, index) => (
+                  <li key={p.id}>
+                    {index === 0 && '🏆 '}
+                    {p.name}: {p.totalScore ?? 0} pts
+                  </li>
+                ))}
             </ul>
             <button
               className="btn btn-primary"
               onClick={() => {
-                const reset = gameLogic.resetGame(gameState);
-                if (clientManager) clientManager.setState(reset);
+                setClientManager(null);
+                setGameState(null);
               }}
             >
               Play Again

@@ -27,6 +27,7 @@ describe('Round Termination Scenarios', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
   };
 

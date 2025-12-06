@@ -53,6 +53,7 @@ describe('Turn advancement', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'HIT' });
@@ -95,6 +96,7 @@ describe('Turn advancement', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'HIT' });
@@ -140,6 +142,7 @@ describe('Turn advancement', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'STAY' });

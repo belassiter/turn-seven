@@ -40,6 +40,7 @@ describe('Game Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, { type: 'HIT' });
@@ -81,6 +82,7 @@ describe('Game Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, { type: 'HIT' });
@@ -122,6 +124,7 @@ describe('Game Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, { type: 'STAY' });
@@ -165,6 +168,7 @@ describe('Game Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, {

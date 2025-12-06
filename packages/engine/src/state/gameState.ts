@@ -1,6 +1,15 @@
 import { CardModel } from '../components/Card';
 import { PlayerModel } from '../components/GameBoard';
 
+export interface LedgerEntry {
+  roundNumber: number;
+  playerName: string;
+  action: string;
+  targetName?: string;
+  result: string;
+  timestamp: number;
+}
+
 export interface GameState {
   players: PlayerModel[];
   currentPlayerId: string | null;
@@ -16,6 +25,7 @@ export interface GameState {
   previousRoundScores?: {
     [playerId: string]: { score: number; resultType?: 'turn-seven' | 'bust' | 'normal' };
   };
+  ledger: LedgerEntry[];
 }
 
 // A simple in-memory store for the game state.

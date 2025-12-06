@@ -45,6 +45,7 @@ describe('Mid-round reshuffle preserves player hands', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // stub shuffle to deterministic order

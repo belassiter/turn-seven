@@ -39,6 +39,7 @@ describe('Lock vs Stay behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // Manually apply what resolveActionOnDeal would do for Lock
@@ -101,6 +102,7 @@ describe('Lock vs Stay behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const afterStay = logic.performAction(state, { type: 'STAY' });

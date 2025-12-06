@@ -69,6 +69,7 @@ describe('Initial Deal Edge Cases', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const nextState = logic.startNextRound(state);
@@ -140,6 +141,7 @@ describe('Initial Deal Edge Cases', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const nextState = logic.startNextRound(state);
@@ -202,6 +204,7 @@ describe('Initial Deal Edge Cases', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const nextState = logic.startNextRound(state);
@@ -273,6 +276,7 @@ describe('Initial Deal Edge Cases', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const nextState = logic.startNextRound(state);

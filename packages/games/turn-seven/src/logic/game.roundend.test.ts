@@ -36,6 +36,7 @@ describe('Round end and startNextRound behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // Performing STAY should detect no active players remaining and end the round
@@ -95,6 +96,7 @@ describe('Round end and startNextRound behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.startNextRound(state);
@@ -135,6 +137,7 @@ describe('Round end and startNextRound behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

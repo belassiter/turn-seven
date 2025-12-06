@@ -66,6 +66,7 @@ describe('Chained Action Resolution', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // 1. P1 plays Turn Three on P2

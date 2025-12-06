@@ -35,6 +35,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -67,6 +68,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -110,6 +112,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -143,6 +146,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -199,6 +203,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -251,6 +256,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -368,6 +374,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     const after = logic.performAction(state, {
@@ -407,6 +414,7 @@ describe('Action card behavior', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     };
 
     // 1. HIT to draw Lock

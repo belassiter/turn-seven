@@ -32,8 +32,15 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
             }
           };
 
+          // Filter out pending actions (cards currently being resolved/targeted) so they don't appear in the sidebar prematurely
+          // Only do this for the current player, as they have a dedicated UI for pending actions.
+          // For other players, we want to see all their cards.
+          const visibleHand = player.hand.filter(
+            (c) => !isCurrent || !player.pendingImmediateActionIds?.includes(c.id)
+          );
+
           // Sort hand: Numbers (asc) -> +X (asc) -> x2 -> Actions
-          const sortedHand = [...player.hand].sort((a, b) => {
+          const sortedHand = [...visibleHand].sort((a, b) => {
             // Helper to get sort weight
             const getWeight = (c: typeof a) => {
               if (c.suit === 'number') return 0 + parseInt(String(c.rank));

@@ -40,6 +40,7 @@ describe('Game Logic Fixes', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // P1 Hits and draws Life Saver
@@ -94,6 +95,7 @@ describe('Game Logic Fixes', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'HIT' });
@@ -160,6 +162,7 @@ describe('Game Logic Fixes', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // P1 plays Turn Three on P2
@@ -227,6 +230,7 @@ describe('Game Logic Fixes', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after3 = logic.performAction(state, {

@@ -28,6 +28,7 @@ describe('Discard & shuffle behavior', () => {
       discardPile: [{ id: 'old', rank: '0', suit: 'number' } as CardModel],
       currentPlayerId: 'p1',
       roundNumber: 1,
+      ledger: [],
       gamePhase: 'ended',
     } as GameState;
 
@@ -78,6 +79,7 @@ describe('Discard & shuffle behavior', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const afterHit = logic.performAction(state, { type: 'HIT' });

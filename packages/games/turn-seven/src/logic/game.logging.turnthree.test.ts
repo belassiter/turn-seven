@@ -46,6 +46,7 @@ describe('Turn Three Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, {
@@ -96,6 +97,7 @@ describe('Turn Three Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, {
@@ -149,6 +151,7 @@ describe('Turn Three Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // 1. P1 plays Turn Three
@@ -215,6 +218,7 @@ describe('Turn Three Logging', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.performAction(state, {

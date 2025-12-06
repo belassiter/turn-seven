@@ -71,6 +71,7 @@ describe('Round Start Logic', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // Mock createDeck to return our specific stack

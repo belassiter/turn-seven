@@ -79,6 +79,7 @@ describe('TurnSevenLogic', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'HIT' });
@@ -129,6 +130,7 @@ describe('TurnSevenLogic', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'STAY' });

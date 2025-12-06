@@ -10,12 +10,16 @@ interface GameHeaderProps {
 
 interface GameHeaderExtra {
   onOpenRules?: () => void;
+  onOpenGallery?: () => void;
+  onOpenLedger?: () => void;
 }
 
 export const GameHeader: React.FC<GameHeaderProps & GameHeaderExtra> = ({
   showOdds,
   onToggleOdds,
   onOpenRules,
+  onOpenGallery,
+  onOpenLedger,
 }) => {
   return (
     <header className="game-header">
@@ -27,6 +31,42 @@ export const GameHeader: React.FC<GameHeaderProps & GameHeaderExtra> = ({
       <div className="header-center">{/* Round number moved to main area */}</div>
       <div className="header-right">
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            className="btn-icon-toggle"
+            onClick={onOpenLedger}
+            title="Game Ledger"
+            aria-label="Game Ledger"
+          >
+            📜
+          </button>
+          <button
+            className="btn-icon-toggle"
+            onClick={onOpenGallery}
+            title="Card Gallery"
+            aria-label="Card Gallery"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 4,
+            }}
+          >
+            <div
+              style={{
+                width: 20,
+                height: 28,
+                background: '#1a4b8c',
+                borderRadius: 2,
+                border: '1px solid #fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              <img src="/logo.png" alt="" style={{ width: '80%', height: 'auto' }} />
+            </div>
+          </button>
           <button
             className={`btn-icon-toggle ${showOdds ? 'active' : ''}`}
             onClick={onToggleOdds}

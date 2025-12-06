@@ -41,6 +41,7 @@ describe('TurnSevenLogic additional tests', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'STAY' });
@@ -89,6 +90,7 @@ describe('TurnSevenLogic additional tests', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, { type: 'STAY' });
@@ -132,6 +134,7 @@ describe('TurnSevenLogic additional tests', () => {
       discardPile: [],
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.startNextRound(state);

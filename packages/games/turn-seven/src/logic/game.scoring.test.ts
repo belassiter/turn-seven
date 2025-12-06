@@ -34,6 +34,7 @@ describe('Scoring Logic', () => {
       currentPlayerId: null,
       gamePhase: 'ended', // Force end to trigger scoring if we were calling a method, but here we might call computeScores directly or via checkRoundEnd
       roundNumber: 1,
+      ledger: [],
     } as GameState;
   };
 

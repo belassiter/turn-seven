@@ -35,6 +35,7 @@ describe('Mid-round reshuffle + large-player deal edge cases', () => {
       currentPlayerId: 'p1',
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // stub shuffle deterministically (no reorder)
@@ -107,6 +108,7 @@ describe('Mid-round reshuffle + large-player deal edge cases', () => {
       currentPlayerId: null,
       gamePhase: 'ended',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const next = logic.startNextRound(state);

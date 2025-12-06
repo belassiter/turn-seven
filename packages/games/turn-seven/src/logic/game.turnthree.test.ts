@@ -31,6 +31,7 @@ describe('Turn Three Edge Cases', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, {
@@ -77,6 +78,7 @@ describe('Turn Three Edge Cases', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, {
@@ -131,6 +133,7 @@ describe('Turn Three Edge Cases', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, {
@@ -179,6 +182,7 @@ describe('Turn Three Edge Cases', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     const after = logic.performAction(state, {

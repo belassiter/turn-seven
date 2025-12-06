@@ -47,6 +47,7 @@ describe('Turn Three vs Locked Player', () => {
       discardPile: [],
       gamePhase: 'playing',
       roundNumber: 1,
+      ledger: [],
     } as GameState;
 
     // Attempt to play Turn Three on P2 (who is locked/inactive)

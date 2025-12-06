@@ -1,4 +1,4 @@
-import { CardModel, GameState, PlayerModel } from '@turn-seven/engine';
+import { CardModel, GameState, PlayerModel, LedgerEntry } from '@turn-seven/engine';
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 18;
@@ -41,6 +41,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
+      ledger: [],
     });
 
     return {
@@ -53,6 +54,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
+      ledger: [],
     };
   }
 
@@ -85,6 +87,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
+      ledger: [],
     });
 
     return {
@@ -97,6 +100,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
+      ledger: [],
     };
   }
 
@@ -151,6 +155,13 @@ export class TurnSevenLogic implements IGameLogic {
       '$1 $2'
     )}.`;
 
+    this.addToLedger(
+      newState,
+      currentPlayer.name,
+      'Hit',
+      `Drew ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}`
+    );
+
     if (card.suit === 'action') {
       // Reserve action for later play and show a visible representation in hand for UI
       currentPlayer.reservedActions = currentPlayer.reservedActions || [];
@@ -204,7 +215,32 @@ export class TurnSevenLogic implements IGameLogic {
             (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
           );
           if (scIdx !== -1) currentPlayer.hand.splice(scIdx, 1);
-          currentPlayer.hasLifeSaver = false;
+
+          // Check if we have another Life Saver (e.g. pending)
+          const hasAnother = currentPlayer.hand.some(
+            (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
+          );
+          if (hasAnother) {
+            // Activate it!
+            currentPlayer.hasLifeSaver = true;
+            // Find the card ID of the remaining Life Saver
+            const otherLS = currentPlayer.hand.find(
+              (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
+            );
+            if (otherLS) {
+              if (currentPlayer.pendingImmediateActionIds) {
+                currentPlayer.pendingImmediateActionIds =
+                  currentPlayer.pendingImmediateActionIds.filter((id) => id !== otherLS.id);
+              }
+              if (currentPlayer.reservedActions) {
+                currentPlayer.reservedActions = currentPlayer.reservedActions.filter(
+                  (c) => c.id !== otherLS.id
+                );
+              }
+            }
+          } else {
+            currentPlayer.hasLifeSaver = false;
+          }
         } else {
           currentPlayer.hasBusted = true;
           currentPlayer.isActive = false;
@@ -327,6 +363,13 @@ export class TurnSevenLogic implements IGameLogic {
     let log = `${actor.name} played ${cardName} on ${target.name}.`;
     newState.previousTurnLog = log;
 
+    let result = 'Played';
+    if (rank === 'Lock') result = 'Locked';
+    else if (rank === 'TurnThree') result = 'Draws 3';
+    else if (rank === 'LifeSaver') result = 'Given';
+
+    this.addToLedger(newState, actor.name, 'Action', result, target.name);
+
     switch (rank) {
       case 'Lock': {
         // target immediately stays and becomes inactive
@@ -366,7 +409,36 @@ export class TurnSevenLogic implements IGameLogic {
                   (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
                 );
                 if (scIdx !== -1) target.hand.splice(scIdx, 1);
-                target.hasLifeSaver = false;
+
+                // Check if we have another Life Saver (e.g. pending)
+                const hasAnother = target.hand.some(
+                  (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
+                );
+                if (hasAnother) {
+                  // Activate it!
+                  target.hasLifeSaver = true;
+                  // Find the card ID of the remaining Life Saver
+                  const otherLS = target.hand.find(
+                    (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
+                  );
+                  if (otherLS) {
+                    if (target.pendingImmediateActionIds) {
+                      target.pendingImmediateActionIds = target.pendingImmediateActionIds.filter(
+                        (id) => id !== otherLS.id
+                      );
+                    }
+                    if (target.reservedActions) {
+                      target.reservedActions = target.reservedActions.filter(
+                        (c) => c.id !== otherLS.id
+                      );
+                    }
+                    // Also remove from revealedActions so it doesn't get added to pending later
+                    const raIdx = revealedActions.findIndex((r) => r.id === otherLS.id);
+                    if (raIdx !== -1) revealedActions.splice(raIdx, 1);
+                  }
+                } else {
+                  target.hasLifeSaver = false;
+                }
               } else {
                 target.hasBusted = true;
                 target.isActive = false;
@@ -537,6 +609,7 @@ export class TurnSevenLogic implements IGameLogic {
     players[currentPlayerIndex].hasStayed = true;
     players[currentPlayerIndex].isActive = false;
     newState.previousTurnLog = `${currentPlayer.name} stayed.`;
+    this.addToLedger(newState, currentPlayer.name, 'Stay', 'Stayed');
 
     // Advance to next active player (forward-wrapping)
     const total = players.length;
@@ -601,6 +674,7 @@ export class TurnSevenLogic implements IGameLogic {
       if (p.hasBusted) {
         p.roundScore = 0;
         p.totalScore = (p.totalScore ?? 0) + 0;
+        this.addToLedger(state, p.name, 'Round End', `Busted (Score: 0, Total: ${p.totalScore})`);
         continue;
       }
 
@@ -642,6 +716,8 @@ export class TurnSevenLogic implements IGameLogic {
 
       p.roundScore = roundTotal;
       p.totalScore = (p.totalScore ?? 0) + roundTotal;
+
+      this.addToLedger(state, p.name, 'Round End', `Score: ${roundTotal} (Total: ${p.totalScore})`);
     }
     // After computing totals, check for an overall winner.
     for (const p of state.players) {
@@ -748,6 +824,27 @@ export class TurnSevenLogic implements IGameLogic {
     // continueDealing sets it.
 
     return newState;
+  }
+
+  private addToLedger(
+    state: GameState,
+    playerName: string,
+    action: string,
+    result: string,
+    targetName?: string
+  ): void {
+    if (!state.ledger) {
+      state.ledger = [];
+    }
+    const entry: LedgerEntry = {
+      roundNumber: state.roundNumber,
+      playerName,
+      action,
+      targetName,
+      result,
+      timestamp: Date.now(),
+    };
+    state.ledger.push(entry);
   }
 
   private createDeck(): CardModel[] {
@@ -961,6 +1058,12 @@ export class TurnSevenLogic implements IGameLogic {
       } else {
         player.hand.push({ ...card, isFaceUp: true });
         keptCard = true;
+        this.addToLedger(
+          state,
+          player.name,
+          'Deal',
+          `Dealt ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}`
+        );
       }
     }
 
