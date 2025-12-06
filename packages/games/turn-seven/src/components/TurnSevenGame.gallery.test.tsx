@@ -1,7 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TurnSevenGame } from './TurnSevenGame';
 import React from 'react';
+
+// Mock LocalGameService to remove latency for tests
+vi.mock('../services/gameService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/gameService')>();
+  return {
+    ...actual,
+    LocalGameService: class extends actual.LocalGameService {
+      constructor() {
+        super();
+        // Force latency to 0
+        // @ts-expect-error - accessing private/protected property for test
+        this.simulatedLatencyMs = 0;
+      }
+    },
+  };
+});
 
 // Mock child components to isolate TurnSevenGame logic
 vi.mock('./GameFooter', () => ({
@@ -37,11 +53,16 @@ vi.mock('./CardGalleryModal', () => ({
 }));
 
 describe('TurnSevenGame Gallery Integration', () => {
-  it('opens and closes the card gallery modal', () => {
+  it('opens and closes the card gallery modal', async () => {
     render(<TurnSevenGame />);
 
     // Start the game to see the header
     fireEvent.click(screen.getByTestId('start-game-btn'));
+
+    // Wait for game to start (header/status bar to appear)
+    await waitFor(() => {
+      expect(screen.getByTitle('Card Gallery')).toBeInTheDocument();
+    });
 
     // Verify gallery is closed initially
     expect(screen.queryByTestId('card-gallery-modal')).toBeNull();

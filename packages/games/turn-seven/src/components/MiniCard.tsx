@@ -1,5 +1,6 @@
 import React from 'react';
 import { CardModel } from '@turn-seven/engine';
+import { motion } from 'framer-motion';
 
 interface MiniCardProps {
   card: CardModel;
@@ -41,8 +42,8 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
   ].join(' ');
 
   return (
-    <div className={classes} title={`${rank} (${suit})`}>
+    <motion.div className={classes} title={`${rank} (${suit})`} layoutId={card.id}>
       <span className="mini-card-content">{displayRank}</span>
-    </div>
+    </motion.div>
   );
 };

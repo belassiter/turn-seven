@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { GameState, ClientGameStateManager, Card } from '@turn-seven/engine';
-import { TurnSevenLogic } from '../logic/game';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { GameState, Card } from '@turn-seven/engine';
+import { LocalGameService } from '../services/gameService';
 import { GameSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
 import { computeHitExpectation } from '../logic/odds';
@@ -13,11 +13,14 @@ import { PlayerSidebar } from './PlayerSidebar';
 import { ActivePlayerHand } from './ActivePlayerHand';
 import { CardGalleryModal } from './CardGalleryModal';
 import { LedgerModal } from './LedgerModal';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const TurnSevenGame: React.FC = () => {
-  const gameLogic = useMemo(() => new TurnSevenLogic(), []);
-  const [clientManager, setClientManager] = useState<ClientGameStateManager | null>(null);
+  const gameService = useMemo(() => new LocalGameService(), []);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   const [showOdds, setShowOdds] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
@@ -31,35 +34,58 @@ export const TurnSevenGame: React.FC = () => {
     return computeHitExpectation(current?.hand, gameState.deck, activeCountLocal);
   }, [showOdds, gameState]);
 
-  const { targetingState, startTargeting, cancelTargeting, confirmTarget } = useActionTargeting(
-    clientManager,
-    gameLogic
-  );
+  const { targetingState, startTargeting, cancelTargeting, confirmTarget } =
+    useActionTargeting(gameService);
 
   useEffect(() => {
-    if (!clientManager) return;
-    const unsubscribe = clientManager.subscribe((s) => setGameState(s));
-    setGameState(clientManager.getState());
+    const unsubscribe = gameService.subscribe((s) => {
+      setGameState(s);
+    });
+    setGameState(gameService.getState());
     return () => unsubscribe();
-  }, [clientManager]);
+  }, [gameService]);
+
+  // Animation Lock Logic
+  const prevPlayerIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!gameState) return;
+
+    // If player changed, trigger animation lock
+    if (prevPlayerIdRef.current !== gameState.currentPlayerId) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 600); // 600ms lock for animations
+      return () => clearTimeout(timer);
+    }
+    prevPlayerIdRef.current = gameState.currentPlayerId || null;
+  }, [gameState]);
 
   const currentPlayer = gameState?.players.find((p) => p.id === gameState.currentPlayerId);
   const hasPendingActions =
     currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
 
-  const handleHit = useCallback(() => {
-    if (!clientManager) return;
-    const currentState = clientManager.getState();
-    const newState = gameLogic.performAction(currentState, { type: 'HIT' });
-    clientManager.setState(newState);
-  }, [clientManager, gameLogic]);
+  const isInputLocked = isPending || isAnimating;
 
-  const handleStay = useCallback(() => {
-    if (!clientManager) return;
-    const currentState = clientManager.getState();
-    const newState = gameLogic.performAction(currentState, { type: 'STAY' });
-    clientManager.setState(newState);
-  }, [clientManager, gameLogic]);
+  const handleHit = useCallback(async () => {
+    if (isInputLocked) return;
+    setIsPending(true);
+    try {
+      await gameService.sendAction({ type: 'HIT' });
+    } finally {
+      setIsPending(false);
+    }
+  }, [gameService, isInputLocked]);
+
+  const handleStay = useCallback(async () => {
+    if (isInputLocked) return;
+    setIsPending(true);
+    try {
+      await gameService.sendAction({ type: 'STAY' });
+    } finally {
+      setIsPending(false);
+    }
+  }, [gameService, isInputLocked]);
 
   // Hotkeys
   useEffect(() => {
@@ -68,6 +94,7 @@ export const TurnSevenGame: React.FC = () => {
       // Ensure we are the active player (in local multiplayer, we always are if it's our turn)
       if (!currentPlayer || currentPlayer.id !== gameState.currentPlayerId) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (isInputLocked) return; // Ignore hotkeys when locked
 
       if (e.key.toLowerCase() === 'h') {
         if (
@@ -87,12 +114,15 @@ export const TurnSevenGame: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, currentPlayer, hasPendingActions, handleHit, handleStay]);
+  }, [gameState, currentPlayer, hasPendingActions, handleHit, handleStay, isInputLocked]);
 
-  const handleStart = (names: string[]) => {
-    const initialState = gameLogic.createInitialStateFromNames(names);
-    const mgr = new ClientGameStateManager(initialState);
-    setClientManager(mgr);
+  const handleStart = async (names: string[]) => {
+    setIsPending(true);
+    try {
+      await gameService.start(names);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   // --- Render Helpers ---
@@ -129,18 +159,21 @@ export const TurnSevenGame: React.FC = () => {
   }
 
   // Action Handlers
-  const handlePlayPendingAction = (cardId: string, targetId: string) => {
-    if (!clientManager || !currentPlayer) return;
-    const currentState = clientManager.getState();
-    const newState = gameLogic.performAction(currentState, {
-      type: 'PLAY_ACTION',
-      payload: {
-        actorId: currentPlayer.id,
-        cardId: cardId,
-        targetId,
-      },
-    });
-    clientManager.setState(newState);
+  const handlePlayPendingAction = async (cardId: string, targetId: string) => {
+    if (!currentPlayer) return;
+    setIsPending(true);
+    try {
+      await gameService.sendAction({
+        type: 'PLAY_ACTION',
+        payload: {
+          actorId: currentPlayer.id,
+          cardId: cardId,
+          targetId,
+        },
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   // If we are in targeting mode (either from reserved action or pending action),
@@ -338,73 +371,101 @@ export const TurnSevenGame: React.FC = () => {
         </div>
 
         {/* Active Player Zone */}
-        {gameState.gamePhase === 'playing' && currentPlayer && (
-          <div className="active-player-zone">
-            <div className="zone-header">
-              <h2>{currentPlayer.name}&apos;s Turn</h2>
-              <div className="current-score">
-                Hand Score: {computeHandScore(currentPlayer.hand)}
-                {currentPlayer.isLocked && <span style={{ marginLeft: 10 }}>🔒 Locked</span>}
-              </div>
-            </div>
-
-            {/* Hand */}
-            <ActivePlayerHand hand={currentPlayer.hand} />
-
-            {/* Controls */}
-            <div
-              className="controls-area"
-              style={{ marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 20 }}
+        <AnimatePresence mode="wait">
+          {gameState.gamePhase === 'playing' && currentPlayer && (
+            <motion.div
+              key="active-player-zone"
+              className="active-player-zone"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
             >
-              {hasPendingActions ? (
-                renderPendingActionUI()
-              ) : (
-                <>
-                  <div className="action-bar">
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleHit}
-                      disabled={
-                        !!currentPlayer.hasStayed ||
-                        !currentPlayer.isActive ||
-                        !!currentPlayer.hasBusted
-                      }
-                    >
-                      Hit
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={handleStay}
-                      disabled={!!currentPlayer.hasStayed || !!currentPlayer.hasBusted}
-                    >
-                      Stay
-                    </button>
+              <div className="zone-header">
+                <motion.h2
+                  key={`${currentPlayer.id}-name`}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {currentPlayer.name}&apos;s Turn
+                </motion.h2>
+                <div className="current-score">
+                  Hand Score: {computeHandScore(currentPlayer.hand)}
+                  {currentPlayer.isLocked && <span style={{ marginLeft: 10 }}>🔒 Locked</span>}
+                </div>
+              </div>
 
-                    {renderOdds()}
-                  </div>
+              {/* Hand */}
+              <ActivePlayerHand hand={currentPlayer.hand} />
 
-                  {renderReservedActions()}
-
-                  {targetingState && (
-                    <div
-                      className="action-targeting"
-                      style={{ marginTop: 10, padding: 10, background: '#fffbeb', borderRadius: 6 }}
-                    >
-                      <strong>Select a target from the sidebar...</strong>
+              {/* Controls */}
+              <motion.div
+                className="controls-area"
+                style={{ marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 20 }}
+                key={`${currentPlayer.id}-controls`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                {hasPendingActions ? (
+                  renderPendingActionUI()
+                ) : (
+                  <>
+                    <div className="action-bar">
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleHit}
+                        disabled={
+                          isInputLocked ||
+                          !!currentPlayer.hasStayed ||
+                          !currentPlayer.isActive ||
+                          !!currentPlayer.hasBusted
+                        }
+                      >
+                        Hit
+                      </button>
                       <button
                         className="btn btn-secondary"
-                        style={{ marginLeft: 10 }}
-                        onClick={cancelTargeting}
+                        onClick={handleStay}
+                        disabled={
+                          isInputLocked || !!currentPlayer.hasStayed || !!currentPlayer.hasBusted
+                        }
                       >
-                        Cancel
+                        Stay
                       </button>
+
+                      {renderOdds()}
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
+
+                    {renderReservedActions()}
+
+                    {targetingState && (
+                      <div
+                        className="action-targeting"
+                        style={{
+                          marginTop: 10,
+                          padding: 10,
+                          background: '#fffbeb',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <strong>Select a target from the sidebar...</strong>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ marginLeft: 10 }}
+                          onClick={cancelTargeting}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <GameFooter />
@@ -471,9 +532,13 @@ export const TurnSevenGame: React.FC = () => {
             </ul>
             <button
               className="btn btn-primary"
-              onClick={() => {
-                const next = gameLogic.startNextRound(gameState);
-                if (clientManager) clientManager.setState(next);
+              onClick={async () => {
+                setIsPending(true);
+                try {
+                  await gameService.startNextRound();
+                } finally {
+                  setIsPending(false);
+                }
               }}
             >
               Start Next Round
@@ -532,7 +597,7 @@ export const TurnSevenGame: React.FC = () => {
             <button
               className="btn btn-primary"
               onClick={() => {
-                setClientManager(null);
+                gameService.reset();
                 setGameState(null);
               }}
             >

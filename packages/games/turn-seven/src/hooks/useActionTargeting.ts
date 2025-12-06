@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import { ClientGameStateManager } from '@turn-seven/engine';
-import { TurnSevenLogic } from '../logic/game';
+import { IGameService } from '../services/gameService';
 
 export interface TargetingState {
   cardId: string;
   actorId: string;
 }
 
-export const useActionTargeting = (
-  clientManager: ClientGameStateManager | null,
-  gameLogic: TurnSevenLogic
-) => {
+export const useActionTargeting = (gameService: IGameService | null) => {
   const [targetingState, setTargetingState] = useState<TargetingState | null>(null);
 
   const startTargeting = (cardId: string, actorId: string) => {
@@ -21,10 +17,9 @@ export const useActionTargeting = (
     setTargetingState(null);
   };
 
-  const confirmTarget = (targetId: string) => {
-    if (!clientManager || !targetingState) return;
-    const currentState = clientManager.getState();
-    const newState = gameLogic.performAction(currentState, {
+  const confirmTarget = async (targetId: string) => {
+    if (!gameService || !targetingState) return;
+    await gameService.sendAction({
       type: 'PLAY_ACTION',
       payload: {
         actorId: targetingState.actorId,
@@ -32,7 +27,6 @@ export const useActionTargeting = (
         targetId,
       },
     });
-    clientManager.setState(newState);
     setTargetingState(null);
   };
 

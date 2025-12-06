@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TurnSevenLogic } from './game';
 
 describe('TurnSevenLogic Ledger', () => {
@@ -11,6 +11,15 @@ describe('TurnSevenLogic Ledger', () => {
   });
 
   it('records Hit action', () => {
+    // Mock createDeck to ensure no action cards are dealt (which would cause pending actions)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(logic as any, 'createDeck').mockReturnValue([
+      { id: 'c1', suit: 'number', rank: '5', isFaceUp: false },
+      { id: 'c2', suit: 'number', rank: '6', isFaceUp: false },
+      { id: 'c3', suit: 'number', rank: '7', isFaceUp: false },
+      { id: 'c4', suit: 'number', rank: '8', isFaceUp: false }, // card to draw
+    ]);
+
     const state = logic.createInitialStateFromNames(['Alice', 'Bob', 'Charlie']);
     // Ensure Alice is current player
     state.currentPlayerId = state.players[0].id;
@@ -28,6 +37,14 @@ describe('TurnSevenLogic Ledger', () => {
   });
 
   it('records Stay action', () => {
+    // Mock createDeck to ensure no action cards are dealt
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(logic as any, 'createDeck').mockReturnValue([
+      { id: 'c1', suit: 'number', rank: '5', isFaceUp: false },
+      { id: 'c2', suit: 'number', rank: '6', isFaceUp: false },
+      { id: 'c3', suit: 'number', rank: '7', isFaceUp: false },
+    ]);
+
     const state = logic.createInitialStateFromNames(['Alice', 'Bob', 'Charlie']);
     state.currentPlayerId = state.players[0].id;
 

@@ -1,14 +1,15 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useActionTargeting } from './useActionTargeting';
-import { ClientGameStateManager } from '@turn-seven/engine';
-import { TurnSevenLogic } from '../logic/game';
+import { IGameService } from '../services/gameService';
 
 describe('useActionTargeting', () => {
   it('manages targeting state', () => {
-    const logic = new TurnSevenLogic();
-    const manager = new ClientGameStateManager(logic.createInitialState(['p1', 'p2']));
-    const { result } = renderHook(() => useActionTargeting(manager, logic));
+    const mockService = {
+      sendAction: vi.fn(),
+    } as unknown as IGameService;
+
+    const { result } = renderHook(() => useActionTargeting(mockService));
 
     expect(result.current.targetingState).toBeNull();
 
@@ -25,26 +26,22 @@ describe('useActionTargeting', () => {
     expect(result.current.targetingState).toBeNull();
   });
 
-  it('confirms target and performs action', () => {
-    const logic = new TurnSevenLogic();
-    const initialState = logic.createInitialState(['p1', 'p2']);
-    const manager = new ClientGameStateManager(initialState);
+  it('confirms target and performs action', async () => {
+    const mockService = {
+      sendAction: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IGameService;
 
-    // Spy on performAction
-    const performActionSpy = vi.spyOn(logic, 'performAction');
-    const setStateSpy = vi.spyOn(manager, 'setState');
-
-    const { result } = renderHook(() => useActionTargeting(manager, logic));
+    const { result } = renderHook(() => useActionTargeting(mockService));
 
     act(() => {
       result.current.startTargeting('card-1', 'p1');
     });
 
-    act(() => {
-      result.current.confirmTarget('p2');
+    await act(async () => {
+      await result.current.confirmTarget('p2');
     });
 
-    expect(performActionSpy).toHaveBeenCalledWith(expect.anything(), {
+    expect(mockService.sendAction).toHaveBeenCalledWith({
       type: 'PLAY_ACTION',
       payload: {
         actorId: 'p1',
@@ -52,7 +49,7 @@ describe('useActionTargeting', () => {
         targetId: 'p2',
       },
     });
-    expect(setStateSpy).toHaveBeenCalled();
+
     expect(result.current.targetingState).toBeNull();
   });
 });
