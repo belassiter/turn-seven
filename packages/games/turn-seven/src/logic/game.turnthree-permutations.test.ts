@@ -21,6 +21,8 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
     });
     state.deck = [];
     state.discardPile = [];
+    // Force current player to be the first player (Alice) to avoid flakiness from random initial deal
+    state.currentPlayerId = state.players[0].id;
   });
 
   const createCard = (

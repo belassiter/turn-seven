@@ -356,6 +356,12 @@ export class TurnSevenLogic implements IGameLogic {
     payload: { actorId: string; cardId: string; targetId: string }
   ): GameState {
     const newState = structuredClone(state);
+
+    // Security Check: Ensure actor is the current player
+    if (payload.actorId !== newState.currentPlayerId) {
+      return newState;
+    }
+
     const { players } = newState;
     const actorIndex = players.findIndex((p) => p.id === payload.actorId);
     const targetIndex = players.findIndex((p) => p.id === payload.targetId);
@@ -450,7 +456,6 @@ export class TurnSevenLogic implements IGameLogic {
           const next = this.drawOne(newState);
           if (!next) break;
           drawnCardNames.push(String(next.rank).replace(/([a-z])([A-Z])/g, '$1 $2'));
-          // (debug logs removed)
 
           if (!next.suit || next.suit === 'number') {
             const duplicateCount = target.hand.filter(
@@ -497,7 +502,6 @@ export class TurnSevenLogic implements IGameLogic {
                   target.hasLifeSaver = false;
                 }
               } else {
-                // (debug logs removed)
                 target.hasBusted = true;
                 target.isActive = false;
                 log += ` ${target.name} Busted!`;
