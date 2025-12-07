@@ -81,8 +81,8 @@ The work will be divided between building the engine and implementing the game.
     - [ ] **Turn Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.
 
 5.  **Polish & Animations:**
-    - [ ] **Engine:** Refine the card turn animation and add other generic animations (e.g., card dealing).
-    - [ ] **Turn Seven:** Add game-specific animations like busting or freezing effects.
+    - [x] **Engine:** Refine the card turn animation and add other generic animations (e.g., card dealing).
+    - [x] **Turn Seven:** Add game-specific animations like busting or freezing effects.
     - [x] **Turn Seven:** Make the cards look better, have more character
 6.  **Card analysis**
     - [x] Probability of busting (based on full deck)

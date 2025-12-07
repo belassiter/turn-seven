@@ -16,8 +16,11 @@ export class LocalGameService implements IGameService {
   private simulatedLatencyMs: number = 300; // Simulate network lag
   private subscribers: ((state: GameState) => void)[] = [];
 
-  constructor() {
+  constructor(initialState?: GameState) {
     this.logic = new TurnSevenLogic();
+    if (initialState) {
+      this.manager = new ClientGameStateManager(initialState);
+    }
   }
 
   async start(playerNames: string[]): Promise<void> {

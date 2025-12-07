@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GameState, Card } from '@turn-seven/engine';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { GameState, Card as CardComponent, CardModel } from '@turn-seven/engine';
 import { LocalGameService } from '../services/gameService';
 import { GameSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
 import { computeHitExpectation } from '../logic/odds';
 import { computeHandScore } from '@turn-seven/engine';
+
+// @ts-expect-error - import.meta.env is provided by Vite
+const ANIMATION_DELAY = import.meta.env.MODE === 'test' ? 50 : 1000;
 
 // Layout Components
 // import { GameHeader } from './GameHeader'; // Removed
@@ -15,9 +18,18 @@ import { CardGalleryModal } from './CardGalleryModal';
 import { LedgerModal } from './LedgerModal';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export const TurnSevenGame: React.FC = () => {
-  const gameService = useMemo(() => new LocalGameService(), []);
-  const [gameState, setGameState] = useState<GameState | null>(null);
+export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
+  const gameService = useMemo(() => new LocalGameService(initialGameState), [initialGameState]);
+
+  // Real state from the engine
+  const [realGameState, setRealGameState] = useState<GameState | null>(null);
+
+  // Visual state for rendering (lags behind real state for animations)
+  const [visualGameState, setVisualGameState] = useState<GameState | null>(null);
+
+  // Card currently being revealed on top of the deck
+  const [revealedDeckCard, setRevealedDeckCard] = useState<CardModel | null>(null);
+
   const [isPending, setIsPending] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -25,6 +37,9 @@ export const TurnSevenGame: React.FC = () => {
   const [showRules, setShowRules] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
+
+  // Use visualGameState for rendering logic
+  const gameState = visualGameState;
 
   // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
@@ -37,35 +52,135 @@ export const TurnSevenGame: React.FC = () => {
   const { targetingState, startTargeting, cancelTargeting, confirmTarget } =
     useActionTargeting(gameService);
 
+  // Subscribe to game service
   useEffect(() => {
     const unsubscribe = gameService.subscribe((s) => {
-      setGameState(s);
+      setRealGameState(s);
     });
-    setGameState(gameService.getState());
+    setRealGameState(gameService.getState());
     return () => unsubscribe();
   }, [gameService]);
 
-  // Animation Lock Logic
-  const prevPlayerIdRef = useRef<string | null>(null);
+  // Animation Sequencing Logic
   useEffect(() => {
-    if (!gameState) return;
+    if (!realGameState) return;
 
-    // If player changed, trigger animation lock
-    if (prevPlayerIdRef.current !== gameState.currentPlayerId) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(false);
-      }, 600); // 600ms lock for animations
-      return () => clearTimeout(timer);
+    // Initial load
+    if (!visualGameState) {
+      // If it's the start of the game (Round 1), start with empty hands to animate the deal
+      // We check if players have cards in real state but we want to show them being dealt
+      if (realGameState.roundNumber === 1 && realGameState.players.some((p) => p.hand.length > 0)) {
+        const emptyState = {
+          ...realGameState,
+          players: realGameState.players.map((p) => ({ ...p, hand: [] })),
+        };
+        setVisualGameState(emptyState);
+        return;
+      }
+      setVisualGameState(realGameState);
+      return;
     }
-    prevPlayerIdRef.current = gameState.currentPlayerId || null;
-  }, [gameState]);
+
+    // If states are identical, do nothing
+    if (JSON.stringify(realGameState) === JSON.stringify(visualGameState)) return;
+
+    if (isAnimating) return;
+
+    const performStep = async () => {
+      setIsAnimating(true);
+
+      // 1. Check for missing cards (Deal/Hit/Turn 3)
+      let playerToUpdateIndex = -1;
+
+      // Try to find the current visual player first to prioritize active player animations
+      const currentVisualIdx = visualGameState.players.findIndex(
+        (p) => p.id === visualGameState.currentPlayerId
+      );
+      if (currentVisualIdx !== -1) {
+        const vp = visualGameState.players[currentVisualIdx];
+        const rp = realGameState.players[currentVisualIdx];
+        if (rp && rp.hand.length > vp.hand.length) {
+          playerToUpdateIndex = currentVisualIdx;
+        }
+      }
+
+      // If not current, find any player who needs a card
+      if (playerToUpdateIndex === -1) {
+        playerToUpdateIndex = visualGameState.players.findIndex((vp, idx) => {
+          const rp = realGameState.players[idx];
+          return rp && rp.hand.length > vp.hand.length;
+        });
+      }
+
+      if (playerToUpdateIndex !== -1) {
+        const vp = visualGameState.players[playerToUpdateIndex];
+        const rp = realGameState.players[playerToUpdateIndex];
+        const newCard = rp.hand[vp.hand.length]; // Next card to add
+
+        // If the player receiving the card is NOT the current visual player,
+        // switch turn to them first so we can see the deal animation
+        if (vp.id !== visualGameState.currentPlayerId) {
+          const switchState = {
+            ...visualGameState,
+            currentPlayerId: vp.id,
+          };
+          setVisualGameState(switchState);
+          await new Promise((r) => setTimeout(r, ANIMATION_DELAY)); // Wait for turn switch
+          setIsAnimating(false);
+          return;
+        }
+
+        // Animate Flip
+        setRevealedDeckCard(newCard);
+        await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+
+        // Animate Fly (Add to hand)
+        const nextPlayers = [...visualGameState.players];
+        nextPlayers[playerToUpdateIndex] = {
+          ...vp,
+          hand: [...vp.hand, newCard],
+        };
+
+        const nextState = {
+          ...visualGameState,
+          players: nextPlayers,
+        };
+
+        setRevealedDeckCard(null);
+        setVisualGameState(nextState);
+        await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+
+        setIsAnimating(false);
+        return;
+      }
+
+      // 2. Check for Turn Change (if hands are synced)
+      if (realGameState.currentPlayerId !== visualGameState.currentPlayerId) {
+        setVisualGameState(realGameState);
+        await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+        setIsAnimating(false);
+        return;
+      }
+
+      // 3. Sync any other state (scores, card removals, etc)
+      setVisualGameState(realGameState);
+      setIsAnimating(false);
+    };
+
+    performStep();
+  }, [realGameState, visualGameState, isAnimating]);
 
   const currentPlayer = gameState?.players.find((p) => p.id === gameState.currentPlayerId);
   const hasPendingActions =
     currentPlayer?.pendingImmediateActionIds && currentPlayer.pendingImmediateActionIds.length > 0;
 
-  const isInputLocked = isPending || isAnimating;
+  // Calculate if state is desynced to lock input immediately
+  const isStateDesync = useMemo(() => {
+    if (!realGameState || !visualGameState) return false;
+    return JSON.stringify(realGameState) !== JSON.stringify(visualGameState);
+  }, [realGameState, visualGameState]);
+
+  const isInputLocked = isPending || isAnimating || isStateDesync;
 
   const handleHit = useCallback(async () => {
     if (isInputLocked) return;
@@ -280,17 +395,36 @@ export const TurnSevenGame: React.FC = () => {
           </div>
 
           <div className="deck-discard-group">
-            <div className="pile">
-              <div className="card-back">
-                <span className="back-label" style={{ fontSize: '1.5rem' }}>
-                  T7
-                </span>
+            <div className="pile" style={{ position: 'relative', perspective: '1000px' }}>
+              <div className="card face-down">
+                <div className="card-back">
+                  <span className="back-label" style={{ fontSize: '1.5rem' }}>
+                    T7
+                  </span>
+                </div>
               </div>
+              {revealedDeckCard && (
+                <motion.div
+                  layoutId={revealedDeckCard.id}
+                  initial={{ rotateY: 180, scale: 0.8 }}
+                  animate={{ rotateY: 0, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    zIndex: 10,
+                    transformStyle: 'preserve-3d',
+                  }}
+                >
+                  <CardComponent card={{ ...revealedDeckCard, isFaceUp: true }} />
+                </motion.div>
+              )}
               <span>Deck ({gameState.deck.length})</span>
             </div>
             <div className="pile">
               {gameState.discardPile.length > 0 ? (
-                <Card
+                <CardComponent
                   card={{
                     ...gameState.discardPile[gameState.discardPile.length - 1],
                     isFaceUp: true,
@@ -374,12 +508,12 @@ export const TurnSevenGame: React.FC = () => {
         <AnimatePresence mode="wait">
           {gameState.gamePhase === 'playing' && currentPlayer && (
             <motion.div
-              key="active-player-zone"
+              key={currentPlayer.id}
               className="active-player-zone"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, x: 300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -300 }}
+              transition={{ duration: 0.5, ease: 'easeInOut' }}
             >
               <div className="zone-header">
                 <motion.h2
@@ -397,7 +531,12 @@ export const TurnSevenGame: React.FC = () => {
               </div>
 
               {/* Hand */}
-              <ActivePlayerHand hand={currentPlayer.hand} />
+              <ActivePlayerHand
+                hand={currentPlayer.hand}
+                isBusted={currentPlayer.hasBusted}
+                isLocked={currentPlayer.isLocked}
+                hasStayed={currentPlayer.hasStayed}
+              />
 
               {/* Controls */}
               <motion.div
@@ -598,7 +737,8 @@ export const TurnSevenGame: React.FC = () => {
               className="btn btn-primary"
               onClick={() => {
                 gameService.reset();
-                setGameState(null);
+                setRealGameState(null);
+                setVisualGameState(null);
               }}
             >
               Play Again

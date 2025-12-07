@@ -1,11 +1,20 @@
 import React, { useMemo } from 'react';
 import { CardModel, Card } from '@turn-seven/engine';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ActivePlayerHandProps {
   hand: CardModel[];
+  isBusted?: boolean;
+  isLocked?: boolean;
+  hasStayed?: boolean;
 }
 
-export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({ hand }) => {
+export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
+  hand,
+  isBusted,
+  isLocked,
+  hasStayed,
+}) => {
   const { specialCards, numberCards } = useMemo(() => {
     const special: CardModel[] = [];
     const numbers: CardModel[] = [];
@@ -33,22 +42,118 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({ hand }) => {
   }, [hand]);
 
   return (
-    <div className="active-player-hand">
+    <div className="active-player-hand" style={{ position: 'relative' }}>
+      <AnimatePresence>
+        {isBusted && (
+          <motion.div
+            className="busted-overlay"
+            initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: 'spring', bounce: 0.5 }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+              fontSize: '4rem',
+              fontWeight: 'bold',
+              color: '#ef4444',
+              textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff',
+              pointerEvents: 'none',
+            }}
+          >
+            BUSTED!
+          </motion.div>
+        )}
+        {isLocked && (
+          <motion.div
+            className="locked-overlay"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: 'spring', bounce: 0.5 }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+              fontSize: '3rem',
+              fontWeight: 'bold',
+              color: '#3b82f6',
+              textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff',
+              pointerEvents: 'none',
+            }}
+          >
+            LOCKED 🔒
+          </motion.div>
+        )}
+        {hasStayed && (
+          <motion.div
+            className="stayed-overlay"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: 'spring', bounce: 0.5 }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+              fontSize: '3rem',
+              fontWeight: 'bold',
+              color: '#ef4444',
+              textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff',
+              pointerEvents: 'none',
+            }}
+          >
+            STAYED 🛑
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {specialCards.length > 0 && (
         <div className="hand-row special-row">
           <div className="cards-container">
-            {specialCards.map((card) => (
-              <Card key={card.id} card={{ ...card, isFaceUp: true }} />
-            ))}
+            <AnimatePresence>
+              {specialCards.map((card) => (
+                <motion.div
+                  key={card.id}
+                  layoutId={card.id}
+                  initial={{ opacity: 0, scale: 0.5, y: -50 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                >
+                  <Card card={{ ...card, isFaceUp: true }} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
       )}
 
       <div className="hand-row number-row">
         <div className="cards-container">
-          {numberCards.length > 0
-            ? numberCards.map((card) => <Card key={card.id} card={{ ...card, isFaceUp: true }} />)
-            : null}
+          <AnimatePresence>
+            {numberCards.length > 0
+              ? numberCards.map((card) => (
+                  <motion.div
+                    key={card.id}
+                    layoutId={card.id}
+                    initial={{ opacity: 0, scale: 0.5, y: -50 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  >
+                    <Card card={{ ...card, isFaceUp: true }} />
+                  </motion.div>
+                ))
+              : null}
+          </AnimatePresence>
         </div>
       </div>
     </div>

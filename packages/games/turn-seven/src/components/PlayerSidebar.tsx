@@ -1,6 +1,7 @@
 import React from 'react';
 import { PlayerModel } from '@turn-seven/engine';
 import { MiniCard } from './MiniCard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PlayerSidebarProps {
   players: PlayerModel[];
@@ -56,7 +57,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
           });
 
           return (
-            <div
+            <motion.div
               key={player.id}
               className={`player-row ${isCurrent ? 'active-turn' : ''} ${
                 isTargetable ? 'targeting-candidate' : ''
@@ -64,17 +65,49 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                 player.isLocked ? 'locked' : ''
               } ${player.hasStayed ? 'stayed' : ''}`}
               onClick={handleClick}
+              animate={
+                player.hasBusted
+                  ? { x: [0, -5, 5, -5, 5, 0], backgroundColor: '#fee2e2' }
+                  : { x: 0, backgroundColor: 'rgba(0,0,0,0)' }
+              }
+              transition={{ duration: 0.4 }}
             >
               <div className="player-info">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div className="player-status-icons">
-                    {player.hasBusted ? (
-                      <span title="Busted">💥</span>
-                    ) : player.isLocked ? (
-                      <span title="Locked">🔒</span>
-                    ) : player.hasStayed ? (
-                      <span title="Stayed">🛑</span>
-                    ) : null}
+                    <AnimatePresence mode="wait">
+                      {player.hasBusted ? (
+                        <motion.span
+                          key="bust"
+                          title="Busted"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1.5 }}
+                          transition={{ type: 'spring' }}
+                        >
+                          💥
+                        </motion.span>
+                      ) : player.isLocked ? (
+                        <motion.span
+                          key="lock"
+                          title="Locked"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring' }}
+                        >
+                          🔒
+                        </motion.span>
+                      ) : player.hasStayed ? (
+                        <motion.span
+                          key="stay"
+                          title="Stayed"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring' }}
+                        >
+                          🛑
+                        </motion.span>
+                      ) : null}
+                    </AnimatePresence>
                   </div>
                   <span className="player-name">
                     {player.name}
@@ -98,7 +131,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                   <MiniCard key={card.id} card={card} />
                 ))}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

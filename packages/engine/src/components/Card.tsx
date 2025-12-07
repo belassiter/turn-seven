@@ -109,38 +109,35 @@ export const Card: React.FC<CardProps> = ({ card }) => {
 
   return (
     <div className={cardClasses}>
-      {isFaceUp ? (
-        <>
-          {/* For number and action cards render only the centered rank in the DOM; for other suits render corners + center. */}
-          {showOnlyCenter ? (
+      <div className="card-front">
+        {/* For number and action cards render only the centered rank in the DOM; for other suits render corners + center. */}
+        {showOnlyCenter ? (
+          <span className="rank-center" data-testid="rank-center">
+            {/* If an image exists for this action, render it centered at 80% width. */}
+            {isAction && actionImageName ? (
+              <img
+                src={actionImageName}
+                alt={labelText}
+                style={{ width: '80%', display: 'block', margin: '0 auto' }}
+              />
+            ) : (
+              <span ref={textRef}>{displayLabel}</span>
+            )}
+          </span>
+        ) : (
+          <>
+            <span className="rank top-left">{labelText}</span>
+            <span className="suit-icon"></span>
             <span className="rank-center" data-testid="rank-center">
-              {/* If an image exists for this action, render it centered at 80% width. */}
-              {isAction && actionImageName ? (
-                <img
-                  src={actionImageName}
-                  alt={labelText}
-                  style={{ width: '80%', display: 'block', margin: '0 auto' }}
-                />
-              ) : (
-                <span ref={textRef}>{displayLabel}</span>
-              )}
+              {labelText}
             </span>
-          ) : (
-            <>
-              <span className="rank top-left">{labelText}</span>
-              <span className="suit-icon"></span>
-              <span className="rank-center" data-testid="rank-center">
-                {labelText}
-              </span>
-              <span className="rank bottom-right">{labelText}</span>
-            </>
-          )}
-        </>
-      ) : (
-        <div className="card-back">
-          <span className="back-label">T7</span>
-        </div>
-      )}
+            <span className="rank bottom-right">{labelText}</span>
+          </>
+        )}
+      </div>
+      <div className="card-back">
+        <span className="back-label">T7</span>
+      </div>
     </div>
   );
 };

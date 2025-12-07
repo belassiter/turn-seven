@@ -123,6 +123,7 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
 
     state.players[0].reservedActions = [t3];
     state.players[0].hand = [t3];
+    state.players[0].pendingImmediateActionIds = []; // Ensure no other pending actions
 
     state.deck = [num6, num5, ls];
 
