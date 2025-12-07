@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GameState, Card as CardComponent, CardModel } from '@turn-seven/engine';
 import { LocalGameService } from '../services/gameService';
 import { GameSetup } from './GameSetup';
@@ -17,6 +17,7 @@ import { ActivePlayerHand } from './ActivePlayerHand';
 import { CardGalleryModal } from './CardGalleryModal';
 import { LedgerModal } from './LedgerModal';
 import { AnimatePresence, motion } from 'framer-motion';
+import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimation';
 
 export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
   const gameService = useMemo(() => new LocalGameService(initialGameState), [initialGameState]);
@@ -30,6 +31,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   // Card currently being revealed on top of the deck
   const [revealedDeckCard, setRevealedDeckCard] = useState<CardModel | null>(null);
 
+  // Overlay animation state
+  const [overlayAnimation, setOverlayAnimation] = useState<{
+    type: OverlayAnimationType;
+    onComplete: () => void;
+  } | null>(null);
+
   const [isPending, setIsPending] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -37,6 +44,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const [showRules, setShowRules] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
+
+  // Queue for animations that should play AFTER a card deal
+  const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
@@ -46,7 +56,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     if (!showOdds || !gameState) return null;
     const current = gameState.players.find((p) => p.id === gameState.currentPlayerId);
     const activeCountLocal = gameState.players.filter((p) => p.isActive).length;
-    return computeHitExpectation(current?.hand, gameState.deck, activeCountLocal);
+    // If deck is empty, we will reshuffle discard pile. Use discard pile for odds calculation in that case.
+    const effectiveDeck = gameState.deck.length > 0 ? gameState.deck : gameState.discardPile || [];
+    return computeHitExpectation(current?.hand, effectiveDeck, activeCountLocal);
   }, [showOdds, gameState]);
 
   const { targetingState, startTargeting, cancelTargeting, confirmTarget } =
@@ -70,9 +82,20 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       // If it's the start of the game (Round 1), start with empty hands to animate the deal
       // We check if players have cards in real state but we want to show them being dealt
       if (realGameState.roundNumber === 1 && realGameState.players.some((p) => p.hand.length > 0)) {
+        // Calculate total cards in hands to restore deck count for animation
+        const totalCardsInHands = realGameState.players.reduce((sum, p) => sum + p.hand.length, 0);
+        // Create dummy cards to pad the deck length
+        const dummyCards = Array(totalCardsInHands).fill({
+          id: 'dummy',
+          suit: 'number',
+          rank: 0,
+          isFaceUp: false,
+        });
+
         const emptyState = {
           ...realGameState,
           players: realGameState.players.map((p) => ({ ...p, hand: [] })),
+          deck: [...realGameState.deck, ...dummyCards],
         };
         setVisualGameState(emptyState);
         return;
@@ -82,12 +105,64 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     }
 
     // If states are identical, do nothing
-    if (JSON.stringify(realGameState) === JSON.stringify(visualGameState)) return;
+    if (
+      JSON.stringify(realGameState) === JSON.stringify(visualGameState) &&
+      !pendingOverlayRef.current
+    )
+      return;
 
     if (isAnimating) return;
 
     const performStep = async () => {
       setIsAnimating(true);
+
+      // Check for Round Change
+      if (realGameState.roundNumber > visualGameState.roundNumber) {
+        // Reset visual hands to empty to trigger deal animation
+        const resetState = {
+          ...realGameState,
+          players: realGameState.players.map((p) => ({ ...p, hand: [] })),
+        };
+        setVisualGameState(resetState);
+        await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+        setIsAnimating(false);
+        return;
+      }
+
+      // 0. Check for Pre-Deal Status Animations (Lock)
+      // These should happen BEFORE dealing cards, as they are usually the result of an action
+      for (let i = 0; i < visualGameState.players.length; i++) {
+        const vp = visualGameState.players[i];
+        const rp = realGameState.players[i];
+
+        // Lock
+        if (!vp.isLocked && rp.isLocked) {
+          // Switch view to the locked player if not already
+          if (visualGameState.currentPlayerId !== vp.id) {
+            const switchState = {
+              ...visualGameState,
+              currentPlayerId: vp.id,
+            };
+            setVisualGameState(switchState);
+            await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+            setIsAnimating(false);
+            return;
+          }
+
+          await new Promise<void>((resolve) => {
+            setOverlayAnimation({ type: 'lock', onComplete: resolve });
+          });
+          setOverlayAnimation(null);
+
+          // Update visual state to reflect lock so we don't loop
+          const nextPlayers = [...visualGameState.players];
+          nextPlayers[i] = { ...vp, isLocked: true };
+          setVisualGameState({ ...visualGameState, players: nextPlayers });
+
+          setIsAnimating(false);
+          return;
+        }
+      }
 
       // 1. Check for missing cards (Deal/Hit/Turn 3)
       let playerToUpdateIndex = -1;
@@ -130,6 +205,74 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           return;
         }
 
+        // Check for Turn 3 Animation (if receiving 3+ cards at once)
+        // We only trigger this once, before the first card of the batch is dealt
+        const cardsNeeded = rp.hand.length - vp.hand.length;
+        if (cardsNeeded >= 3) {
+          // We use a ref or just check if we haven't animated yet?
+          // Actually, we can just trigger the animation and return.
+          // But we need to know we've done it.
+          // Since we return, the next loop will come back here.
+          // We need a way to avoid infinite loop of animations.
+          // However, the overlayAnimation state is separate.
+          // We can check if overlayAnimation is active? No, it clears.
+          // We can check if we just did it?
+          // Or we can rely on the fact that we deal one card at a time.
+          // If we trigger animation, we must NOT deal a card yet.
+          // But then we'll be in the same state next time.
+          // Solution: We can't store "animated" in visual state easily without polluting it.
+          // Alternative: Trigger animation AND deal the first card in one go?
+          // Or, just let the animation play, and inside the onComplete, we proceed?
+          // But this is a useEffect loop.
+
+          // Better approach:
+          // If we detect Turn 3 condition, we play the animation using a Promise that blocks this function.
+          // We don't return. We just await the animation.
+          // But we only want to do it for the FIRST card of the 3.
+          // How do we know it's the first?
+          // We can check if the PREVIOUS hand length was exactly 3 less?
+          // Or just check if cardsNeeded === 3 (assuming exactly 3 for Turn 3).
+          // If cardsNeeded is 2, we've already dealt one.
+          if (cardsNeeded === 3) {
+            await new Promise<void>((resolve) => {
+              setOverlayAnimation({
+                type: 'turn3',
+                onComplete: () => {
+                  resolve();
+                },
+              });
+            });
+            setOverlayAnimation(null);
+            // Now proceed to deal the card
+          }
+        }
+
+        // Check if card exists in any other hand in visual state (Action Card Transfer)
+        const existingCardOwner = visualGameState.players.find((p) =>
+          p.hand.some((c) => c.id === newCard.id)
+        );
+
+        if (existingCardOwner) {
+          // Move directly (no deck animation)
+          // We need to remove from old owner and add to new owner in one step
+          const nextPlayers = visualGameState.players.map((p) => {
+            if (p.id === existingCardOwner.id) {
+              return { ...p, hand: p.hand.filter((c) => c.id !== newCard.id) };
+            }
+            if (p.id === vp.id) {
+              // vp is the target player
+              return { ...p, hand: [...p.hand, newCard] };
+            }
+            return p;
+          });
+
+          const nextState = { ...visualGameState, players: nextPlayers };
+          setVisualGameState(nextState);
+          await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+          setIsAnimating(false);
+          return;
+        }
+
         // Animate Flip
         setRevealedDeckCard(newCard);
         await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
@@ -141,9 +284,25 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           hand: [...vp.hand, newCard],
         };
 
+        // Check for Turn 7 Completion (trigger animation next loop)
+        const prevUnique = new Set(
+          vp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
+        ).size;
+        const nextUnique = new Set(
+          nextPlayers[playerToUpdateIndex].hand
+            .filter((c) => !c.suit || c.suit === 'number')
+            .map((c) => c.rank)
+        ).size;
+
+        if (prevUnique < 7 && nextUnique >= 7) {
+          pendingOverlayRef.current = 'turn7';
+        }
+
         const nextState = {
           ...visualGameState,
           players: nextPlayers,
+          // Decrement deck count visually if we drew from it
+          deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
         };
 
         setRevealedDeckCard(null);
@@ -154,7 +313,86 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         return;
       }
 
-      // 2. Check for Turn Change (if hands are synced)
+      // 2. Check for Status Animations (Bust, LifeSaver, Turn 7)
+      // We check if the status changed from false to true (or true to false for LifeSaver)
+
+      if (pendingOverlayRef.current) {
+        const type = pendingOverlayRef.current;
+        await new Promise<void>((resolve) => {
+          setOverlayAnimation({ type, onComplete: resolve });
+        });
+        setOverlayAnimation(null);
+        pendingOverlayRef.current = null;
+      } else {
+        // We iterate players to find changes
+        for (let i = 0; i < visualGameState.players.length; i++) {
+          const vp = visualGameState.players[i];
+          const rp = realGameState.players[i];
+
+          // Bust
+          if (!vp.hasBusted && rp.hasBusted) {
+            await new Promise<void>((resolve) => {
+              setOverlayAnimation({ type: 'bust', onComplete: resolve });
+            });
+            setOverlayAnimation(null);
+            // We don't return here, we let the state sync happen below
+            // But wait, if we don't sync, the loop will run again and see the same diff?
+            // Yes. So we MUST sync the state or at least this property.
+            // But we usually sync the whole state at step 4.
+            // So we just await the animation, then fall through to step 4.
+            break; // Only one animation per step
+          }
+
+          // Life Saver (Used)
+          // Condition: Had it, lost it, didn't bust.
+          if (vp.hasLifeSaver && !rp.hasLifeSaver && !rp.hasBusted) {
+            // Simulate the draw that caused the save
+            // The drawn card and the Life Saver are now in the discard pile (last 2 cards)
+            // We need to animate the draw of the card that caused the save
+            if (realGameState.discardPile && realGameState.discardPile.length >= 2) {
+              const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 2];
+              // Animate Flip
+              setRevealedDeckCard(drawnCard);
+              await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+              setRevealedDeckCard(null);
+
+              // Animate Fly to Hand (Visual only - add temporarily)
+              const tempHand = [...vp.hand, drawnCard];
+              const tempPlayers = [...visualGameState.players];
+              tempPlayers[i] = { ...vp, hand: tempHand };
+              setVisualGameState({
+                ...visualGameState,
+                players: tempPlayers,
+                deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
+              });
+              await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+            }
+
+            await new Promise<void>((resolve) => {
+              setOverlayAnimation({ type: 'lifesaver', onComplete: resolve });
+            });
+            setOverlayAnimation(null);
+            break;
+          }
+
+          // Turn 7
+          const vpUnique = new Set(
+            vp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
+          ).size;
+          const rpUnique = new Set(
+            rp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
+          ).size;
+          if (vpUnique < 7 && rpUnique >= 7) {
+            await new Promise<void>((resolve) => {
+              setOverlayAnimation({ type: 'turn7', onComplete: resolve });
+            });
+            setOverlayAnimation(null);
+            break;
+          }
+        }
+      }
+
+      // 3. Check for Turn Change (if hands are synced)
       if (realGameState.currentPlayerId !== visualGameState.currentPlayerId) {
         setVisualGameState(realGameState);
         await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
@@ -162,7 +400,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         return;
       }
 
-      // 3. Sync any other state (scores, card removals, etc)
+      // 4. Sync any other state (scores, card removals, etc)
       setVisualGameState(realGameState);
       setIsAnimating(false);
     };
@@ -201,6 +439,40 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       setIsPending(false);
     }
   }, [gameService, isInputLocked]);
+
+  const handleNextRound = useCallback(async () => {
+    setIsPending(true);
+    try {
+      await gameService.startNextRound();
+    } finally {
+      setIsPending(false);
+    }
+  }, [gameService]);
+
+  const handleNewGame = useCallback(() => {
+    gameService.reset();
+    setRealGameState(null);
+    setVisualGameState(null);
+  }, [gameService]);
+
+  // Global Navigation Hotkeys (Enter, Escape)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showGallery) setShowGallery(false);
+        if (showLedger) setShowLedger(false);
+        if (showRules) setShowRules(false);
+      } else if (e.key === 'Enter') {
+        if (gameState?.gamePhase === 'ended') {
+          handleNextRound();
+        } else if (gameState?.gamePhase === 'gameover') {
+          handleNewGame();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState?.gamePhase, showGallery, showLedger, showRules, handleNextRound, handleNewGame]);
 
   // Hotkeys
   useEffect(() => {
@@ -269,6 +541,16 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         </div>
 
         <GameFooter />
+
+        {/* Overlay Animations */}
+        <AnimatePresence>
+          {overlayAnimation && (
+            <GameOverlayAnimation
+              type={overlayAnimation.type}
+              onComplete={overlayAnimation.onComplete}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -669,17 +951,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                 );
               })}
             </ul>
-            <button
-              className="btn btn-primary"
-              onClick={async () => {
-                setIsPending(true);
-                try {
-                  await gameService.startNextRound();
-                } finally {
-                  setIsPending(false);
-                }
-              }}
-            >
+            <button className="btn btn-primary" onClick={handleNextRound}>
               Start Next Round
             </button>
           </div>
@@ -733,19 +1005,22 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   );
                 })}
             </ul>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                gameService.reset();
-                setRealGameState(null);
-                setVisualGameState(null);
-              }}
-            >
+            <button className="btn btn-primary" onClick={handleNewGame}>
               Play Again
             </button>
           </div>
         </div>
       )}
+
+      {/* Overlay Animations */}
+      <AnimatePresence>
+        {overlayAnimation && (
+          <GameOverlayAnimation
+            type={overlayAnimation.type}
+            onComplete={overlayAnimation.onComplete}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

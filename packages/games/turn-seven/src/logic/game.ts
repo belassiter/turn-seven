@@ -29,6 +29,8 @@ export class TurnSevenLogic implements IGameLogic {
       hasLifeSaver: false,
     }));
 
+    const ledger: LedgerEntry[] = [];
+
     // Deal one card to each player to start, resolving Action cards immediately.
     // If a player already received a card (e.g. as a target of an earlier action),
     // that counts as their initial card and we should not deal another.
@@ -41,7 +43,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
-      ledger: [],
+      ledger,
     });
 
     return {
@@ -55,7 +57,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
-      ledger: [],
+      ledger,
     };
   }
 
@@ -78,6 +80,8 @@ export class TurnSevenLogic implements IGameLogic {
       hasLifeSaver: false,
     }));
 
+    const ledger: LedgerEntry[] = [];
+
     // Deal one card to each player and resolve action cards immediately.
     this.continueDealing({
       players,
@@ -88,7 +92,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
-      ledger: [],
+      ledger,
     });
 
     return {
@@ -102,7 +106,7 @@ export class TurnSevenLogic implements IGameLogic {
       roundNumber: 1,
       previousTurnLog: undefined,
       previousRoundScores: undefined,
-      ledger: [],
+      ledger,
     };
   }
 
@@ -192,8 +196,35 @@ export class TurnSevenLogic implements IGameLogic {
           this.checkRoundEnd(newState);
           return newState;
         } else {
-          currentPlayer.pendingImmediateActionIds = currentPlayer.pendingImmediateActionIds || [];
-          currentPlayer.pendingImmediateActionIds.push(card.id);
+          // If they already have one, they must give it to someone else.
+          // Check if there are any other eligible players (active and don't have Life Saver).
+          const otherEligible = newState.players.some(
+            (p) => p.id !== currentPlayer.id && p.isActive && !p.hasLifeSaver
+          );
+
+          if (otherEligible) {
+            currentPlayer.pendingImmediateActionIds = currentPlayer.pendingImmediateActionIds || [];
+            currentPlayer.pendingImmediateActionIds.push(card.id);
+          } else {
+            // No one to give it to. Discard it.
+            // Remove from reservedActions and hand
+            currentPlayer.reservedActions = currentPlayer.reservedActions.filter(
+              (c) => c.id !== card.id
+            );
+            currentPlayer.hand = currentPlayer.hand.filter((c) => c.id !== card.id);
+            newState.discardPile.push({ ...card, isFaceUp: true });
+
+            newState.previousTurnLog = log + ' (Discarded Life Saver - no eligible targets)';
+            this.addToLedger(
+              newState,
+              currentPlayer.name,
+              'Hit',
+              ledgerResult + ' (Discarded - no targets)'
+            );
+            this.advanceTurn(newState);
+            this.checkRoundEnd(newState);
+            return newState;
+          }
         }
       }
     } else if (card.suit === 'modifier') {
@@ -345,6 +376,13 @@ export class TurnSevenLogic implements IGameLogic {
     actor.reservedActions = actor.reservedActions || [];
     const idx = actor.reservedActions.findIndex((c) => c.id === payload.cardId);
     if (idx === -1) return newState;
+
+    // Validation: Life Saver cannot be played on self
+    const cardToCheck = actor.reservedActions[idx];
+    if (String(cardToCheck.rank) === 'LifeSaver' && actor.id === target.id) {
+      return newState;
+    }
+
     const card = actor.reservedActions.splice(idx, 1)[0];
 
     // Remove visible representation from actor.hand if present
@@ -683,8 +721,8 @@ export class TurnSevenLogic implements IGameLogic {
   }
 
   private checkRoundEnd(state: GameState) {
-    // If the round is already marked as ended, avoid re-computing scores.
-    if (state.gamePhase === 'ended') return;
+    // If the round is already marked as ended or gameover, avoid re-computing scores.
+    if (state.gamePhase === 'ended' || state.gamePhase === 'gameover') return;
     // If any player has 7 unique number cards, end round
     for (const p of state.players) {
       const numberRanks = p.hand.filter((h) => h.suit === 'number').map((h) => h.rank);
@@ -692,7 +730,7 @@ export class TurnSevenLogic implements IGameLogic {
       if (uniqueCount >= 7) {
         this.computeScores(state);
         // If computeScores didn't already mark a gameover, mark round as ended.
-        if (state.gamePhase !== 'gameover') {
+        if ((state.gamePhase as string) !== 'gameover') {
           state.gamePhase = 'ended';
           state.currentPlayerId = null;
         }
@@ -704,7 +742,7 @@ export class TurnSevenLogic implements IGameLogic {
     const anyActive = state.players.some((p) => p.isActive);
     if (!anyActive) {
       this.computeScores(state);
-      if (state.gamePhase !== 'gameover') {
+      if ((state.gamePhase as string) !== 'gameover') {
         state.gamePhase = 'ended';
         state.currentPlayerId = null;
       }
@@ -1116,6 +1154,8 @@ export class TurnSevenLogic implements IGameLogic {
         // If not pending (e.g. Life Saver auto-resolved to someone else), check if player kept it
         if (player.hand.some((h) => h.id === card.id)) {
           keptCard = true;
+          const cardName = String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
+          this.addToLedger(state, player.name, 'Deal', `Dealt ${cardName}`);
         }
         // If not kept, loop continues (draw replacement)
       } else {

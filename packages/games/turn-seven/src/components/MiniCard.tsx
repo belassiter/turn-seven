@@ -42,7 +42,14 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
   ].join(' ');
 
   return (
-    <motion.div className={classes} title={`${rank} (${suit})`} layoutId={card.id}>
+    <motion.div
+      className={classes}
+      title={`${rank} (${suit})`}
+      layoutId={card.id}
+      layout
+      initial={false}
+      data-testid="mini-card"
+    >
       <span className="mini-card-content">{displayRank}</span>
     </motion.div>
   );

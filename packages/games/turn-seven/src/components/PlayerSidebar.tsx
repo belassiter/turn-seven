@@ -36,9 +36,8 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
           // Filter out pending actions (cards currently being resolved/targeted) so they don't appear in the sidebar prematurely
           // Only do this for the current player, as they have a dedicated UI for pending actions.
           // For other players, we want to see all their cards.
-          const visibleHand = player.hand.filter(
-            (c) => !isCurrent || !player.pendingImmediateActionIds?.includes(c.id)
-          );
+          // UPDATE: Users found it confusing that cards disappeared. Showing all cards (even pending) is better.
+          const visibleHand = player.hand;
 
           // Sort hand: Numbers (asc) -> +X (asc) -> x2 -> Actions
           const sortedHand = [...visibleHand].sort((a, b) => {
@@ -127,9 +126,11 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                 </span>
               </div>
               <div className="player-mini-hand">
-                {sortedHand.map((card) => (
-                  <MiniCard key={card.id} card={card} />
-                ))}
+                <AnimatePresence initial={false}>
+                  {sortedHand.map((card) => (
+                    <MiniCard key={card.id} card={card} />
+                  ))}
+                </AnimatePresence>
               </div>
             </motion.div>
           );

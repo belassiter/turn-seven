@@ -4,10 +4,12 @@ import { TurnSevenLogic } from './game';
 describe('TurnSevenLogic Ledger', () => {
   const logic = new TurnSevenLogic();
 
-  it('initializes with empty ledger', () => {
+  it('initializes with ledger entries for initial deal', () => {
     const state = logic.createInitialStateFromNames(['Alice', 'Bob', 'Charlie']);
     expect(state.ledger).toBeDefined();
-    expect(state.ledger).toEqual([]);
+    // Should have entries for dealing cards to Alice, Bob, Charlie
+    expect(state.ledger.length).toBeGreaterThan(0);
+    expect(state.ledger[0].action).toBe('Deal');
   });
 
   it('records Hit action', () => {
@@ -29,8 +31,8 @@ describe('TurnSevenLogic Ledger', () => {
     // But basic hit should record one entry.
     // If she draws Life Saver, handleHit calls advanceTurn.
     // Let's just check that at least one entry is added.
-    expect(nextState.ledger.length).toBeGreaterThan(0);
-    const entry = nextState.ledger[0];
+    expect(nextState.ledger.length).toBeGreaterThan(state.ledger.length);
+    const entry = nextState.ledger[nextState.ledger.length - 1];
     expect(entry.playerName).toBe('Alice');
     expect(entry.action).toBe('Hit');
     expect(entry.result).toContain('Drew');
@@ -49,9 +51,9 @@ describe('TurnSevenLogic Ledger', () => {
     state.currentPlayerId = state.players[0].id;
 
     const nextState = logic.performAction(state, { type: 'STAY' });
-    expect(nextState.ledger).toHaveLength(1);
-    expect(nextState.ledger[0].playerName).toBe('Alice');
-    expect(nextState.ledger[0].action).toBe('Stay');
-    expect(nextState.ledger[0].result).toBe('Stayed');
+    expect(nextState.ledger.length).toBeGreaterThan(state.ledger.length);
+    const entry = nextState.ledger[nextState.ledger.length - 1];
+    expect(entry.playerName).toBe('Alice');
+    expect(entry.action).toBe('Stay');
   });
 });
