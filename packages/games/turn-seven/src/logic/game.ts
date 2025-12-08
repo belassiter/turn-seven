@@ -243,7 +243,14 @@ export class TurnSevenLogic implements IGameLogic {
           const scIdx = currentPlayer.hand.findIndex(
             (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
           );
-          if (scIdx !== -1) currentPlayer.hand.splice(scIdx, 1);
+          if (scIdx !== -1) {
+            const lifeSaverCard = currentPlayer.hand.splice(scIdx, 1)[0];
+            newState.discardPile.push({ ...lifeSaverCard, isFaceUp: true });
+          }
+          newState.discardPile.push({ ...card, isFaceUp: true });
+
+          log += ' Life Saved!';
+          ledgerResult += '. Life Saved!';
 
           // Check if we have another Life Saver (e.g. pending)
           const hasAnother = currentPlayer.hand.some(
@@ -1150,7 +1157,7 @@ export class TurnSevenLogic implements IGameLogic {
         // If pending action created, STOP.
         if (
           player.pendingImmediateActionIds &&
-          player.pendingImmediateActionIds.includes(card.id)
+          player.pendingImmediateActionIds.length > 0
         ) {
           return;
         }
