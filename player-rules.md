@@ -3,8 +3,8 @@
 - Each turn, choose Hit or Stay. Hit draws a card, Stay ends your play for the round and collects your score.
 - If you get a twin of one of your Number cards--bust! You score zero and are out for the round.
 - If you collect seven unique Number cards, you achieve Turn 7! The round ends, and you get 15 bonus points.
-- There are bonus cards (+2, x2, etc) that add to your score but do not contribute to busting or Turn 7.
--
+- There are bonus cards (+2, x2, etc) that add to your score but do not contribute to busting or achieving Turn 7.
+- 
 
 # Objective of the Game
 

@@ -197,9 +197,11 @@ describe('TurnSevenGame component', () => {
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
-    // enable odds display
-    const dice = getByTitle('Show Odds');
-    fireEvent.click(dice);
+    // enable odds display (cycle to Purple/Perfect Memory mode to match test expectations)
+    const dice = getByTitle('Odds Mode: White');
+    fireEvent.click(dice); // Green
+    fireEvent.click(dice); // Blue
+    fireEvent.click(dice); // Purple
 
     // Expect: current hand is 10, remaining deck after dealing to 3 players is [1,3,5] -> avg=3
     // expected should be 13 (10 + 3), delta = +3

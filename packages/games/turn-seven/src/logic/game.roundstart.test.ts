@@ -70,7 +70,7 @@ describe('Round Start Logic', () => {
       deck: [],
       discardPile: [],
       gamePhase: 'ended',
-      roundNumber: 1,
+      roundNumber: 3,
       ledger: [],
     } as GameState;
 

@@ -100,7 +100,8 @@ describe('Round end and startNextRound behavior', () => {
     } as GameState;
 
     const next = logic.startNextRound(state);
-    expect(next.currentPlayerId).toBe(next.players[0].id);
+    // Round 1 -> Round 2. Starter should rotate to index 1 (p2)
+    expect(next.currentPlayerId).toBe(next.players[1].id);
   });
 
   it('startNextRound should *preserve* the previous deck (not replace it) when it is non-empty', () => {

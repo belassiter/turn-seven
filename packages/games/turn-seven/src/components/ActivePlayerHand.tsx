@@ -46,6 +46,7 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
       <AnimatePresence>
         {isBusted && (
           <motion.div
+            key="busted"
             className="busted-overlay"
             initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
@@ -67,8 +68,9 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
             BUSTED!
           </motion.div>
         )}
-        {isLocked && (
+        {!isBusted && isLocked && (
           <motion.div
+            key="locked"
             className="locked-overlay"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -90,8 +92,9 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
             LOCKED 🔒
           </motion.div>
         )}
-        {hasStayed && (
+        {!isBusted && !isLocked && hasStayed && (
           <motion.div
+            key="stayed"
             className="stayed-overlay"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -908,14 +908,9 @@ export class TurnSevenLogic implements IGameLogic {
       hasLifeSaver: false,
     }));
 
-    // Determine next round starter
-    let nextStarterIndex = 0;
-    if (state.roundStarterId) {
-      const currentStarterIndex = state.players.findIndex((p) => p.id === state.roundStarterId);
-      if (currentStarterIndex !== -1) {
-        nextStarterIndex = (currentStarterIndex + 1) % state.players.length;
-      }
-    }
+    // Determine next round starter based on round number to ensure deterministic rotation
+    // Round 1 -> Index 0, Round 2 -> Index 1, etc.
+    const nextStarterIndex = (newState.roundNumber - 1) % newState.players.length;
     const nextStarter = newState.players[nextStarterIndex];
     newState.roundStarterId = nextStarter.id;
 
@@ -1175,10 +1170,8 @@ export class TurnSevenLogic implements IGameLogic {
         this.addToLedger(state, player.name, 'Deal', `Dealt ${cardName}`);
 
         // If pending action created, STOP.
-        if (
-          player.pendingImmediateActionIds &&
-          player.pendingImmediateActionIds.length > 0
-        ) {
+        // We check the player object directly from the state to be safe
+        if (player.pendingImmediateActionIds && player.pendingImmediateActionIds.length > 0) {
           return;
         }
 

@@ -36,7 +36,8 @@ The project will be built as a generic card game engine with "Turn Seven" as the
 - **Styling:** Tailwind CSS will be used for utility-first styling.
 - **Testing:** We will use **Vitest** as our testing framework. Our strategy is:
   - **Strict TDD for the Core Engine:** For the `packages/engine`, we will strictly adhere to TDD (Test-Driven Development). This means writing failing tests before any implementation. This ensures the engine is robust and has a clean, stable API.
-  - **Conventional Testing for Game Logic & UI:** For the `packages/games/turn-seven`, we will write unit and integration tests for game logic and components, but not strictly follow TDD. This allows for more flexibility and faster iteration on the user-facing parts of the application.
+  - **TDD for Bug Fixes:** When fixing bugs in any package (engine or games), we must ALWAYS create a failing test case that reproduces the bug before writing the fix. This ensures the bug is confirmed and prevents regression.
+  - **Conventional Testing for Game Logic & UI:** For the `packages/games/turn-seven`, we will write unit and integration tests for game logic and components, but not strictly follow TDD for new features. This allows for more flexibility and faster iteration on the user-facing parts of the application.
 - **State Management:** A decoupled state model ("UI State" vs "Server State") will be managed by a generic `useGameState` hook.
 - **Backend & Hosting:** All backend and hosting will be managed by Firebase.
   - **Hosting:** Firebase Hosting.
@@ -86,9 +87,17 @@ The work will be divided between building the engine and implementing the game.
     - [x] **Turn Seven:** Make the cards look better, have more character
 6.  **Card analysis**
     - [x] Probability of busting (based on full deck)
-    - [ ] Probability of busting (visible cards)
-    - [ ] Probability of busting based on all cards seen since shuffle
+    - [x] Probability of busting (visible cards)
+    - [x] Probability of busting based on all cards seen since shuffle
     - [x] same conditions as above, but expected score if hit
+7. **Bot players**
+    - [ ] Easy: randomly chooses Hit/Stay. Randomly assigns action cards (even to self)
+    - [ ] Medium: chooses Hit/Stay based on green odds. Assigns action cards based on total score from last round
+    - [ ] Hard: chooses Hit/Stay based on blue odds. Assigns action cards based on total score including current round.
+    - [ ] OMG: chooses Hit/Stay based on purple odds. Assigns action cards based on total score including current round.
+8. **Mobile layout**
+    - [ ] UI that works for Mobile, vertical
+    - [ ] UI that works for Mobile, horizontal        
 
 ## Recent Tasks (Completed)
 

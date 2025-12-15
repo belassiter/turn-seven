@@ -1,6 +1,43 @@
 import type { CardModel } from '@turn-seven/engine';
 import { computeHandScore } from '@turn-seven/engine';
 
+export function getFullDeckTemplate(): CardModel[] {
+  const deck: CardModel[] = [];
+  let idCounter = 0;
+
+  // numbers 12 down to 1
+  for (let value = 12; value >= 1; value--) {
+    const count = value;
+    for (let i = 0; i < count; i++) {
+      deck.push({
+        id: `template-${idCounter++}`,
+        suit: 'number',
+        rank: String(value),
+        isFaceUp: false,
+      });
+    }
+  }
+
+  // single 0 card
+  deck.push({ id: `template-${idCounter++}`, suit: 'number', rank: '0', isFaceUp: false });
+
+  // Add modifier cards
+  const modifiers = ['+2', '+4', '+6', '+8', '+10', 'x2'];
+  for (const mod of modifiers) {
+    deck.push({ id: `template-${idCounter++}`, suit: 'modifier', rank: mod, isFaceUp: false });
+  }
+
+  // Add action cards
+  const actions = ['Lock', 'TurnThree', 'LifeSaver'];
+  for (const action of actions) {
+    for (let i = 0; i < 3; i++) {
+      deck.push({ id: `template-${idCounter++}`, suit: 'action', rank: action, isFaceUp: false });
+    }
+  }
+
+  return deck;
+}
+
 // Compute the probability (0..1) that drawing one card from `deck` will cause the
 // player to bust given their `hand` of cards.
 // Simplification: this ignores effects of action cards (we treat them as non-busting)

@@ -68,7 +68,7 @@ describe('Initial Deal Edge Cases', () => {
       deck: [],
       discardPile: [],
       gamePhase: 'ended',
-      roundNumber: 1,
+      roundNumber: 2, // Ensure next round is 3 (P1 starts)
       ledger: [],
     } as GameState;
 
@@ -140,7 +140,7 @@ describe('Initial Deal Edge Cases', () => {
       deck: [],
       discardPile: [],
       gamePhase: 'ended',
-      roundNumber: 1,
+      roundNumber: 2, // Ensure next round is 3 (P1 starts)
       ledger: [],
     } as GameState;
 
@@ -203,7 +203,7 @@ describe('Initial Deal Edge Cases', () => {
       deck: [],
       discardPile: [],
       gamePhase: 'ended',
-      roundNumber: 1,
+      roundNumber: 2, // Ensure next round is 3 (P1 starts)
       ledger: [],
     } as GameState;
 
@@ -275,7 +275,7 @@ describe('Initial Deal Edge Cases', () => {
       deck: [],
       discardPile: [],
       gamePhase: 'ended',
-      roundNumber: 1,
+      roundNumber: 2, // Ensure next round is 3 (P1 starts)
       ledger: [],
     } as GameState;
 
