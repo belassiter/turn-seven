@@ -1119,10 +1119,26 @@ export class TurnSevenLogic implements IGameLogic {
     // Actually, if they have reserved actions (like a queued Lock), they technically have a card.
     // But if they just resolved it (played it), they might have 0 cards again.
     // So we check for empty hand AND empty reserved actions.
-    const playerIndex = state.players.findIndex(
-      (p) =>
-        p.isActive && p.hand.length === 0 && (!p.reservedActions || p.reservedActions.length === 0)
-    );
+    // We must start searching from the round starter to ensure correct deal order.
+    let startIndex = 0;
+    if (state.roundStarterId) {
+      startIndex = state.players.findIndex((p) => p.id === state.roundStarterId);
+      if (startIndex === -1) startIndex = 0;
+    }
+
+    let playerIndex = -1;
+    for (let i = 0; i < state.players.length; i++) {
+      const idx = (startIndex + i) % state.players.length;
+      const p = state.players[idx];
+      if (
+        p.isActive &&
+        p.hand.length === 0 &&
+        (!p.reservedActions || p.reservedActions.length === 0)
+      ) {
+        playerIndex = idx;
+        break;
+      }
+    }
 
     if (playerIndex === -1) {
       // Everyone has cards. Deal done.
@@ -1154,6 +1170,10 @@ export class TurnSevenLogic implements IGameLogic {
       if (card.suit === 'action') {
         this.resolveActionOnDeal(state.players, playerIndex, card);
 
+        // Always log the deal of an action card
+        const cardName = String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
+        this.addToLedger(state, player.name, 'Deal', `Dealt ${cardName}`);
+
         // If pending action created, STOP.
         if (
           player.pendingImmediateActionIds &&
@@ -1165,8 +1185,6 @@ export class TurnSevenLogic implements IGameLogic {
         // If not pending (e.g. Life Saver auto-resolved to someone else), check if player kept it
         if (player.hand.some((h) => h.id === card.id)) {
           keptCard = true;
-          const cardName = String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
-          this.addToLedger(state, player.name, 'Deal', `Dealt ${cardName}`);
         }
         // If not kept, loop continues (draw replacement)
       } else {

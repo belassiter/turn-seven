@@ -20,6 +20,10 @@ export class LocalGameService implements IGameService {
     this.logic = new TurnSevenLogic();
     if (initialState) {
       this.manager = new ClientGameStateManager(initialState);
+      // Ensure we subscribe to the manager if we have one, so UI gets updates
+      this.manager.subscribe((state) => {
+        this.subscribers.forEach((cb) => cb(state));
+      });
     }
   }
 
@@ -38,7 +42,10 @@ export class LocalGameService implements IGameService {
   }
 
   async sendAction(action: { type: string; payload?: unknown }): Promise<void> {
-    if (!this.manager) throw new Error('Game not started');
+    if (!this.manager) {
+      console.error('Game not started. Current state:', this.manager);
+      throw new Error('Game not started');
+    }
     await this.simulateLatency();
 
     const currentState = this.manager.getState();

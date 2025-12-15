@@ -69,7 +69,11 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     const unsubscribe = gameService.subscribe((s) => {
       setRealGameState(s);
     });
-    setRealGameState(gameService.getState());
+    // If gameService has state, set it immediately
+    const currentState = gameService.getState();
+    if (currentState) {
+      setRealGameState(currentState);
+    }
     return () => unsubscribe();
   }, [gameService]);
 
@@ -116,7 +120,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     const performStep = async () => {
       setIsAnimating(true);
 
-      // Check for Round Change
+      try {
+        // Check for Round Change
       if (realGameState.roundNumber > visualGameState.roundNumber) {
         // Reset visual hands to empty to trigger deal animation
         const resetState = {
@@ -255,13 +260,14 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         if (existingCardOwner) {
           // Move directly (no deck animation)
           // We need to remove from old owner and add to new owner in one step
-          const nextPlayers = visualGameState.players.map((p) => {
+          const nextPlayers = visualGameState.players.map((p, idx) => {
             if (p.id === existingCardOwner.id) {
               return { ...p, hand: p.hand.filter((c) => c.id !== newCard.id) };
             }
             if (p.id === vp.id) {
               // vp is the target player
-              return { ...p, hand: [...p.hand, newCard] };
+              // Sync with real player state to capture pending actions
+              return { ...realGameState.players[idx], hand: [...p.hand, newCard] };
             }
             return p;
           });
@@ -280,7 +286,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         // Animate Fly (Add to hand)
         const nextPlayers = [...visualGameState.players];
         nextPlayers[playerToUpdateIndex] = {
-          ...vp,
+          ...rp,
           hand: [...vp.hand, newCard],
         };
 
@@ -350,7 +356,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             // The drawn card and the Life Saver are now in the discard pile (last 2 cards)
             // We need to animate the draw of the card that caused the save
             if (realGameState.discardPile && realGameState.discardPile.length >= 2) {
-              const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 2];
+              const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 1];
               // Animate Flip
               setRevealedDeckCard(drawnCard);
               await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
@@ -402,7 +408,15 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
       // 4. Sync any other state (scores, card removals, etc)
       setVisualGameState(realGameState);
-      setIsAnimating(false);
+      } catch (error) {
+        console.error('Animation error:', error);
+        // Force sync to recover from error state
+        if (realGameState) {
+          setVisualGameState(realGameState);
+        }
+      } finally {
+        setIsAnimating(false);
+      }
     };
 
     performStep();
@@ -422,9 +436,25 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   const handleHit = useCallback(async () => {
     if (isInputLocked) return;
+    // Double check game service state
+    if (!gameService.getState()) {
+      console.error('Attempted to hit but game service has no state');
+      // Force reset to setup screen if we are in a bad state
+      setRealGameState(null);
+      setVisualGameState(null);
+      return;
+    }
+
     setIsPending(true);
     try {
       await gameService.sendAction({ type: 'HIT' });
+    } catch (e) {
+      console.error('Hit action failed:', e);
+      // If error is "Game not started", reset UI
+      if (e instanceof Error && e.message === 'Game not started') {
+        setRealGameState(null);
+        setVisualGameState(null);
+      }
     } finally {
       setIsPending(false);
     }
@@ -432,9 +462,22 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   const handleStay = useCallback(async () => {
     if (isInputLocked) return;
+    if (!gameService.getState()) {
+      console.error('Attempted to stay but game service has no state');
+      setRealGameState(null);
+      setVisualGameState(null);
+      return;
+    }
+
     setIsPending(true);
     try {
       await gameService.sendAction({ type: 'STAY' });
+    } catch (e) {
+      console.error('Stay action failed:', e);
+      if (e instanceof Error && e.message === 'Game not started') {
+        setRealGameState(null);
+        setVisualGameState(null);
+      }
     } finally {
       setIsPending(false);
     }
@@ -453,6 +496,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     gameService.reset();
     setRealGameState(null);
     setVisualGameState(null);
+    setRevealedDeckCard(null);
+    setOverlayAnimation(null);
+    setIsAnimating(false);
+    setIsPending(false);
   }, [gameService]);
 
   // Global Navigation Hotkeys (Enter, Escape)
@@ -841,7 +888,13 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                           isInputLocked ||
                           !!currentPlayer.hasStayed ||
                           !currentPlayer.isActive ||
-                          !!currentPlayer.hasBusted
+                          !!currentPlayer.hasBusted ||
+                          (gameState.deck.length === 0 && gameState.discardPile.length === 0)
+                        }
+                        title={
+                          gameState.deck.length === 0 && gameState.discardPile.length === 0
+                            ? 'No cards left to draw'
+                            : 'Draw a card'
                         }
                       >
                         Hit
