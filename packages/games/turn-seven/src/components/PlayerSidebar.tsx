@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayerModel } from '@turn-seven/engine';
 import { MiniCard } from './MiniCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getPlayerColor, getDifficultyColor } from '../utils/colors';
 
 interface PlayerSidebarProps {
   players: PlayerModel[];
@@ -16,7 +17,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
   currentPlayerId,
   onTargetPlayer,
   isTargetingMode,
-  targetingActorId,
 }) => {
   return (
     <div className="player-sidebar">
@@ -24,7 +24,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
         {players.map((player) => {
           const isCurrent = player.id === currentPlayerId;
           const isTargetable = isTargetingMode && player.isActive; // Simplified targeting logic
-          const isSelf = player.id === targetingActorId;
           const isInactiveTarget = isTargetingMode && !player.isActive;
 
           const handleClick = () => {
@@ -39,8 +38,13 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
           // UPDATE: Users found it confusing that cards disappeared. Showing all cards (even pending) is better.
           const visibleHand = player.hand;
 
+          // Deduplicate hand to prevent React key warnings if state has transient duplicates
+          const uniqueHandMap = new Map();
+          visibleHand.forEach((c) => uniqueHandMap.set(c.id, c));
+          const uniqueHand = Array.from(uniqueHandMap.values());
+
           // Sort hand: Numbers (asc) -> +X (asc) -> x2 -> Actions
-          const sortedHand = [...visibleHand].sort((a, b) => {
+          const sortedHand = [...uniqueHand].sort((a, b) => {
             // Helper to get sort weight
             const getWeight = (c: typeof a) => {
               if (c.suit === 'number') return 0 + parseInt(String(c.rank));
@@ -57,6 +61,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
 
           return (
             <motion.div
+              id={`player-row-${player.id}`}
               key={player.id}
               className={`player-row ${isCurrent ? 'active-turn' : ''} ${
                 isTargetable ? 'targeting-candidate' : ''
@@ -108,9 +113,17 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                       ) : null}
                     </AnimatePresence>
                   </div>
-                  <span className="player-name">
+                  <span
+                    className="player-name"
+                    style={{
+                      color:
+                        player.isBot && player.botDifficulty
+                          ? getDifficultyColor(player.botDifficulty)
+                          : getPlayerColor(player.name, player.isBot || false),
+                    }}
+                  >
                     {player.name}
-                    {isSelf && (
+                    {!player.isBot && (
                       <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 6 }}>
                         (you)
                       </span>

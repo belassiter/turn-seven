@@ -1,17 +1,35 @@
 import React from 'react';
-import { LedgerEntry } from '@turn-seven/engine';
+import { LedgerEntry, PlayerModel } from '@turn-seven/engine';
+import { getPlayerColor, getDifficultyColor } from '../utils/colors';
 
 interface LedgerModalProps {
   isOpen: boolean;
   onClose: () => void;
   ledger: LedgerEntry[];
+  players: PlayerModel[];
 }
 
-export const LedgerModal: React.FC<LedgerModalProps> = ({ isOpen, onClose, ledger }) => {
+export const LedgerModal: React.FC<LedgerModalProps> = ({ isOpen, onClose, ledger, players }) => {
   if (!isOpen) return null;
 
-  // Sort by timestamp descending (newest first)
-  const sortedLedger = [...ledger].sort((a, b) => b.timestamp - a.timestamp);
+  // Sort by timestamp descending (newest first).
+  // If timestamps are equal, use the original index (reversed) to maintain Newest First for simultaneous events.
+  const sortedLedger = [...ledger]
+    .map((entry, index) => ({ ...entry, originalIndex: index }))
+    .sort((a, b) => {
+      if (b.timestamp !== a.timestamp) {
+        return b.timestamp - a.timestamp;
+      }
+      return b.originalIndex - a.originalIndex;
+    });
+
+  const getColorForName = (name: string) => {
+    const p = players.find((p) => p.name === name);
+    if (p?.isBot && p.botDifficulty) {
+      return getDifficultyColor(p.botDifficulty);
+    }
+    return getPlayerColor(name, p?.isBot || false);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -36,11 +54,30 @@ export const LedgerModal: React.FC<LedgerModalProps> = ({ isOpen, onClose, ledge
               {sortedLedger.map((entry, index) => (
                 <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '8px' }}>{entry.roundNumber}</td>
-                  <td style={{ padding: '8px' }}>{entry.playerName}</td>
+                  <td
+                    style={{
+                      padding: '8px',
+                      color: getColorForName(entry.playerName),
+                    }}
+                  >
+                    {entry.playerName}
+                  </td>
                   <td style={{ padding: '8px' }}>{entry.action}</td>
                   <td style={{ padding: '8px' }}>
                     {entry.result}
-                    {entry.targetName && ` (on ${entry.targetName})`}
+                    {entry.targetName && (
+                      <>
+                        {' (on '}
+                        <span
+                          style={{
+                            color: getColorForName(entry.targetName),
+                          }}
+                        >
+                          {entry.targetName}
+                        </span>
+                        {')'}
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

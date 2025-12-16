@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TurnSevenGame } from './TurnSevenGame';
+import { PlayerSetup } from './GameSetup';
 import React from 'react';
 
 // Mock LocalGameService to remove latency for tests
@@ -33,8 +34,17 @@ vi.mock('./ActivePlayerHand', () => ({
 }));
 
 vi.mock('./GameSetup', () => ({
-  GameSetup: ({ onStart }: { onStart: (names: string[]) => void }) => (
-    <button onClick={() => onStart(['P1', 'P2', 'P3'])} data-testid="start-game-btn">
+  GameSetup: ({ onStart }: { onStart: (players: PlayerSetup[]) => void }) => (
+    <button
+      onClick={() =>
+        onStart([
+          { name: 'P1', isBot: false },
+          { name: 'P2', isBot: false },
+          { name: 'P3', isBot: false },
+        ])
+      }
+      data-testid="start-game-btn"
+    >
       Start Game
     </button>
   ),

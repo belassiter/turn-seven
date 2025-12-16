@@ -3,6 +3,12 @@ import { CardModel, GameState, PlayerModel, LedgerEntry } from '@turn-seven/engi
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 18;
 
+export interface PlayerConfig {
+  name: string;
+  isBot?: boolean;
+  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg';
+}
+
 // We can define a generic interface for game logic
 export interface IGameLogic {
   createInitialState(playerIds: string[]): GameState;
@@ -61,6 +67,100 @@ export class TurnSevenLogic implements IGameLogic {
     };
   }
 
+  public createInitialStateFromConfig(configs: PlayerConfig[]): GameState {
+    // generate ids from names with a suffix index to ensure uniqueness
+    const ids = configs.map((_, i) => `p${i + 1}`);
+    const deck = this.createDeck();
+    const players = configs.map((config, index) => ({
+      id: ids[index],
+      name: config.name || `Player ${index + 1}`,
+      isBot: config.isBot,
+      botDifficulty: config.botDifficulty,
+      hand: [] as CardModel[],
+      hasStayed: false,
+      isLocked: false,
+      isActive: true,
+      hasBusted: false,
+      roundScore: 0,
+      totalScore: 0,
+      pendingImmediateActionIds: [],
+      hasLifeSaver: false,
+    }));
+
+    const ledger: LedgerEntry[] = [];
+
+    // Deal one card to each player and resolve action cards immediately.
+    this.continueDealing({
+      players,
+      deck,
+      discardPile: [],
+      currentPlayerId: ids[0] || null,
+      roundStarterId: ids[0] || null,
+      gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
+      ledger,
+    });
+
+    return {
+      players,
+      deck,
+      discardPile: [],
+      currentPlayerId:
+        players.find((p) => p.pendingImmediateActionIds?.length > 0)?.id || ids[0] || null,
+      roundStarterId: ids[0] || null,
+      gamePhase: 'playing',
+      roundNumber: 1,
+      previousTurnLog: undefined,
+      previousRoundScores: undefined,
+      ledger,
+    };
+  }
+
+  private createDeck(): CardModel[] {
+    const deck: CardModel[] = [];
+    let idCounter = 0;
+
+    // numbers 12 down to 1
+    for (let value = 12; value >= 1; value--) {
+      const count = value;
+      for (let i = 0; i < count; i++) {
+        deck.push({
+          id: `card-${idCounter++}`,
+          suit: 'number',
+          rank: String(value),
+          isFaceUp: false,
+        });
+      }
+    }
+
+    // single 0 card
+    deck.push({ id: `card-${idCounter++}`, suit: 'number', rank: '0', isFaceUp: false });
+
+    // Add modifier cards
+    const modifiers = ['+2', '+4', '+6', '+8', '+10', 'x2'];
+    for (const mod of modifiers) {
+      deck.push({ id: `card-${idCounter++}`, suit: 'modifier', rank: mod, isFaceUp: false });
+    }
+
+    // Add action cards
+    const actions = ['Lock', 'TurnThree', 'LifeSaver'];
+    for (const action of actions) {
+      for (let i = 0; i < 3; i++) {
+        deck.push({ id: `card-${idCounter++}`, suit: 'action', rank: action, isFaceUp: false });
+      }
+    }
+
+    // Shuffle
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
+    return deck;
+  }
+
   // Create initial state given player names (keeps provided names)
   public createInitialStateFromNames(names: string[]): GameState {
     // generate ids from names with a suffix index to ensure uniqueness
@@ -88,6 +188,7 @@ export class TurnSevenLogic implements IGameLogic {
       deck,
       discardPile: [],
       currentPlayerId: ids[0] || null,
+      roundStarterId: ids[0] || null,
       gamePhase: 'playing',
       roundNumber: 1,
       previousTurnLog: undefined,
@@ -579,12 +680,16 @@ export class TurnSevenLogic implements IGameLogic {
             }
             // Remove from hand
             target.hand = target.hand.filter((h) => h.id !== a.id);
-            // Add to discard pile
-            newState.discardPile.push(a);
+            // Add to discard pile if not already there
+            if (!newState.discardPile.some((d) => d.id === a.id)) {
+              newState.discardPile.push(a);
+            }
           });
           // Discard the original TurnThree card when the target busted (Case 14)
           target.hand = target.hand.filter((h) => h.id !== card.id);
-          newState.discardPile.push(card);
+          if (!newState.discardPile.some((d) => d.id === card.id)) {
+            newState.discardPile.push(card);
+          }
 
           // Turn ends for actor.
           if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
@@ -643,7 +748,9 @@ export class TurnSevenLogic implements IGameLogic {
         break;
       }
       default: {
-        newState.discardPile.push({ ...card, isFaceUp: true });
+        if (!newState.discardPile.some((d) => d.id === card.id)) {
+          newState.discardPile.push({ ...card, isFaceUp: true });
+        }
         if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
           this.advanceTurn(newState);
         }
@@ -869,14 +976,35 @@ export class TurnSevenLogic implements IGameLogic {
 
     // Move all cards from players (hands, reserved actions) into the discard pile for the finished round
     newState.discardPile = newState.discardPile || [];
+
+    // Robustly deduplicate the existing discard pile first to ensure no ID collisions
+    const uniqueDiscardMap = new Map<string, CardModel>();
+    newState.discardPile.forEach((c) => uniqueDiscardMap.set(c.id, c));
+    
+    // Track IDs to prevent adding duplicates from hands/reserved
+    const discardedIds = new Set<string>(uniqueDiscardMap.keys());
+
     newState.players.forEach((p) => {
       if (p.hand && p.hand.length > 0) {
-        newState.discardPile.push(...p.hand.map((c) => ({ ...c, isFaceUp: true })));
+        p.hand.forEach((c) => {
+          if (!discardedIds.has(c.id)) {
+            uniqueDiscardMap.set(c.id, { ...c, isFaceUp: true });
+            discardedIds.add(c.id);
+          }
+        });
       }
       if (p.reservedActions && p.reservedActions.length > 0) {
-        newState.discardPile.push(...p.reservedActions.map((c) => ({ ...c, isFaceUp: true })));
+        p.reservedActions.forEach((c) => {
+          if (!discardedIds.has(c.id)) {
+            uniqueDiscardMap.set(c.id, { ...c, isFaceUp: true });
+            discardedIds.add(c.id);
+          }
+        });
       }
     });
+
+    // Reconstruct discard pile from the unique map
+    newState.discardPile = Array.from(uniqueDiscardMap.values());
 
     // Do not shuffle discarded cards back into the deck immediately at the start of a round.
     // Per rules: collect all cards into the discard pile. Preserve the current deck and discard
@@ -884,10 +1012,16 @@ export class TurnSevenLogic implements IGameLogic {
     // carry over into the next round. If there is no deck array present (shouldn't normally
     // happen), initialize it as an empty array.
     if (!newState.deck) newState.deck = [];
-    // If after carrying over the deck we find it empty, create a fresh deck so the
-    // new round's initial dealing can proceed.
+    // If after carrying over the deck we find it empty, we must replenish it.
+    // If we have a discard pile, reshuffle it into the deck.
+    // Only create a fresh deck if both are empty (which implies we lost all cards).
     if (newState.deck.length === 0) {
-      newState.deck = this.createDeck();
+      if (newState.discardPile && newState.discardPile.length > 0) {
+        newState.deck = this.shuffle(newState.discardPile);
+        newState.discardPile = [];
+      } else {
+        newState.deck = this.createDeck();
+      }
     }
     newState.gamePhase = 'playing';
     newState.roundNumber = (state.roundNumber || 1) + 1;
@@ -906,6 +1040,8 @@ export class TurnSevenLogic implements IGameLogic {
       pendingImmediateActionIds: [],
       reservedActions: [],
       hasLifeSaver: false,
+      isBot: p.isBot,
+      botDifficulty: p.botDifficulty,
     }));
 
     // Determine next round starter based on round number to ensure deterministic rotation
@@ -948,46 +1084,6 @@ export class TurnSevenLogic implements IGameLogic {
     state.ledger.push(entry);
   }
 
-  private createDeck(): CardModel[] {
-    // Implement number-card distribution per rules.md
-    // Counts: 12 copies of 12, 11 copies of 11, ..., 2 copies of 2, 1 copy of 1, and 1 copy of 0
-    // Note: these are number cards (no suits). We'll store them with suit: 'number'.
-    const deck: CardModel[] = [];
-    let idCounter = 0;
-
-    // numbers 12 down to 1
-    for (let value = 12; value >= 1; value--) {
-      const count = value; // e.g., value=12 -> 12 copies
-      for (let i = 0; i < count; i++) {
-        deck.push({
-          id: `card-${idCounter++}`,
-          suit: 'number',
-          rank: String(value),
-          isFaceUp: false,
-        });
-      }
-    }
-
-    // single 0 card
-    deck.push({ id: `card-${idCounter++}`, suit: 'number', rank: '0', isFaceUp: false });
-
-    // Add modifier cards (one copy each): +2, +4, +6, +8, +10, and x2
-    const modifiers = ['+2', '+4', '+6', '+8', '+10', 'x2'];
-    for (const mod of modifiers) {
-      deck.push({ id: `card-${idCounter++}`, suit: 'modifier', rank: mod, isFaceUp: false });
-    }
-
-    // Add action cards: Lock, TurnThree, LifeSaver (3 copies each)
-    const actions = ['Lock', 'TurnThree', 'LifeSaver'];
-    for (const action of actions) {
-      for (let i = 0; i < 3; i++) {
-        deck.push({ id: `card-${idCounter++}`, suit: 'action', rank: action, isFaceUp: false });
-      }
-    }
-
-    return this.shuffle(deck);
-  }
-
   // Helper: find next active player index starting after `fromIndex` (forward-wrapping)
   private nextActiveIndex(players: PlayerModel[], fromIndex: number): number {
     const total = players.length;
@@ -1022,7 +1118,9 @@ export class TurnSevenLogic implements IGameLogic {
     }
     // no eligible player — discard the card to prevent it from being lost
     state.discardPile = state.discardPile || [];
-    if (card) state.discardPile.push({ ...card, isFaceUp: true });
+    if (card && !state.discardPile.some((d) => d.id === card.id)) {
+      state.discardPile.push({ ...card, isFaceUp: true });
+    }
     // discarded because no eligible players
     return false;
   }

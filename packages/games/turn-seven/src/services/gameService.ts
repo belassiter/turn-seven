@@ -1,8 +1,8 @@
 import { GameState, ClientGameStateManager } from '@turn-seven/engine';
-import { TurnSevenLogic } from '../logic/game';
+import { TurnSevenLogic, PlayerConfig } from '../logic/game';
 
 export interface IGameService {
-  start(playerNames: string[]): Promise<void>;
+  start(players: PlayerConfig[]): Promise<void>;
   sendAction(action: { type: string; payload?: unknown }): Promise<void>;
   startNextRound(): Promise<void>;
   reset(): void;
@@ -27,9 +27,9 @@ export class LocalGameService implements IGameService {
     }
   }
 
-  async start(playerNames: string[]): Promise<void> {
+  async start(players: PlayerConfig[]): Promise<void> {
     await this.simulateLatency();
-    const initialState = this.logic.createInitialStateFromNames(playerNames);
+    const initialState = this.logic.createInitialStateFromConfig(players);
     this.manager = new ClientGameStateManager(initialState);
 
     // Subscribe to manager updates and forward to our subscribers

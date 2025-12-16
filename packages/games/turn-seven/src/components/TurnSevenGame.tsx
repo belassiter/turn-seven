@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GameState, Card as CardComponent, CardModel } from '@turn-seven/engine';
 import { LocalGameService } from '../services/gameService';
-import { GameSetup } from './GameSetup';
+import { GameSetup, PlayerSetup } from './GameSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
+import { useBotPlayer } from '../hooks/useBotPlayer';
 import { computeHitExpectation, getFullDeckTemplate } from '../logic/odds';
 import { computeHandScore } from '@turn-seven/engine';
+import { getPlayerColor, getDifficultyColor } from '../utils/colors';
 
 // @ts-expect-error - import.meta.env is provided by Vite
 const ANIMATION_DELAY = import.meta.env.MODE === 'test' ? 50 : 1000;
@@ -22,6 +24,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimation';
 
 export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
+  // console.error('Render TurnSevenGame');
   const gameService = useMemo(() => new LocalGameService(initialGameState), [initialGameState]);
 
   // Real state from the engine
@@ -49,6 +52,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   // Queue for animations that should play AFTER a card deal
   const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
+  const isDealingLargeBatch = useRef<boolean>(false);
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
@@ -179,10 +183,30 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     )
       return;
 
-    if (isAnimating) return;
+    if (isAnimating) {
+      // console.log('Animation loop skipped: isAnimating=true');
+      return;
+    }
 
     const performStep = async () => {
+      // console.log('Starting animation step...');
       setIsAnimating(true);
+
+      const playOverlayAnimation = async (type: OverlayAnimationType) => {
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          const safeResolve = () => {
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          };
+          setOverlayAnimation({ type, onComplete: safeResolve });
+          // Fallback timeout in case animation gets stuck (e.g. tab backgrounded)
+          setTimeout(safeResolve, 3000);
+        });
+        setOverlayAnimation(null);
+      };
 
       try {
         // Check for Round Change
@@ -218,10 +242,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               return;
             }
 
-            await new Promise<void>((resolve) => {
-              setOverlayAnimation({ type: 'lock', onComplete: resolve });
-            });
-            setOverlayAnimation(null);
+            await playOverlayAnimation('lock');
 
             // Update visual state to reflect lock so we don't loop
             const nextPlayers = [...visualGameState.players];
@@ -277,6 +298,15 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           // Check for Turn 3 Animation (if receiving 3+ cards at once)
           // We only trigger this once, before the first card of the batch is dealt
           const cardsNeeded = rp.hand.length - vp.hand.length;
+
+          // Track if we are in a large deal sequence (e.g. initial deal of 7 cards)
+          if (cardsNeeded > 3) {
+            isDealingLargeBatch.current = true;
+          }
+          if (cardsNeeded === 0) {
+            isDealingLargeBatch.current = false;
+          }
+
           if (cardsNeeded >= 3) {
             // We use a ref or just check if we haven't animated yet?
             // Actually, we can just trigger the animation and return.
@@ -302,16 +332,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             // We can check if the PREVIOUS hand length was exactly 3 less?
             // Or just check if cardsNeeded === 3 (assuming exactly 3 for Turn 3).
             // If cardsNeeded is 2, we've already dealt one.
-            if (cardsNeeded === 3) {
-              await new Promise<void>((resolve) => {
-                setOverlayAnimation({
-                  type: 'turn3',
-                  onComplete: () => {
-                    resolve();
-                  },
-                });
-              });
-              setOverlayAnimation(null);
+            if (cardsNeeded === 3 && !isDealingLargeBatch.current) {
+              await playOverlayAnimation('turn3');
               // Now proceed to deal the card
             }
           }
@@ -349,8 +371,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
           // Animate Fly (Add to hand)
           const nextPlayers = [...visualGameState.players];
+          // IMPORTANT: Do not copy ...rp here, as it may contain future state flags (like hasBusted)
+          // that we haven't animated yet. We only want to update the hand.
           nextPlayers[playerToUpdateIndex] = {
-            ...rp,
+            ...vp,
             hand: [...vp.hand, newCard],
           };
 
@@ -388,10 +412,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
         if (pendingOverlayRef.current) {
           const type = pendingOverlayRef.current;
-          await new Promise<void>((resolve) => {
-            setOverlayAnimation({ type, onComplete: resolve });
-          });
-          setOverlayAnimation(null);
+          await playOverlayAnimation(type);
           pendingOverlayRef.current = null;
         } else {
           // We iterate players to find changes
@@ -400,11 +421,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             const rp = realGameState.players[i];
 
             // Bust
-            if (!vp.hasBusted && rp.hasBusted) {
-              await new Promise<void>((resolve) => {
-                setOverlayAnimation({ type: 'bust', onComplete: resolve });
-              });
-              setOverlayAnimation(null);
+            // Ensure we only show bust if we have synced the hand (no pending cards to deal)
+            if (!vp.hasBusted && rp.hasBusted && rp.hand.length === vp.hand.length) {
+              await playOverlayAnimation('bust');
               // We don't return here, we let the state sync happen below
               // But wait, if we don't sync, the loop will run again and see the same diff?
               // Yes. So we MUST sync the state or at least this property.
@@ -417,31 +436,21 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             // Condition: Had it, lost it, didn't bust.
             if (vp.hasLifeSaver && !rp.hasLifeSaver && !rp.hasBusted) {
               // Simulate the draw that caused the save
-              // The drawn card and the Life Saver are now in the discard pile (last 2 cards)
-              // We need to animate the draw of the card that caused the save
-              if (realGameState.discardPile && realGameState.discardPile.length >= 2) {
-                const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 1];
-                // Animate Flip
-                setRevealedDeckCard(drawnCard);
-                await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-                setRevealedDeckCard(null);
+              setRevealedDeckCard(null);
 
-                // Animate Fly to Hand (Visual only - add temporarily)
-                const tempHand = [...vp.hand, drawnCard];
-                const tempPlayers = [...visualGameState.players];
-                tempPlayers[i] = { ...vp, hand: tempHand };
-                setVisualGameState({
-                  ...visualGameState,
-                  players: tempPlayers,
-                  deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
-                });
-                await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-              }
-
-              await new Promise<void>((resolve) => {
-                setOverlayAnimation({ type: 'lifesaver', onComplete: resolve });
+              // Animate Fly to Hand (Visual only - add temporarily)
+              const drawnCard = rp.hand[rp.hand.length - 1];
+              const tempHand = [...vp.hand, drawnCard];
+              const tempPlayers = [...visualGameState.players];
+              tempPlayers[i] = { ...vp, hand: tempHand };
+              setVisualGameState({
+                ...visualGameState,
+                players: tempPlayers,
+                deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
               });
-              setOverlayAnimation(null);
+              await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+
+              await playOverlayAnimation('lifesaver');
               break;
             }
 
@@ -453,10 +462,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               rp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
             ).size;
             if (vpUnique < 7 && rpUnique >= 7) {
-              await new Promise<void>((resolve) => {
-                setOverlayAnimation({ type: 'turn7', onComplete: resolve });
-              });
-              setOverlayAnimation(null);
+              await playOverlayAnimation('turn7');
               break;
             }
           }
@@ -479,6 +485,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           setVisualGameState(realGameState);
         }
       } finally {
+        // console.log('Animation step complete.');
         setIsAnimating(false);
       }
     };
@@ -547,6 +554,18 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     }
   }, [gameService, isInputLocked]);
 
+  useBotPlayer({
+    gameState: realGameState,
+    currentPlayer: realGameState?.players.find((p) => p.id === realGameState.currentPlayerId),
+    isAnimating,
+    isInputLocked,
+    targetingState,
+    onStartTargeting: startTargeting,
+    onHit: handleHit,
+    onStay: handleStay,
+    onTargetPlayer: confirmTarget,
+  });
+
   const handleNextRound = useCallback(async () => {
     setIsPending(true);
     try {
@@ -555,6 +574,19 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       setIsPending(false);
     }
   }, [gameService]);
+
+  // Auto-advance rounds if all players are bots
+  useEffect(() => {
+    if (!realGameState || realGameState.gamePhase !== 'ended') return;
+
+    const allBots = realGameState.players.every((p) => p.isBot);
+    if (allBots) {
+      const timer = setTimeout(() => {
+        handleNextRound();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [realGameState, handleNextRound]);
 
   const handleNewGame = useCallback(() => {
     gameService.reset();
@@ -591,6 +623,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       if (!gameState || gameState.gamePhase !== 'playing') return;
       // Ensure we are the active player (in local multiplayer, we always are if it's our turn)
       if (!currentPlayer || currentPlayer.id !== gameState.currentPlayerId) return;
+      if (currentPlayer.isBot) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (isInputLocked) return; // Ignore hotkeys when locked
 
@@ -614,10 +647,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, currentPlayer, hasPendingActions, handleHit, handleStay, isInputLocked]);
 
-  const handleStart = async (names: string[]) => {
+  const handleStart = async (players: PlayerSetup[]) => {
     setIsPending(true);
     try {
-      await gameService.start(names);
+      await gameService.start(players);
     } finally {
       setIsPending(false);
     }
@@ -941,7 +974,17 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  {currentPlayer.name}&apos;s Turn
+                  <span
+                    style={{
+                      color:
+                        currentPlayer.isBot && currentPlayer.botDifficulty
+                          ? getDifficultyColor(currentPlayer.botDifficulty)
+                          : getPlayerColor(currentPlayer.name, currentPlayer.isBot || false),
+                    }}
+                  >
+                    {currentPlayer.name}
+                  </span>
+                  &apos;s Turn
                 </motion.h2>
                 <div className="current-score">
                   Hand Score: {computeHandScore(currentPlayer.hand)}
@@ -960,7 +1003,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               {/* Controls */}
               <motion.div
                 className="controls-area"
-                style={{ marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 20 }}
+                style={{
+                  marginTop: 20,
+                  borderTop: '1px solid #f3f4f6',
+                  paddingTop: 20,
+                  pointerEvents: currentPlayer?.isBot ? 'none' : 'auto',
+                }}
                 key={`${currentPlayer.id}-controls`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -972,6 +1020,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   <>
                     <div className="action-bar">
                       <button
+                        id="btn-hit"
                         className="btn btn-primary"
                         onClick={handleHit}
                         disabled={
@@ -990,6 +1039,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                         Hit
                       </button>
                       <button
+                        id="btn-stay"
                         className="btn btn-secondary"
                         onClick={handleStay}
                         disabled={
@@ -1039,6 +1089,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           isOpen={showLedger}
           onClose={() => setShowLedger(false)}
           ledger={gameState.ledger || []}
+          players={gameState.players}
         />
       )}
       {showRules && (
@@ -1086,7 +1137,16 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                 return (
                   <li key={p.id}>
                     <span>
-                      <strong>{p.name}</strong>{' '}
+                      <strong
+                        style={{
+                          color:
+                            p.isBot && p.botDifficulty
+                              ? getDifficultyColor(p.botDifficulty)
+                              : getPlayerColor(p.name, p.isBot || false),
+                        }}
+                      >
+                        {p.name}
+                      </strong>{' '}
                       {p.hasBusted ? '(Busted)' : hasTurnSeven ? '(Turn 7!)' : ''}. Scored{' '}
                       {p.roundScore ?? 0}. Total score: {p.totalScore ?? 0}. {rankText} place.
                     </span>
@@ -1123,9 +1183,23 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             <p style={{ fontSize: '1.25rem' }}>
               Winner:{' '}
               <strong>
-                {gameState.winnerId
-                  ? gameState.players.find((p) => p.id === gameState.winnerId)?.name
-                  : '—'}
+                {gameState.winnerId ? (
+                  <span
+                    style={{
+                      color: (() => {
+                        const w = gameState.players.find((p) => p.id === gameState.winnerId);
+                        if (!w) return 'inherit';
+                        return w.isBot && w.botDifficulty
+                          ? getDifficultyColor(w.botDifficulty)
+                          : getPlayerColor(w.name, w.isBot || false);
+                      })(),
+                    }}
+                  >
+                    {gameState.players.find((p) => p.id === gameState.winnerId)?.name}
+                  </span>
+                ) : (
+                  '—'
+                )}
               </strong>{' '}
               🏆
             </p>
@@ -1142,7 +1216,17 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   return (
                     <li key={p.id}>
                       <span>
-                        {p.name}: {p.totalScore ?? 0} points {medal}
+                        <span
+                          style={{
+                            color:
+                              p.isBot && p.botDifficulty
+                                ? getDifficultyColor(p.botDifficulty)
+                                : getPlayerColor(p.name, p.isBot || false),
+                          }}
+                        >
+                          {p.name}
+                        </span>
+                        : {p.totalScore ?? 0} points {medal}
                       </span>
                     </li>
                   );

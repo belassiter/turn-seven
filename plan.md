@@ -90,16 +90,55 @@ The work will be divided between building the engine and implementing the game.
     - [x] Probability of busting (visible cards)
     - [x] Probability of busting based on all cards seen since shuffle
     - [x] same conditions as above, but expected score if hit
-7. **Bot players**
-    - [ ] Easy: randomly chooses Hit/Stay. Randomly assigns action cards (even to self)
-    - [ ] Medium: chooses Hit/Stay based on green odds. Assigns action cards based on total score from last round
-    - [ ] Hard: chooses Hit/Stay based on blue odds. Assigns action cards based on total score including current round.
-    - [ ] OMG: chooses Hit/Stay based on purple odds. Assigns action cards based on total score including current round.
-8. **Mobile layout**
+7.  **Bot players**
+    - [x] Easy: randomly chooses Hit/Stay. Randomly assigns action cards (even to self)
+    - [x] Medium: chooses Hit/Stay based on green odds. Assigns action cards based on total score from last round
+    - [x] Hard: chooses Hit/Stay based on blue odds. Assigns action cards based on total score including current round.
+    - [x] OMG: chooses Hit/Stay based on purple odds. Assigns action cards based on total score including current round.
+    - [ ] Advanced logic if near the end of the game
+8.  **Mobile layout**
     - [ ] UI that works for Mobile, vertical
-    - [ ] UI that works for Mobile, horizontal        
+    - [ ] UI that works for Mobile, horizontal
+
+## Bot Implementation Details
+
+### Configuration
+
+- **Setup Screen:**
+  - Toggle for "Bot" next to each player.
+  - Difficulty dropdown for bots: Easy (Green), Medium (Yellow), Hard (Orange), OMG (Dark Red).
+  - Bot names assigned randomly from a pool, prepended with "🤖 ".
+  - Bot names colored by difficulty.
+
+### Bot Logic
+
+- **Decision (Hit/Stay):**
+  - **Easy:** Random choice (50/50).
+  - **Medium/Hard/OMG:** Calculate expected score gain using the corresponding odds mode (Green/Blue/Purple).
+    - If `Expected Score Gain > 0`, HIT.
+    - Else, STAY.
+- **Targeting (Action Cards):**
+  - **Easy:** Random target.
+  - **Medium/Hard/OMG:**
+    - **Lock / Turn Three:** Target player with the **highest** total score (disadvantage leader).
+    - **Life Saver:** Target player with the **lowest** total score (help underdog).
+- **Execution:**
+  - 1-second delay before action.
+  - Bots simulate clicks on the actual UI buttons (`.click()`).
+  - Input is locked for humans while bot is "thinking" (during the delay).
+
+### Bot Name Pool
+
+- C-3PO, Data, HAL 9000, R2-D2, T-800, Johnny 5, Wall-E, Bender, KITT, Marvin, Lore, GLaDOS, Cortana, Claptrap, EDI, HK-47, R. Daneel, Skynet, J.A.R.V.I.S., Agent Smith.
 
 ## Recent Tasks (Completed)
+
+### Bot Players
+
+- [x] Implement Bot Configuration in Setup Screen (Toggle, Difficulty, Names).
+- [x] Implement Bot Logic (Hit/Stay based on odds, Targeting based on score).
+- [x] Implement Bot Execution (1s delay, simulate clicks).
+- [x] Lock input for humans during bot turn.
 
 ### Fix Card Text Truncation
 

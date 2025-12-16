@@ -21,6 +21,9 @@ export interface PlayerModel {
   // per-round and cumulative scores
   roundScore?: number;
   totalScore?: number;
+  // Bot configuration
+  isBot?: boolean;
+  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg';
 }
 
 export interface GameBoardProps {

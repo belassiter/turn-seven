@@ -19,7 +19,12 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
     const special: CardModel[] = [];
     const numbers: CardModel[] = [];
 
-    hand.forEach((card) => {
+    // Deduplicate hand to prevent React key warnings
+    const uniqueHandMap = new Map();
+    hand.forEach((c) => uniqueHandMap.set(c.id, c));
+    const uniqueHand = Array.from(uniqueHandMap.values());
+
+    uniqueHand.forEach((card) => {
       if (card.suit === 'number') {
         numbers.push(card);
       } else {

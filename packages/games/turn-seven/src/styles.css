@@ -442,10 +442,10 @@ html {
   /* For now, let's disable hover translate for face-down cards, or handle it carefully. */
   /* Actually, if we use a wrapper for hover, and inner for flip, it's easier. */
   /* But we can't change DOM easily. */
-  
+
   /* If we just set transform, we lose the rotation if we don't include it. */
   /* .card.face-down:hover { transform: rotateY(180deg) translateY(-4px); } */
-  
+
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
   z-index: 5;
   transition: transform 0.2s, box-shadow 0.2s;

@@ -60,7 +60,7 @@ describe('TurnSevenGame component', () => {
     expect(screen.getByAltText('Turn Seven Logo')).toBeInTheDocument();
     await screen.findByText('Hit');
     expect(getByText('Stay')).toBeInTheDocument();
-    expect(getByText('Player 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Player 1').length).toBeGreaterThan(0);
   });
 
   it('does not show the default startup message in the last action log', async () => {
