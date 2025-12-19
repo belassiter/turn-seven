@@ -670,16 +670,25 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             alignItems: 'flex-start',
             justifyContent: 'center',
             width: '100%',
-            paddingTop: 48,
+            paddingTop: 16,
+            paddingBottom: 16,
+            height: '100%',
+            overflow: 'hidden',
           }}
         >
           <div
             className="turn-seven-game-setup"
-            style={{ padding: 40, maxWidth: 600, margin: '0 auto' }}
+            style={{
+              padding: 0,
+              maxWidth: 600,
+              width: '95%',
+              margin: '0 auto',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-              <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 144 }} />
-            </div>
             <GameSetup onStart={handleStart} />
           </div>
         </div>
@@ -1093,20 +1102,23 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         />
       )}
       {showRules && (
-        <div className="overlay-container">
-          <div className="overlay-content">
-            <h2>Quick Rules</h2>
-            <p>
-              Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number
-              cards to score points. Action cards (Lock, Turn Three, Life Saver) alter player turns
-              and may require targeting other players. Modifier cards like +X and x2 affect scoring.
-              At the end of each round, players&apos; cards are collected into the discard; the deck
-              is preserved across rounds and reshuffled from discard when needed.
-            </p>
-            <div style={{ marginTop: 16 }}>
-              <button className="btn btn-secondary" onClick={() => setShowRules(false)}>
-                Close
+        <div className="modal-overlay" onClick={() => setShowRules(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Quick Rules</h2>
+              <button className="close-button" onClick={() => setShowRules(false)}>
+                &times;
               </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number
+                cards to score points. Action cards (Lock, Turn Three, Life Saver) alter player
+                turns and may require targeting other players. Modifier cards like +X and x2 affect
+                scoring. At the end of each round, players&apos; cards are collected into the
+                discard; the deck is preserved across rounds and reshuffled from discard when
+                needed.
+              </p>
             </div>
           </div>
         </div>

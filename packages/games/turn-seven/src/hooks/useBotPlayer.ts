@@ -180,7 +180,7 @@ export const useBotPlayer = ({
     return () => {
       // We DON'T clear timeout here automatically anymore, because we want it to survive re-renders
     };
-  }, [gameState, currentPlayer, isAnimating, targetingState, onStartTargeting]);
+  }, [gameState, currentPlayer, isAnimating, isInputLocked, targetingState, onStartTargeting]);
 
   // Unmount cleanup
   useEffect(() => {

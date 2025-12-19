@@ -368,7 +368,7 @@ describe('TurnSevenGame component', () => {
     );
   }, 20000);
 
-  it('sidebar shows "(you)" hint when actor is selecting targets', async () => {
+  it('sidebar shows actor when selecting targets', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([
       ...Array.from({ length: 10 }, (_, i) => ({
@@ -390,12 +390,11 @@ describe('TurnSevenGame component', () => {
       expect(container.querySelector('.pending-action-ui')).toBeTruthy();
     });
 
-    // Sidebar should show the actor with hint (you)
+    // Sidebar should show the actor
     const sidebar = container.querySelector('.player-sidebar');
     expect(sidebar).toBeTruthy();
     const actorLabel = sidebar?.querySelector('.player-row .player-name')?.textContent || '';
     expect(actorLabel).toMatch(/Player 1/i);
-    expect(actorLabel).toMatch(/you/);
   });
 
   it('header rules button opens summarized rules overlay', async () => {

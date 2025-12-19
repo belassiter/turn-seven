@@ -161,3 +161,53 @@ The work will be divided between building the engine and implementing the game.
 - [x] Refactor `TurnSevenGame` to use the new hook.
 - [x] Add unit tests for `useActionTargeting`.
 - [x] Integrate game logo into Header and Card backs.
+
+### Mobile vertical layout
+
+Here is the comprehensive summary of the changes required to recreate the mobile vertical layout. You can use this guide to re-implement the features after reverting to a clean state.
+
+1. New Components
+You created two new components to handle mobile-specific interactions:
+
+MobilePlayerDrawer.tsx:
+Purpose: A slide-up drawer that displays the PlayerSidebar content on mobile (since the sidebar is hidden).
+Key Logic: Uses framer-motion for slide-up animation. Wraps the existing PlayerSidebar component. Auto-closes when a target is selected.
+PlayerHud.tsx:
+Purpose: A persistent bottom bar showing a compact summary of all players (Score, Card Count, Status Icons like 💥/🔒).
+Key Logic: Clicking it opens the Drawer. Displays active turn highlighting.
+2. Component Modifications
+TurnSevenGame.tsx
+State: Added isDrawerOpen state to control the MobilePlayerDrawer.
+Layout Structure:
+Split Status Bar: Created two distinct divs for the top bar:
+.desktop-status-bar: Contains the original layout (Round info left, Controls right).
+.mobile-status-bar: New vertical layout (Logo + Round top row, Deck/Discard + Controls bottom row).
+Drawer Integration: Added <MobilePlayerDrawer /> and <PlayerHud /> at the bottom of the component.
+Logo: Added the <img src="/logo.png" ... /> back into the desktop status bar (it was missing in the intermediate state).
+GameSetup.tsx
+Split Layout: Divided the setup screen into two main sections to handle mobile scrolling better:
+.setup-top-section: Contains Logo, "Start Game" button (mobile only), and Player Count slider. Fixed at the top on mobile.
+.setup-bottom-section: Contains the scrollable list of player inputs.
+Dual Start Buttons:
+Added a "Start Game" button in the top section (visible only on mobile via .mobile-only-start-btn).
+Added a "Start Game" button at the bottom (visible only on desktop via .desktop-only-start-btn).
+3. CSS Architecture (The "Split" Strategy)
+styles.css (Desktop Base)
+Revert: This file should remain exactly as it was in the "good" commit.
+Patch: Add a small block at the end to hide the new mobile elements on desktop:
+src/mobile.css (Mobile Overrides)
+Media Query: Wrap everything in @media (max-width: 768px).
+Layout Changes:
+.turn-seven-layout: Change grid to single column ('main' 'hud').
+.game-main-area: Remove fixed height, allow scrolling.
+.game-status-bar: Change to flex-direction: column, remove border radius, full width.
+Visibility Toggles:
+Hide .desktop-status-bar, .player-sidebar, .game-footer, .desktop-only-start-btn.
+Show .mobile-status-bar, .mobile-only-start-btn, .player-hud.
+Sizing Adjustments:
+Scale down cards (width: 45px).
+Scale down text/icons.
+Hide non-essential buttons (Gallery, Odds) to save space.
+4. Entry Point
+main.tsx: Import the new CSS file: import './mobile.css';.
+This plan allows you to have a completely separate "Mobile View" layer that sits on top of the stable Desktop application without breaking it.

@@ -980,7 +980,7 @@ export class TurnSevenLogic implements IGameLogic {
     // Robustly deduplicate the existing discard pile first to ensure no ID collisions
     const uniqueDiscardMap = new Map<string, CardModel>();
     newState.discardPile.forEach((c) => uniqueDiscardMap.set(c.id, c));
-    
+
     // Track IDs to prevent adding duplicates from hands/reserved
     const discardedIds = new Set<string>(uniqueDiscardMap.keys());
 

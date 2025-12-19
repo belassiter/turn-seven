@@ -123,11 +123,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                     }}
                   >
                     {player.name}
-                    {!player.isBot && (
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 6 }}>
-                        (you)
-                      </span>
-                    )}
                     {isCurrent && <span className="turn-indicator"> (Turn)</span>}
                   </span>
                 </div>

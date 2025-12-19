@@ -104,17 +104,78 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
   };
 
   return (
-    <div className="game-setup">
-      {/* Logo removed here — kept in the outer setup wrapper (TurnSevenGame) to avoid duplication */}
-      <label style={{ display: 'block', marginBottom: 12 }}>Number of players: {count}</label>
-      <input
-        type="range"
-        value={count}
-        min={MIN_PLAYERS}
-        max={MAX_PLAYERS}
-        onChange={(e) => handleCountChange(Number(e.target.value))}
-      />
-      <div className="player-names">
+    <div
+      className="game-setup"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        padding: 0,
+      }}
+    >
+      {/* Fixed Header Section */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '24px 24px 0 24px',
+          borderBottom: '1px solid #e5e7eb',
+          background: 'white',
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 100 }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <button
+            onClick={start}
+            className="btn btn-primary"
+            style={{
+              fontSize: '1rem',
+              fontWeight: 600,
+              padding: '12px 32px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            }}
+          >
+            Start Game
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+            Number of players: {count}
+          </label>
+          <input
+            type="range"
+            value={count}
+            min={MIN_PLAYERS}
+            max={MAX_PLAYERS}
+            onChange={(e) => handleCountChange(Number(e.target.value))}
+            style={{ width: '100%' }}
+          />
+        </div>
+
+        {error && (
+          <div className="error" style={{ color: 'red', marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Scrollable Player List */}
+      <div
+        className="player-names"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
         {Array.from({ length: count }).map((_, i) => {
           const player = players[i] || {
             name: `Player ${i + 1}`,
@@ -125,67 +186,71 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
             <div
               key={i}
               className="player-input"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}
             >
-              <label style={{ minWidth: 70, whiteSpace: 'nowrap' }}>Player {i + 1}:</label>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <label style={{ fontWeight: 600, color: '#374151' }}>Player {i + 1}:</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {player.isBot && (
+                    <select
+                      value={player.botDifficulty}
+                      onChange={(e) =>
+                        handleDifficultyChange(i, e.target.value as PlayerSetup['botDifficulty'])
+                      }
+                      style={{
+                        color: getDifficultyColor(player.botDifficulty),
+                        fontWeight: 'bold',
+                        borderColor: getDifficultyColor(player.botDifficulty),
+                        width: 72,
+                        padding: '2px 4px',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <option value="easy" style={{ color: 'green' }}>
+                        Easy
+                      </option>
+                      <option value="medium" style={{ color: '#eab308' }}>
+                        Med
+                      </option>
+                      <option value="hard" style={{ color: 'orange' }}>
+                        Hard
+                      </option>
+                      <option value="omg" style={{ color: 'darkred' }}>
+                        OMG
+                      </option>
+                    </select>
+                  )}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.9rem',
+                      color: '#4b5563',
+                    }}
+                  >
+                    Bot
+                    <input
+                      type="checkbox"
+                      checked={player.isBot}
+                      onChange={() => handleBotToggle(i)}
+                    />
+                  </label>
+                </div>
+              </div>
               <input
                 value={player.name}
                 onChange={(e) => handleNameChange(i, e.target.value)}
                 disabled={player.isBot}
-                style={{ flex: 1, minWidth: 0 }}
+                style={{ width: '100%', padding: '8px 12px', fontSize: '1rem', height: '42px' }}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={player.isBot}
-                    onChange={() => handleBotToggle(i)}
-                  />
-                  Bot
-                </label>
-                {player.isBot && (
-                  <select
-                    value={player.botDifficulty}
-                    onChange={(e) =>
-                      handleDifficultyChange(i, e.target.value as PlayerSetup['botDifficulty'])
-                    }
-                    style={{
-                      color: getDifficultyColor(player.botDifficulty),
-                      fontWeight: 'bold',
-                      borderColor: getDifficultyColor(player.botDifficulty),
-                      width: 90,
-                    }}
-                  >
-                    <option value="easy" style={{ color: 'green' }}>
-                      Easy
-                    </option>
-                    <option value="medium" style={{ color: '#eab308' }}>
-                      Med
-                    </option>
-                    <option value="hard" style={{ color: 'orange' }}>
-                      Hard
-                    </option>
-                    <option value="omg" style={{ color: 'darkred' }}>
-                      OMG
-                    </option>
-                  </select>
-                )}
-              </div>
             </div>
           );
         })}
-      </div>
-      {error && <div className="error">{error}</div>}
-      <div className="setup-actions">
-        <button onClick={start}>Start Game</button>
       </div>
     </div>
   );
