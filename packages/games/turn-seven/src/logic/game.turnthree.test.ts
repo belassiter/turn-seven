@@ -40,12 +40,14 @@ describe('Turn Three Edge Cases', () => {
     });
     const p2 = after.players.find((p) => p.id === 'p2')!;
 
-    // P2 should have 4 cards: TurnThree (played on them), Lock, 5, 6
-    expect(p2.hand).toHaveLength(4);
+    // P2 should have 1 card: Lock (interrupted)
+    expect(p2.hand).toHaveLength(1);
+    expect(p2.hand[0].rank).toBe('Lock');
 
-    // Lock should be in reservedActions
-    expect(p2.reservedActions).toHaveLength(1);
-    expect(p2.reservedActions![0].rank).toBe('Lock');
+    // Lock and Resume should be in reservedActions
+    expect(p2.reservedActions).toHaveLength(2);
+    expect(p2.reservedActions!.some((c) => c.rank === 'Lock')).toBe(true);
+    expect(p2.reservedActions!.some((c) => c.rank === 'TurnThree')).toBe(true);
 
     // P2 should NOT be stayed (Lock was not resolved)
     expect(p2.hasStayed).toBe(false);
@@ -87,12 +89,13 @@ describe('Turn Three Edge Cases', () => {
     });
     const p2 = after.players.find((p) => p.id === 'p2')!;
 
-    // P2 should have 4 cards: TurnThree (played on them), TurnThree (drawn), 5, 6
-    expect(p2.hand).toHaveLength(4);
+    // P2 should have 1 card: TurnThree (drawn) (interrupted)
+    expect(p2.hand).toHaveLength(1);
+    expect(p2.hand[0].rank).toBe('TurnThree');
 
-    // Drawn TurnThree should be in reservedActions
-    expect(p2.reservedActions).toHaveLength(1);
-    expect(p2.reservedActions![0].rank).toBe('TurnThree');
+    // Drawn TurnThree and Resume should be in reservedActions
+    expect(p2.reservedActions).toHaveLength(2);
+    expect(p2.reservedActions!.filter((c) => c.rank === 'TurnThree')).toHaveLength(2);
 
     // P2 should NOT have drawn 3 more cards recursively (deck should still have items if we put more, but here we just check hand size)
     // If it resolved recursively, P2 would have drawn more or tried to.

@@ -311,18 +311,12 @@ describe('TurnSevenGame component', () => {
       () => {
         const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
-        // Expect Player 2 to have TurnThree + 8 + Lock + 9 (4 cards)
-        // BUT Lock is pending and Player 2 is now the current player (to resolve Lock),
-        // so Lock is hidden from the sidebar (shown in main UI).
-        // So we expect 3 visible cards in sidebar.
-        expect(p2MiniCards).toHaveLength(3);
+        // Expect Player 2 to have 8 + Lock (2 cards) - interrupted
+        // TurnThree is in reservedActions (not shown). 9 is not drawn yet.
+        expect(p2MiniCards).toHaveLength(2);
         const ranks = Array.from(p2MiniCards).map((c) => c.textContent || '');
-        // normalize whitespace when checking for 'TurnThree' because the card renderer
-        // places a newline between camel-cased words ("Turn\nThree").
-        // Mini cards might just show "TurnThree" or "T3" depending on implementation.
-        // The current MiniCard implementation shows `rank`.
-        // Accept multiple possible renderings for special card labels: either full text or abbreviated
-        expect(ranks.some((t) => t.includes('TurnThree') || t.includes('T3'))).toBeTruthy();
+        expect(ranks).toContain('8');
+        // Lock is present (as emoji or text)
       },
       { timeout: 15000 }
     );

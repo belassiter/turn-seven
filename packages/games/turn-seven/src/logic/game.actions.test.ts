@@ -156,12 +156,16 @@ describe('Action card behavior', () => {
     const p2 = after.players.find((p) => p.id === 'p2')!;
 
     // Should have the Lock card in hand AND reservedActions
-    // Hand has 2 cards: TurnThree (played) + Lock (revealed)
-    expect(p2.hand).toHaveLength(2);
+    // Hand has 1 card: Lock (revealed). TurnThree is reserved/pending.
+    expect(p2.hand).toHaveLength(1);
     expect(p2.hand.some((c: CardModel) => c.rank === 'Lock')).toBe(true);
-    expect(p2.hand.some((c: CardModel) => c.rank === 'TurnThree')).toBe(true);
-    expect(p2.reservedActions).toHaveLength(1);
-    expect(p2.reservedActions![0].rank).toBe('Lock');
+    // TurnThree is NOT in hand yet
+    expect(p2.hand.some((c: CardModel) => c.rank === 'TurnThree')).toBe(false);
+
+    // Check reserved actions
+    expect(p2.reservedActions).toHaveLength(2); // Lock + TurnThree
+    expect(p2.reservedActions!.some((c) => c.rank === 'Lock')).toBe(true);
+    expect(p2.reservedActions!.some((c) => c.rank === 'TurnThree')).toBe(true);
   });
 
   it('Life Saver passes to next eligible player if target already has one', () => {

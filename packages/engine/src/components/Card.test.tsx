@@ -36,7 +36,8 @@ describe('Card component', () => {
     // The inner text span should be restricted to at most 90% width to avoid overflow in UI
     const inner = center?.querySelector('span') as HTMLElement | null;
     expect(inner).toBeTruthy();
-    expect(inner?.style.width).toBe('90%');
+    // Modifiers are no longer scaled to 90% width, they behave like number cards
+    expect(inner?.style.width).not.toBe('90%');
   });
 
   it('renders action card with action-card class and shows a centered rank element', () => {
@@ -51,19 +52,19 @@ describe('Card component', () => {
     expect(actionImg?.style.width).toBe('80%');
   });
 
-  it('modifier +10 and x2 should also use 90% center width to prevent overflow', () => {
+  it('modifier +10 and x2 should NOT use 90% center width (same as number cards)', () => {
     const plus10: CardModel = { id: 'mod10', suit: 'modifier', rank: '+10', isFaceUp: true };
     const x2: CardModel = { id: 'modx2', suit: 'modifier', rank: 'x2', isFaceUp: true };
     const { container } = render(<Card card={plus10} />);
     const plusCenter = container.querySelector('[data-testid="rank-center"]');
     const innerPlus = plusCenter?.querySelector('span') as HTMLElement | null;
     expect(innerPlus).toBeTruthy();
-    expect(innerPlus?.style.width).toBe('90%');
+    expect(innerPlus?.style.width).not.toBe('90%');
 
     const { container: c2 } = render(<Card card={x2} />);
     const x2Center = c2.querySelector('[data-testid="rank-center"]');
     const innerX2 = x2Center?.querySelector('span') as HTMLElement | null;
     expect(innerX2).toBeTruthy();
-    expect(innerX2?.style.width).toBe('90%');
+    expect(innerX2?.style.width).not.toBe('90%');
   });
 });

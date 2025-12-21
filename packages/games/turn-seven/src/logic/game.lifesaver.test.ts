@@ -120,11 +120,11 @@ describe('Turn Seven Life Saver Logic', () => {
     target.hand = [five, ls1];
     target.hasLifeSaver = true;
 
-    // Deck: [5 (Dup), LifeSaver 2] (Pop order: LS2, 5)
-    // We push 5, LS2
+    // Deck: [LifeSaver 2, 5 (Dup)] (Pop order: 5, LS2)
+    // We push LS2, 5
     const ls2 = createCard('LifeSaver', 'action', 'ls2');
     const dupFive = createCard('5', 'number', 'c2');
-    state.deck = [dupFive, ls2];
+    state.deck = [ls2, dupFive];
 
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
@@ -170,14 +170,13 @@ describe('Turn Seven Life Saver Logic', () => {
     target.hand = [five, ls1];
     target.hasLifeSaver = true;
 
-    // Deck: [5 (Dup 1), LifeSaver 2, 5 (Dup 2)] (Pop order: 5(Dup2), LS2, 5(Dup1))
-    // Wait, pop order is reverse of push.
-    // We want draw order: LS2, 5(Dup1), 5(Dup2).
-    // So stack: 5(Dup2), 5(Dup1), LS2.
+    // Deck: [5 (Dup 2), LifeSaver 2, 5 (Dup 1)] (Pop order: 5(Dup1), LS2, 5(Dup2))
+    // We want draw order: 5(Dup1), LS2, 5(Dup2).
+    // So stack: 5(Dup2), LS2, 5(Dup1).
     const ls2 = createCard('LifeSaver', 'action', 'ls2');
     const dupFive1 = createCard('5', 'number', 'c2');
     const dupFive2 = createCard('5', 'number', 'c3');
-    state.deck = [dupFive2, dupFive1, ls2];
+    state.deck = [dupFive2, ls2, dupFive1];
 
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',

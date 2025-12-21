@@ -75,6 +75,14 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerC.id, cardId: lock.id, targetId: playerD.id },
     });
 
+    // C must resume Turn Three
+    const resumeId = state.players[2].pendingImmediateActionIds![0];
+    expect(resumeId).toMatch(/#resume:2$/);
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerC.id, cardId: resumeId, targetId: playerC.id },
+    });
+
     // D should be locked
     expect(state.players[3].hasStayed).toBe(true);
 
@@ -101,8 +109,8 @@ describe('Turn Seven Edge Cases', () => {
 
     // Stack deck: [6, 5 (duplicate), Lock]
     // Pop order: Lock, 5 (duplicate), 6
-    // 1. Pop -> Lock (Set aside)
-    // 2. Pop -> 5 (Bust!)
+    // 1. Pop -> Lock (Interrupt)
+    // 2. Resume -> 5 (Bust!)
     state.deck.push(createCard('6', 'number', 'n-6'));
     state.deck.push(createCard('5', 'number', 'n-5-dup'));
     const lock = createCard('Lock', 'action', 'f-1');
@@ -114,17 +122,28 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerA.id, cardId: turnThree.id, targetId: playerB.id },
     });
 
+    // B draws Lock -> Interrupt
+    expect(state.currentPlayerId).toBe(playerB.id);
+    expect(state.players[1].pendingImmediateActionIds).toContain(lock.id);
+
+    // B resolves Lock (e.g. on C)
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: lock.id, targetId: state.players[2].id },
+    });
+
+    // B resumes Turn Three
+    const resumeId = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: resumeId, targetId: playerB.id },
+    });
+
     // B should have busted
-    // (previously debugged the scenario; now assert expected state)
-    expect(state.players[1].hasBusted).toBe(true);
     expect(state.players[1].hasBusted).toBe(true);
 
-    // Lock should be in discard pile
-    const discardedLock = state.discardPile.find((c: CardModel) => c.id === lock.id);
-    expect(discardedLock).toBeDefined();
-
-    // Turn Three should be in discard pile
-    const discardedT3 = state.discardPile.find((c: CardModel) => c.id === turnThree.id);
+    // Turn Three (the resume card) should be in discard pile
+    const discardedT3 = state.discardPile.find((c: CardModel) => c.id.startsWith('t3-1'));
     expect(discardedT3).toBeDefined();
 
     // B should NOT have pending actions
@@ -191,17 +210,19 @@ describe('Turn Seven Edge Cases', () => {
     playerA.reservedActions = [turnThree1];
     playerA.hand = [turnThree1];
 
-    // Stack deck for C's draw (when resolving t3-2): [7, 8, 9]
+    // Stack deck for B's draw (when resuming): [5, 6]
     // These must be at the BOTTOM of the stack (pushed first)
+    state.deck.push(createCard('6', 'number', 'n-6'));
+    state.deck.push(createCard('5', 'number', 'n-5'));
+
+    // Stack deck for C's draw (when resolving t3-2): [7, 8, 9]
+    // These must be in the MIDDLE
     state.deck.push(createCard('9', 'number', 'n-9'));
     state.deck.push(createCard('8', 'number', 'n-8'));
     state.deck.push(createCard('7', 'number', 'n-7'));
 
-    // Stack deck for B's draw: [TurnThree, 5, 6]
-    // Pop order: 6, 5, TurnThree
-    // These must be at the TOP of the stack (pushed last)
-    state.deck.push(createCard('6', 'number', 'n-6'));
-    state.deck.push(createCard('5', 'number', 'n-5'));
+    // Stack deck for B's initial draw: [TurnThree]
+    // This must be at the TOP
     const turnThree2 = createCard('TurnThree', 'action', 't3-2');
     state.deck.push(turnThree2);
 
@@ -223,8 +244,19 @@ describe('Turn Seven Edge Cases', () => {
     });
 
     // C resolves immediately (no pending actions generated from C's draw)
-    // So turn should advance to A's neighbor -> B
+    // B still has pending actions (T3-1#resume).
+    // So advanceTurn is NOT called.
     expect(state.currentPlayerId).toBe(playerB.id);
+    expect(state.turnOrderBaseId).toBe(playerA.id);
+
+    // B resumes
+    const resumeId = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: resumeId, targetId: playerB.id },
+    });
+
+    // Now B is done. AdvanceTurn called.
     expect(state.turnOrderBaseId).toBeNull();
 
     // C should have 7, 8, 9
@@ -288,15 +320,46 @@ describe('Turn Seven Edge Cases', () => {
       payload: { actorId: playerA.id, cardId: turnThree1.id, targetId: playerB.id },
     });
 
-    // B should have pending actions: Lock, then TurnThree
+    // B should have pending actions: Lock, then Resume
     expect(state.currentPlayerId).toBe(playerB.id);
-    expect(state.players[1].pendingImmediateActionIds).toEqual([lock.id, turnThree2.id]);
+    expect(state.players[1].pendingImmediateActionIds).toHaveLength(2);
+    expect(state.players[1].pendingImmediateActionIds![0]).toBe(lock.id);
+    expect(state.players[1].pendingImmediateActionIds![1]).toMatch(/#resume:1$/);
 
     // B resolves Lock on C
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',
       payload: { actorId: playerB.id, cardId: lock.id, targetId: playerC.id },
     });
+
+    // B resumes
+    const resumeId1 = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: resumeId1, targetId: playerB.id },
+    });
+
+    // B draws TurnThree -> Interrupt
+    // Remaining draws: 0. So no resume token.
+    expect(state.players[1].pendingImmediateActionIds).toHaveLength(1);
+    expect(state.players[1].pendingImmediateActionIds![0]).toBe(turnThree2.id);
+
+    // B resolves TurnThree (drawn) on C
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: playerB.id, cardId: turnThree2.id, targetId: playerC.id },
+    });
+
+    // C resolves immediately (draws 7, 8, 9)
+    // Turn returns to B.
+    // B has no pending actions.
+    // AdvanceTurn called.
+    // Next player is B (A played on B, so turn advances to B).
+    expect(state.currentPlayerId).toBe(playerB.id);
+
+    // B draws 6 (already drawn in first step).
+    // B hand: 6.
+    expect(state.players[1].hand.map((c) => c.rank)).toContain('6');
 
     // C is locked
     expect(state.players[2].hasStayed).toBe(true);

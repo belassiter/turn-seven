@@ -62,14 +62,10 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
       payload: { actorId: state.players[0].id, cardId: t3_1.id, targetId: state.players[1].id },
     });
 
-    // Bob should have drawn T3_2, T3_3, and 5.
-    // T3_2 and T3_3 should be in reservedActions/pendingImmediateActionIds.
-    // 5 should be in hand.
-    // T3_1 should be in hand (kept).
-
+    // Bob should have drawn T3_2 -> Interrupt
     const bob = state.players[1];
-    expect(bob.hand).toHaveLength(4); // T3_1, T3_2, T3_3, 5
-    expect(bob.pendingImmediateActionIds).toHaveLength(2); // T3_2, T3_3
+    expect(bob.hand).toHaveLength(1); // T3_2 (drawn)
+    expect(bob.pendingImmediateActionIds).toHaveLength(2); // T3_2, T3_1#resume:2
     expect(state.currentPlayerId).toBe(bob.id);
 
     // Bob resolves T3_2 on Charlie
@@ -86,10 +82,11 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
     });
 
     // Charlie draws 3 cards.
-    // Bob still has one pending action (T3_3).
+    // Bob still has one pending action (T3_1#resume:2).
     const bobAfter = state.players[1];
     expect(state.currentPlayerId).toBe(bobAfter.id);
     expect(bobAfter.pendingImmediateActionIds).toHaveLength(1);
+    expect(bobAfter.pendingImmediateActionIds![0]).toMatch(/#resume:2$/);
   });
 
   it('handles Turn 3 drawing Lock', () => {
@@ -110,11 +107,27 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
     });
 
     const bob = state.players[1];
-    // Bob draws Lock (set aside), 5, 6.
-    // Lock is pending
-    expect(bob.pendingImmediateActionIds).toHaveLength(1);
+    // Bob draws Lock -> Interrupt
+    expect(bob.pendingImmediateActionIds).toHaveLength(2); // Lock, T3#resume:2
     expect(bob.pendingImmediateActionIds![0]).toBe(lock.id);
     expect(state.currentPlayerId).toBe(bob.id);
+
+    // Bob resolves Lock on Charlie
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: lock.id, targetId: state.players[2].id },
+    });
+
+    // Bob resumes
+    const resumeId = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: resumeId, targetId: bob.id },
+    });
+
+    // Bob draws 5, 6.
+    expect(state.players[1].hand.map((c) => c.rank)).toContain('5');
+    expect(state.players[1].hand.map((c) => c.rank)).toContain('6');
   });
 
   it('handles Turn 3 drawing Life Saver (target has none)', () => {
@@ -166,9 +179,26 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
     const bob = state.players[1];
     // Bob draws LS. Has one, so must give it away.
     // LS becomes pending action.
-    expect(bob.pendingImmediateActionIds).toHaveLength(1);
+    expect(bob.pendingImmediateActionIds).toHaveLength(2); // LS, T3#resume:2
     expect(bob.pendingImmediateActionIds![0]).toBe(ls.id);
     expect(state.currentPlayerId).toBe(bob.id);
+
+    // Bob gives LS to Charlie
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: ls.id, targetId: state.players[2].id },
+    });
+
+    // Bob resumes
+    const resumeId = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: resumeId, targetId: bob.id },
+    });
+
+    // Bob draws 5, 6.
+    expect(state.players[1].hand.map((c) => c.rank)).toContain('5');
+    expect(state.players[1].hand.map((c) => c.rank)).toContain('6');
   });
 
   it('handles busting during Turn 3 resolution', () => {
@@ -213,10 +243,29 @@ describe('TurnSevenLogic - Turn Three Permutations', () => {
       payload: { actorId: state.players[0].id, cardId: t3.id, targetId: state.players[1].id },
     });
 
+    // Bob draws Lock -> Interrupt
     const bob = state.players[1];
-    expect(bob.hasBusted).toBe(true);
-    // Lock should be discarded, not pending
-    expect(bob.pendingImmediateActionIds).toHaveLength(0);
-    expect(state.discardPile).toContainEqual(expect.objectContaining({ rank: 'Lock' }));
+    expect(bob.pendingImmediateActionIds).toHaveLength(2); // Lock, T3#resume:2
+    expect(bob.pendingImmediateActionIds![0]).toBe(lock.id);
+
+    // Bob resolves Lock (e.g. on Charlie)
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: lock.id, targetId: state.players[2].id },
+    });
+
+    // Bob resumes
+    const resumeId = state.players[1].pendingImmediateActionIds![0];
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: bob.id, cardId: resumeId, targetId: bob.id },
+    });
+
+    // Bob draws 5(dup) -> Bust
+    expect(state.players[1].hasBusted).toBe(true);
+    expect(state.players[1].pendingImmediateActionIds).toHaveLength(0);
+
+    // TurnThree (resume) should be discarded
+    expect(state.discardPile).toContainEqual(expect.objectContaining({ rank: 'TurnThree' }));
   });
 });

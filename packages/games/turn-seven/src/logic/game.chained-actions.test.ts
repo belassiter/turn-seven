@@ -77,11 +77,13 @@ describe('Chained Action Resolution', () => {
 
     const p2 = nextState.players[1];
 
-    // P2 should have drawn 3 cards
-    expect(p2.hand).toHaveLength(4); // TurnThree + 8 + Lock + 9
+    // P2 should have drawn 2 cards (8, Lock) - interrupted at Lock
+    expect(p2.hand).toHaveLength(2); // 8 + Lock
+    expect(p2.hand.map((c) => c.rank)).toEqual(['8', 'Lock']);
 
-    // P2 should have pending action (Lock)
-    expect(p2.pendingImmediateActionIds).toContain('a2');
+    // P2 should have pending action (Lock) and Resume
+    expect(p2.pendingImmediateActionIds).toContain('a2'); // Lock
+    expect(p2.pendingImmediateActionIds!.some((id) => id.includes('#resume:1'))).toBe(true);
 
     // Current player should be P2 (to resolve Lock)
     expect(nextState.currentPlayerId).toBe('p2');
@@ -91,6 +93,25 @@ describe('Chained Action Resolution', () => {
       type: 'PLAY_ACTION',
       payload: { actorId: 'p2', cardId: 'a2', targetId: 'p3' },
     });
+
+    // Now P2 should have the Resume action pending
+    const p2AfterLock = nextState.players[1];
+    expect(p2AfterLock.pendingImmediateActionIds).toHaveLength(1);
+    const resumeId = p2AfterLock.pendingImmediateActionIds![0];
+    expect(resumeId).toMatch(/#resume:1$/);
+
+    // 3. P2 plays Resume action on themselves (continuing the Turn Three)
+    nextState = logic.performAction(nextState, {
+      type: 'PLAY_ACTION',
+      payload: { actorId: 'p2', cardId: resumeId, targetId: 'p2' },
+    });
+
+    const p2Final = nextState.players[1];
+    // Now should have drawn the 9.
+    // Hand: 8, 9, TurnThree (original). Lock is played (gone).
+    expect(p2Final.hand).toHaveLength(3);
+    expect(p2Final.hand.map((c) => c.rank)).toContain('9');
+    expect(p2Final.hand.map((c) => c.rank)).not.toContain('Lock');
 
     const p3 = nextState.players[2];
 

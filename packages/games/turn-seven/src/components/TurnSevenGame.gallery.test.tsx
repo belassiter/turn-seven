@@ -71,14 +71,17 @@ describe('TurnSevenGame Gallery Integration', () => {
 
     // Wait for game to start (header/status bar to appear)
     await waitFor(() => {
-      expect(screen.getByTitle('Card Gallery')).toBeInTheDocument();
+      const buttons = screen.getAllByTitle('Card Gallery');
+      expect(buttons.length).toBeGreaterThan(0);
+      expect(buttons[0]).toBeInTheDocument();
     });
 
     // Verify gallery is closed initially
     expect(screen.queryByTestId('card-gallery-modal')).toBeNull();
 
     // Open gallery via button in status bar
-    fireEvent.click(screen.getByTitle('Card Gallery'));
+    const buttons = screen.getAllByTitle('Card Gallery');
+    fireEvent.click(buttons[0]);
     expect(screen.getByTestId('card-gallery-modal')).toBeDefined();
 
     // Close gallery via modal button

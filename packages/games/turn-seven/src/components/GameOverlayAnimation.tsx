@@ -32,11 +32,25 @@ export const GameOverlayAnimation: React.FC<GameOverlayAnimationProps> = ({ type
           <span style={{ color: '#f97316', fontFamily: 'Inter, sans-serif' }}>🛟 LIFE SAVED 🛟</span>
         );
       case 'lock':
-        return <img src="/lock.png" alt="Locked" style={{ width: '200px', height: 'auto' }} />;
+        return (
+          <img src="/lock.png" alt="Locked" style={{ width: 'min(200px, 50vw)', height: 'auto' }} />
+        );
       case 'turn3':
-        return <img src="/turn3.png" alt="Turn Three" style={{ width: '200px', height: 'auto' }} />;
+        return (
+          <img
+            src="/turn3.png"
+            alt="Turn Three"
+            style={{ width: 'min(200px, 50vw)', height: 'auto' }}
+          />
+        );
       case 'turn7':
-        return <img src="/logo.png" alt="Turn Seven" style={{ width: '300px', height: 'auto' }} />;
+        return (
+          <img
+            src="/logo.png"
+            alt="Turn Seven"
+            style={{ width: 'min(300px, 70vw)', height: 'auto' }}
+          />
+        );
       default:
         return null;
     }
@@ -66,7 +80,7 @@ export const GameOverlayAnimation: React.FC<GameOverlayAnimationProps> = ({ type
         justifyContent: 'center',
         zIndex: 9999,
         pointerEvents: 'none',
-        fontSize: '4rem',
+        fontSize: 'clamp(2rem, 10vw, 4rem)',
         fontWeight: 900,
         textShadow:
           '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 4px 8px rgba(0,0,0,0.2)',

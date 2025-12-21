@@ -1,0 +1,428 @@
+/* Mobile-specific overrides */
+@media (max-width: 768px) {
+  /* Layout Structure */
+  .turn-seven-layout {
+    grid-template-areas:
+      'main'
+      'hud';
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* Visibility Toggles */
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Hide Footer */
+  .game-footer {
+    display: none !important;
+  }
+
+  /* Flex mobile-only items */
+  .player-hud.mobile-only {
+    display: flex !important;
+  }
+
+  /* Main Area */
+  .game-main-area {
+    padding: 0; /* Remove padding to let bar touch edges */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f3f4f6;
+  }
+
+  /* Status Bar (Mobile Version) */
+  .mobile-status-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #1e293b; /* Match desktop game bar color (dark blue/slate) */
+    padding: 8px 12px;
+    border-radius: 0; /* Rectangular */
+    width: 100%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: white;
+  }
+
+  .mobile-status-row-1 {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+  }
+
+  .mobile-round-badge {
+    justify-self: start;
+    width: 110px; /* Match Deck + Discard width */
+  }
+
+  .mobile-logo-container {
+    justify-self: center;
+  }
+
+  .mobile-status-buttons {
+    justify-self: end;
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobile-status-row-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Deck/Discard in Mobile Status Bar */
+  .mobile-status-bar .deck-discard-group {
+    transform: none;
+    margin: 0;
+    gap: 16px;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+  }
+
+  .mobile-status-bar .pile {
+    width: 45px; /* Match card width */
+    font-size: 0.7rem; /* Smaller text */
+    text-align: center;
+    color: #cbd5e1; /* Light gray text for dark background */
+  }
+
+  .mobile-status-bar .pile .card {
+    width: 45px;
+    height: 63px;
+    margin: 0 auto; /* Center card relative to pile container */
+  }
+
+  .mobile-status-bar .pile .card-placeholder {
+    width: 45px;
+    height: 63px;
+    border: 2px dashed #64748b;
+    border-radius: 4px;
+    margin: 0 auto;
+  }
+
+  .mobile-log {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #e2e8f0;
+    flex: 1;
+    margin-left: 12px;
+  }
+
+  .mobile-log p {
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  /* Hide extra buttons in mobile status bar */
+  .mobile-status-bar .btn-icon-toggle {
+    /* Override default styles for dark background */
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+    display: flex; /* Ensure they are visible */
+  }
+
+  /* Main Area Adjustments */
+  .action-targeting strong {
+    font-size: 1rem; /* Same as "Choose a player" */
+    display: block;
+    margin-bottom: 4px; /* Less padding */
+  }
+
+  .active-player-zone h2 {
+    font-size: 1rem; /* Smaller font */
+    margin-bottom: 4px;
+  }
+
+  .current-score {
+    font-size: 1rem !important; /* Smaller font */
+    padding: 2px 6px !important;
+  }
+  /* Keep Rules button visible? User said "do not show buttons for card gallery and odds". 
+     They didn't say hide Ledger or Rules. But "game bar... do not show buttons for card gallery and odds".
+     I will hide those specific ones using nth-child or specific classes if I can.
+     But the HTML structure is generic buttons.
+     I'll use :nth-child or attribute selectors if possible.
+     The buttons have titles: "Game Ledger", "Card Gallery", "Odds Mode...", "Rules".
+  */
+  .mobile-status-bar button[title='Card Gallery'],
+  .mobile-status-bar button[title^='Odds Mode'] {
+    display: none !important;
+  }
+  .active-player-zone {
+    padding: 8px;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .active-player-zone h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0;
+  }
+
+  .current-score {
+    font-size: 1.2rem !important; /* Match player name size */
+    padding: 4px 8px !important;
+    margin-bottom: 4px;
+  }
+
+  /* Hand */
+  .active-player-hand {
+    min-height: 80px;
+    padding: 8px;
+    gap: 2px; /* Reduced from 4px */
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  /* Cards - 7 across on small screen (~360px width) -> ~45px width */
+  .card {
+    width: 45px;
+    height: 63px;
+    border-radius: 4px;
+  }
+
+  .card .rank-center {
+    font-size: 1.4rem !important; /* Smaller for mobile to fit 2 digits */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+  }
+
+  /* Reduce text outline for smaller cards */
+  .card.number-card .rank-center,
+  .card.modifier-card .rank-center {
+    -webkit-text-stroke: 0.75px #1e3a8a !important;
+  }
+
+  .card-content {
+    padding: 2px;
+  }
+
+  .card.number-card .card-content {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .card-rank-main {
+    font-size: 1.2rem;
+  }
+
+  .card-suit-small {
+    font-size: 0.8rem;
+  }
+
+  .card-corner-rank {
+    font-size: 0.6rem;
+  }
+
+  /* Controls */
+  .controls-area {
+    margin-top: auto; /* Push to bottom */
+    padding-top: 8px;
+    border-top: none; /* Remove horizontal line */
+  }
+
+  .action-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    flex: 1;
+  }
+
+  /* HUD */
+  .player-hud {
+    grid-area: hud;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: 0; /* Zero padding */
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 40;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 0; /* Zero gap */
+  }
+
+  .hud-handle-indicator {
+    width: 32px;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin: 2px auto;
+  }
+
+  .hud-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0; /* Zero gap */
+    width: 100%;
+  }
+
+  .hud-player-cell {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 2px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb; /* Visible grid lines */
+    border-radius: 0; /* Rectangular */
+    padding: 0 2px;
+    height: 32px; /* Smaller height */
+    position: relative;
+  }
+
+  .hud-player-cell.active {
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    border-width: 2px; /* Thicker border for active */
+  }
+
+  .hud-player-cell.inactive {
+    opacity: 0.5;
+    background: #f3f4f6;
+  }
+
+  .hud-cell-status {
+    font-size: 0.75rem;
+    justify-self: start;
+  }
+
+  .hud-cell-score {
+    font-weight: 700;
+    font-size: 0.85rem;
+    justify-self: center;
+  }
+
+  .hud-cell-cards {
+    font-size: 0.85rem;
+    color: #4b5563;
+    justify-self: end;
+  }
+
+  /* Drawer */
+  .drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+    backdrop-filter: blur(2px);
+  }
+
+  .mobile-player-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 80vh;
+    background: white;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .drawer-handle-bar {
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .drawer-handle {
+    width: 40px;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+  }
+
+  .drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  /* Reuse Sidebar styles inside drawer */
+  .mobile-player-drawer .player-sidebar {
+    border: none;
+    background: transparent;
+    height: 100%;
+  }
+
+  /* Setup Screen Mobile Adjustments */
+  .turn-seven-game-setup {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ledger Mobile */
+  .ledger-modal .modal-content {
+    width: 95%;
+    max-height: 80vh;
+  }
+  .ledger-table {
+    font-size: 0.8rem;
+  }
+  .ledger-table th,
+  .ledger-table td {
+    padding: 4px !important;
+  }
+
+  /* Round Results Mobile */
+  .overlay-content {
+    width: 90%;
+    padding: 16px !important;
+  }
+  .overlay-content h2 {
+    font-size: 1.5rem;
+  }
+  .overlay-content ul {
+    padding-left: 0 !important;
+    list-style: none;
+  }
+  .overlay-content li {
+    font-size: 0.9rem;
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
+  }
+}
+
+/* Default Desktop Visibility (to be safe, though media query handles most) */
+.mobile-only {
+  display: none;
+}

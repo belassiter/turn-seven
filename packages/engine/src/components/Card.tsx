@@ -47,9 +47,9 @@ export const Card: React.FC<CardProps> = ({ card }) => {
 
     if (!textEl || !containerEl || !showOnlyCenter) return;
 
-    // Scale action and modifier cards so the centered rank doesn't take more than 90% of the card width.
+    // Scale action cards so the centered rank doesn't take more than 90% of the card width.
     // Number cards already fit the layout, but modifiers (e.g. +10, x2) may need scaling too.
-    if (!isAction && !isModifier) return;
+    if (!isAction) return;
 
     // Always set a width cap to keep the text element from overflowing. Even in JSDOM (no layout)
     // this ensures tests can assert the intended restriction.

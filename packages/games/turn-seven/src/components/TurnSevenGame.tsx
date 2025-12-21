@@ -17,6 +17,8 @@ type OddsMode = 'off' | 'green' | 'blue' | 'purple';
 // import { GameHeader } from './GameHeader'; // Removed
 import { GameFooter } from './GameFooter';
 import { PlayerSidebar } from './PlayerSidebar';
+import { MobilePlayerDrawer } from './MobilePlayerDrawer';
+import { PlayerHud } from './PlayerHud';
 import { ActivePlayerHand } from './ActivePlayerHand';
 import { CardGalleryModal } from './CardGalleryModal';
 import { LedgerModal } from './LedgerModal';
@@ -49,6 +51,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const [showRules, setShowRules] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Queue for animations that should play AFTER a card deal
   const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
@@ -813,7 +816,19 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     <div className="turn-seven-layout">
       {/* Header Removed */}
 
-      <PlayerSidebar
+      <div className="desktop-only">
+        <PlayerSidebar
+          players={gameState.players}
+          currentPlayerId={gameState.currentPlayerId ?? undefined}
+          isTargetingMode={!!targetingState || hasPendingActions}
+          targetingActorId={currentPlayer?.id}
+          onTargetPlayer={handleSidebarTargetClick}
+        />
+      </div>
+
+      <MobilePlayerDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
         players={gameState.players}
         currentPlayerId={gameState.currentPlayerId ?? undefined}
         isTargetingMode={!!targetingState || hasPendingActions}
@@ -822,8 +837,92 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       />
 
       <div className="game-main-area">
+        {/* Mobile Status Bar */}
+        <div className="mobile-status-bar mobile-only">
+          {/* Row 1: Round | Logo | Buttons */}
+          <div className="mobile-status-row-1">
+            <div className="mobile-round-badge">
+              <span
+                className="round-badge-large"
+                style={{ fontSize: '0.9rem', padding: '4px 8px' }}
+              >
+                Round {gameState.roundNumber}
+              </span>
+            </div>
+            <div className="mobile-logo-container">
+              <img src="/logo.png" alt="Turn Seven" style={{ height: 40 }} />
+            </div>
+            <div className="mobile-status-buttons">
+              <button
+                className="btn-icon-toggle"
+                onClick={() => setShowLedger(true)}
+                title="Game Ledger"
+              >
+                📜
+              </button>
+              <button className="btn-icon-toggle" onClick={() => setShowRules(true)} title="Rules">
+                ❓
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Deck/Discard | Previous Turn Summary */}
+          <div className="mobile-status-row-2">
+            <div className="deck-discard-group">
+              <div className="pile" style={{ position: 'relative', perspective: '1000px' }}>
+                <div className="card face-down">
+                  <div className="card-back">
+                    <span className="back-label" style={{ fontSize: '1.5rem' }}>
+                      T7
+                    </span>
+                  </div>
+                </div>
+                {revealedDeckCard && (
+                  <motion.div
+                    layoutId={revealedDeckCard.id}
+                    initial={{ rotateY: 180, scale: 0.8 }}
+                    animate={{ rotateY: 0, scale: 1 }}
+                    transition={{ duration: 0.6 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      zIndex: 10,
+                      transformStyle: 'preserve-3d',
+                    }}
+                  >
+                    <CardComponent card={{ ...revealedDeckCard, isFaceUp: true }} />
+                  </motion.div>
+                )}
+                <span>Deck ({gameState.deck.length})</span>
+              </div>
+              <div className="pile">
+                {gameState.discardPile.length > 0 ? (
+                  <CardComponent
+                    card={{
+                      ...gameState.discardPile[gameState.discardPile.length - 1],
+                      isFaceUp: true,
+                      suit:
+                        gameState.discardPile[gameState.discardPile.length - 1].suit ||
+                        (gameState.discardPile[gameState.discardPile.length - 1].rank.match(/^\d+$/)
+                          ? 'number'
+                          : 'action'),
+                    }}
+                  />
+                ) : (
+                  <div className="card-placeholder"></div>
+                )}
+                <span>Discard ({gameState.discardPile.length})</span>
+              </div>
+            </div>
+            <div className="last-action-log mobile-log">
+              {gameState.previousTurnLog ? <p>{gameState.previousTurnLog}</p> : null}
+            </div>
+          </div>
+        </div>
+
         {/* Top Status Bar */}
-        <div className="game-status-bar">
+        <div className="game-status-bar desktop-only">
           <div className="status-bar-left">
             <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 80, marginBottom: 4 }} />
             <span className="round-badge-large">Round {gameState.roundNumber}</span>
@@ -1091,6 +1190,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         </AnimatePresence>
       </div>
 
+      <PlayerHud
+        players={gameState.players}
+        currentPlayerId={gameState.currentPlayerId ?? undefined}
+        onPlayerClick={() => setIsDrawerOpen(true)}
+      />
+
       <GameFooter />
       {showGallery && <CardGalleryModal onClose={() => setShowGallery(false)} />}
       {showLedger && gameState && (
@@ -1127,9 +1232,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       {/* Overlays for Round End / Game Over */}
       {gameState.gamePhase === 'ended' && (
         <div className="overlay-container">
-          <div className="overlay-content">
+          <div className="overlay-content" style={{ fontSize: '0.9rem', padding: '16px' }}>
             <h2>Round Results</h2>
-            <ul style={{ textAlign: 'left' }}>
+            <ul style={{ textAlign: 'left', paddingLeft: '10px' }}>
               {gameState.players.map((p) => {
                 // Calculate rank based on total score
                 const sorted = [...gameState.players].sort(

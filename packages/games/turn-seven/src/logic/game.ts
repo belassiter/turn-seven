@@ -544,6 +544,21 @@ export class TurnSevenLogic implements IGameLogic {
         target.isLocked = true;
         target.isActive = false;
         target.hand.push({ ...card, isFaceUp: true });
+
+        // If target is locked, they cannot perform further actions.
+        // If target has pending actions (e.g. from an interrupted Turn Three), clear them.
+        if (target.pendingImmediateActionIds && target.pendingImmediateActionIds.length > 0) {
+          // Move pending reserved actions to discard pile
+          const pendingIds = new Set(target.pendingImmediateActionIds);
+          if (target.reservedActions) {
+            const toDiscard = target.reservedActions.filter((c) => pendingIds.has(c.id));
+            target.reservedActions = target.reservedActions.filter((c) => !pendingIds.has(c.id));
+            newState.discardPile = newState.discardPile || [];
+            newState.discardPile.push(...toDiscard);
+          }
+          target.pendingImmediateActionIds = [];
+        }
+
         // Playing an action card ends the actor's turn (per user request/interpretation)
         // Unless they have more pending actions (e.g. from a Turn Three queue)
 
@@ -553,14 +568,21 @@ export class TurnSevenLogic implements IGameLogic {
         break;
       }
       case 'TurnThree': {
-        // target draws up to 3 cards; action cards revealed are set aside as per deal semantics
-        target.hand.push({ ...card, isFaceUp: true });
+        // Parse remaining draws from ID if present (for resumed actions)
+        let drawCount = 3;
+        const resumeMatch = payload.cardId.match(/#resume:(\d+)$/);
+        if (resumeMatch) {
+          drawCount = parseInt(resumeMatch[1], 10);
+        }
+
+        // We do NOT put the TurnThree card in hand immediately.
+        // We wait to see if the action completes or is interrupted.
 
         // Queue for actions revealed during the draw
-        const revealedActions: CardModel[] = [];
         const drawnCardNames: string[] = [];
+        let interrupted = false;
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < drawCount; i++) {
           const next = this.drawOne(newState);
           if (!next) break;
           drawnCardNames.push(String(next.rank).replace(/([a-z])([A-Z])/g, '$1 $2'));
@@ -602,9 +624,6 @@ export class TurnSevenLogic implements IGameLogic {
                         (c) => c.id !== otherLS.id
                       );
                     }
-                    // Also remove from revealedActions so it doesn't get added to pending later
-                    const raIdx = revealedActions.findIndex((r) => r.id === otherLS.id);
-                    if (raIdx !== -1) revealedActions.splice(raIdx, 1);
                   }
                 } else {
                   target.hasLifeSaver = false;
@@ -648,91 +667,95 @@ export class TurnSevenLogic implements IGameLogic {
           } else if (next.suit === 'modifier') {
             target.hand.push({ ...next, isFaceUp: true });
           } else if (next.suit === 'action') {
-            if (String(next.rank) === 'LifeSaver') {
-              if (!target.hasLifeSaver) {
+            const nextRank = String(next.rank);
+            let shouldInterrupt = false;
+
+            if (nextRank === 'Lock' || nextRank === 'TurnThree') {
+              shouldInterrupt = true;
+            } else if (nextRank === 'LifeSaver') {
+              if (target.hasLifeSaver) {
+                shouldInterrupt = true;
+              } else {
                 target.hasLifeSaver = true;
                 target.hand.push({ ...next, isFaceUp: true });
-              } else {
-                // Queue for targeting
-                target.reservedActions = target.reservedActions || [];
-                target.reservedActions.push({ ...next, isFaceUp: true });
-                target.hand.push({ ...next, isFaceUp: true });
-                revealedActions.push(next);
               }
-            } else {
-              // set aside non-resolution action cards into target's hand for later play
+            }
+
+            if (shouldInterrupt) {
+              // Add action to hand/reserved for resolution
               target.reservedActions = target.reservedActions || [];
               target.reservedActions.push({ ...next, isFaceUp: true });
               target.hand.push({ ...next, isFaceUp: true });
-              // Add to queue for resolution after the 3-card draw
-              revealedActions.push(next);
+
+              // Queue action for immediate resolution
+              target.pendingImmediateActionIds = target.pendingImmediateActionIds || [];
+              target.pendingImmediateActionIds.push(next.id);
+
+              // Re-queue the current TurnThree for resumption
+              const remaining = drawCount - (i + 1);
+              if (remaining > 0) {
+                // Update ID to store state
+                const baseId = card.id.split('#')[0];
+                card.id = `${baseId}#resume:${remaining}`;
+
+                // Put back in reservedActions
+                target.reservedActions.push(card);
+                // Add to pending queue (AFTER the new action)
+                target.pendingImmediateActionIds.push(card.id);
+              } else {
+                // If no cards left, just put it in hand as normal
+                target.hand.push({ ...card, isFaceUp: true });
+              }
+
+              interrupted = true;
+
+              // Transfer control to target to resolve actions
+              if (!newState.turnOrderBaseId) {
+                newState.turnOrderBaseId = actor.id;
+              }
+              newState.currentPlayerId = target.id;
+
+              break; // Stop drawing
+            } else {
+              // Non-interrupting action (e.g. first LifeSaver)
+              // Already handled in if/else block above
             }
           }
         }
 
-        // Case 14/15: If player busted, discard any set-aside actions
-        // Note: reaching 7 unique number cards (round end) should NOT discard the original TurnThree card
-        if (target.hasBusted) {
-          revealedActions.forEach((a) => {
-            // Remove from reservedActions
-            if (target.reservedActions) {
-              target.reservedActions = target.reservedActions.filter((r) => r.id !== a.id);
-            }
-            // Remove from hand
-            target.hand = target.hand.filter((h) => h.id !== a.id);
-            // Add to discard pile if not already there
-            if (!newState.discardPile.some((d) => d.id === a.id)) {
-              newState.discardPile.push(a);
-            }
-          });
-          // Discard the original TurnThree card when the target busted (Case 14)
-          target.hand = target.hand.filter((h) => h.id !== card.id);
-          if (!newState.discardPile.some((d) => d.id === card.id)) {
-            newState.discardPile.push(card);
-          }
-
-          // Turn ends for actor.
-          if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
-            this.advanceTurn(newState);
-          }
-        } else {
-          // Case 12: After successful resolution we keep the original TurnThree in the target's hand
-
-          // If there are revealed actions, queue them for the target to resolve
-          if (target.isActive && revealedActions.length > 0) {
-            target.pendingImmediateActionIds = target.pendingImmediateActionIds || [];
-            revealedActions.forEach((a) => {
-              target.pendingImmediateActionIds!.push(a.id);
-            });
-
-            // Transfer control to target to resolve actions
-            // Case 19: We must preserve the original turn order base if it exists, or set it if not.
-            // If we are already in a chain (turnOrderBaseId set), keep it.
-            // If this is the start of a chain (Actor played TurnThree), set it to Actor.
-            if (!newState.turnOrderBaseId) {
-              newState.turnOrderBaseId = actor.id;
+        if (!interrupted) {
+          // Case 14/15: If player busted, discard any set-aside actions
+          if (target.hasBusted) {
+            // Discard the original TurnThree card when the target busted (Case 14)
+            // Note: card is NOT in hand yet, so we just discard it directly
+            if (!newState.discardPile.some((d) => d.id === card.id)) {
+              newState.discardPile.push(card);
             }
 
-            newState.currentPlayerId = target.id;
+            // Turn ends for actor.
+            if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
+              this.advanceTurn(newState);
+            }
           } else {
+            // Case 12: After successful resolution we keep the original TurnThree in the target's hand
+            target.hand.push({ ...card, isFaceUp: true });
+
             // No pending actions, advance turn from Actor
             if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
               this.advanceTurn(newState);
             }
           }
-        }
 
-        // Only log if we haven't already logged (due to Turn 7 condition above)
-        // We can check if the ledger has this entry? Or just use a flag.
-        // Or check if gamePhase is ended.
-        if (newState.gamePhase !== 'ended' && newState.gamePhase !== 'gameover') {
-          const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
-          this.addToLedger(
-            newState,
-            actor.name,
-            'Action',
-            `Turn 3 (on ${target.name}). Draws ${drawnString}`
-          );
+          // Only log if we haven't already logged (due to Turn 7 condition above)
+          if (newState.gamePhase !== 'ended' && newState.gamePhase !== 'gameover') {
+            const drawnString = drawnCardNames.length > 0 ? drawnCardNames.join(', ') : 'nothing';
+            this.addToLedger(
+              newState,
+              actor.name,
+              'Action',
+              `Turn 3 (on ${target.name}). Draws ${drawnString}`
+            );
+          }
         }
 
         newState.previousTurnLog = log;

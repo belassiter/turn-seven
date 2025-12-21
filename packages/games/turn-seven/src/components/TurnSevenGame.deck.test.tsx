@@ -52,17 +52,20 @@ describe('TurnSevenGame Deck Visibility', () => {
     render(<TurnSevenGame initialGameState={mockGameState} />);
 
     // Check for the "Deck (2)" text
-    expect(screen.getByText('Deck (2)')).toBeInTheDocument();
+    const deckLabels = screen.getAllByText('Deck (2)');
+    expect(deckLabels.length).toBeGreaterThan(0);
+    expect(deckLabels[0]).toBeInTheDocument();
 
     // Check for the "T7" label on the card back
     // Note: The CSS might hide this, but it should be in the DOM
-    const t7Label = screen.getByText('T7');
-    expect(t7Label).toBeInTheDocument();
+    const t7Labels = screen.getAllByText('T7');
+    expect(t7Labels.length).toBeGreaterThan(0);
+    expect(t7Labels[0]).toBeInTheDocument();
 
     // Check if the card back element exists
     // We can look for the class 'card-back'
     // Since we can't query by class easily with testing-library without setup, we can use the text to find the parent
-    const cardBack = t7Label.closest('.card-back');
+    const cardBack = t7Labels[0].closest('.card-back');
     expect(cardBack).toBeInTheDocument();
   });
 });
