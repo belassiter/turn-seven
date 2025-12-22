@@ -3,9 +3,9 @@ import ReactDOM from 'react-dom/client';
 import { TurnSevenGame } from './index';
 import './styles.css';
 import './mobile.css';
-import { auth } from '@turn-seven/engine';
-import { signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
+const auth = getAuth();
 signInAnonymously(auth)
   .then((creds) => {
     console.log('Signed in anonymously', creds.user.uid);

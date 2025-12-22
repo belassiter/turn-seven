@@ -76,10 +76,24 @@ The work will be divided between building the engine and implementing the game.
 
 4.  **Backend Integration (Remote Play):**
 
-    - [ ] **TODO:** Set up Firebase.
-    - [ ] **Engine:** Set up Firebase, Auth, Firestore, and the generic `performAction` Cloud Function.
+    - [x] **TODO:** Set up Firebase.
+    - [x] **Engine:** Set up Firebase, Auth, Firestore, and the generic `performAction` Cloud Function.
     - [ ] **Engine:** Create the `useGameState` hook to subscribe to Firestore.
     - [ ] **Turn Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.
+
+    ### Development Workflow Note
+
+    For local development, this project is configured to use the **Firebase Local Emulator Suite**. This is the standard best practice and provides several key advantages over connecting to the live Firebase project:
+
+    - **Safety:** It prevents the production database from being filled with test data and eliminates any risk of accidentally deleting or corrupting real user data.
+    - **Speed:** All backend requests are handled locally with zero network latency, making the development environment much faster.
+    - **No Cost:** All operations against the emulators are free, so there is no risk of incurring costs during development and testing.
+
+    To run the project locally:
+
+    1.  In one terminal, run `pnpm firebase emulators:start`.
+    2.  In a second terminal, run `pnpm dev`.
+    3.  The app will automatically connect to the local emulators. The Emulator UI is available at `http://localhost:4000`.
 
 5.  **Polish & Animations:**
     - [x] **Engine:** Refine the card turn animation and add other generic animations (e.g., card dealing).

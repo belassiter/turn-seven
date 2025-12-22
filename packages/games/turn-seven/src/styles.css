@@ -969,3 +969,51 @@ html {
   margin-left: 0;
   width: 100%;
 }
+
+/* Markdown Rules Styles */
+.markdown-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.markdown-body h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.3em;
+}
+
+.markdown-body h1:first-child {
+  margin-top: 0;
+}
+
+.markdown-body h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body p {
+  margin-bottom: 1em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+  color: #111827;
+}

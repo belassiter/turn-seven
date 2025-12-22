@@ -242,4 +242,108 @@ describe('Game Logic Fixes', () => {
     // P1 turn ends. P2 is inactive. Should be P3.
     expect(after3.currentPlayerId).toBe('p3');
   });
+
+  it('Bug 2: Turn Three drawn during initial deal should pause deal for resolution', () => {
+    const state = logic.createInitialStateFromNames(['A', 'B', 'C']);
+    // Clear hands for easier setup
+    state.players.forEach((p) => {
+      p.hand = [];
+      p.pendingImmediateActionIds = [];
+      p.reservedActions = [];
+    });
+    state.deck = []; // Clear deck
+    state.discardPile = [];
+
+    const createCard = (
+      rank: string,
+      suit: 'number' | 'action' | 'modifier' = 'number',
+      id: string
+    ): CardModel => ({
+      id,
+      rank,
+      suit,
+      isFaceUp: true,
+    });
+
+    state.deck.push(createCard('6', 'number', 'n-6'));
+    state.deck.push(createCard('5', 'number', 'n-5'));
+    const turnThree = createCard('TurnThree', 'action', 't3-1');
+    state.deck.push(turnThree);
+
+    // Reset state to "pre-deal" effectively
+    state.players.forEach((p) => (p.hand = []));
+    state.currentPlayerId = null;
+
+    // Trigger deal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (logic as any).continueDealing(state);
+
+    const playerA = state.players[0];
+    const playerB = state.players[1];
+    const playerC = state.players[2];
+
+    expect(playerA.pendingImmediateActionIds).toContain(turnThree.id);
+    expect(playerA.hand).toHaveLength(1); // The TurnThree card
+    expect(playerB.hand).toHaveLength(0);
+    expect(playerC.hand).toHaveLength(0);
+    expect(state.currentPlayerId).toBe(playerA.id);
+  });
+
+  it('Bug 3: Player Hits, draws Turn Three, targets Self -> Hand state consistency', () => {
+    let state = logic.createInitialStateFromNames(['A', 'B', 'C']);
+    state.players.forEach((p) => {
+      p.hand = [];
+      p.pendingImmediateActionIds = [];
+      p.reservedActions = [];
+    });
+    state.deck = [];
+    state.discardPile = [];
+
+    const createCard = (
+      rank: string,
+      suit: 'number' | 'action' | 'modifier' = 'number',
+      id: string
+    ): CardModel => ({
+      id,
+      rank,
+      suit,
+      isFaceUp: true,
+    });
+
+    const playerA = state.players[0];
+    state.currentPlayerId = playerA.id;
+
+    // A has some cards
+    playerA.hand = [createCard('10', 'number', 'n-10')];
+
+    // Deck has TurnThree, then 1, 2, 3
+    state.deck.push(createCard('3', 'number', 'n-3'));
+    state.deck.push(createCard('2', 'number', 'n-2'));
+    state.deck.push(createCard('1', 'number', 'n-1'));
+    const turnThree = createCard('TurnThree', 'action', 't3-1');
+    state.deck.push(turnThree);
+
+    // A Hits
+    state = logic.performAction(state, { type: 'HIT' });
+
+    const playerAAfterHit = state.players[0];
+
+    expect(playerAAfterHit.pendingImmediateActionIds).toContain(turnThree.id);
+    expect(playerAAfterHit.hand).toHaveLength(2); // 10 + TurnThree
+
+    // A plays TurnThree on Self
+    state = logic.performAction(state, {
+      type: 'PLAY_ACTION',
+      payload: {
+        actorId: playerAAfterHit.id,
+        cardId: turnThree.id,
+        targetId: playerAAfterHit.id,
+      },
+    });
+
+    const playerAFinal = state.players[0];
+    // Should have: 10, 1, 2, 3, TurnThree (5 cards)
+    expect(playerAFinal.hand).toHaveLength(5);
+    expect(playerAFinal.hand.map((c) => c.rank)).toContain('TurnThree');
+  });
 });

@@ -22,6 +22,7 @@ import { PlayerHud } from './PlayerHud';
 import { ActivePlayerHand } from './ActivePlayerHand';
 import { CardGalleryModal } from './CardGalleryModal';
 import { LedgerModal } from './LedgerModal';
+import { RulesModal } from './RulesModal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimation';
 
@@ -257,6 +258,52 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           }
         }
 
+        // 0.5. Check for removed cards (Discards/Transfers)
+        // This handles cases where cards are removed from hand (e.g. Turn Three self-target discard)
+        // We must process removals BEFORE additions to ensure correct hand state syncing
+        let playerToRemoveIndex = -1;
+        for (let i = 0; i < visualGameState.players.length; i++) {
+          const vp = visualGameState.players[i];
+          const rp = realGameState.players[i];
+          // Check if vp has any card that rp does not have (by ID)
+          const realIds = new Set(rp.hand.map((c) => c.id));
+          if (vp.hand.some((c) => !realIds.has(c.id))) {
+            playerToRemoveIndex = i;
+            break;
+          }
+        }
+
+        if (playerToRemoveIndex !== -1) {
+          const vp = visualGameState.players[playerToRemoveIndex];
+          const rp = realGameState.players[playerToRemoveIndex];
+          const realIds = new Set(rp.hand.map((c) => c.id));
+          const cardToRemove = vp.hand.find((c) => !realIds.has(c.id));
+
+          if (cardToRemove) {
+            // Animate removal
+            const nextPlayers = [...visualGameState.players];
+            nextPlayers[playerToRemoveIndex] = {
+              ...vp,
+              hand: vp.hand.filter((c) => c.id !== cardToRemove.id),
+            };
+
+            // Add to visual discard pile if not already there
+            const nextDiscard = [...visualGameState.discardPile];
+            if (!nextDiscard.some((c) => c.id === cardToRemove.id)) {
+              nextDiscard.push({ ...cardToRemove, isFaceUp: true });
+            }
+
+            setVisualGameState({
+              ...visualGameState,
+              players: nextPlayers,
+              discardPile: nextDiscard,
+            });
+            await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
+            setIsAnimating(false);
+            return;
+          }
+        }
+
         // 1. Check for missing cards (Deal/Hit/Turn 3)
         let playerToUpdateIndex = -1;
 
@@ -442,8 +489,13 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               setRevealedDeckCard(null);
 
               // Animate Fly to Hand (Visual only - add temporarily)
-              const drawnCard = rp.hand[rp.hand.length - 1];
-              const tempHand = [...vp.hand, drawnCard];
+              // FIX: Get drawn card from discard pile (it was just discarded)
+              const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 1];
+              // Fallback if discard is empty (shouldn't happen)
+              const cardToAnimate =
+                drawnCard || ({ id: 'unknown', rank: '?', suit: 'number' } as CardModel);
+
+              const tempHand = [...vp.hand, cardToAnimate];
               const tempPlayers = [...visualGameState.players];
               tempPlayers[i] = { ...vp, hand: tempHand };
               setVisualGameState({
@@ -1206,28 +1258,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           players={gameState.players}
         />
       )}
-      {showRules && (
-        <div className="modal-overlay" onClick={() => setShowRules(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Quick Rules</h2>
-              <button className="close-button" onClick={() => setShowRules(false)}>
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>
-                Turn Seven is a fast-paced card game. Players try to collect up to 7 unique number
-                cards to score points. Action cards (Lock, Turn Three, Life Saver) alter player
-                turns and may require targeting other players. Modifier cards like +X and x2 affect
-                scoring. At the end of each round, players&apos; cards are collected into the
-                discard; the deck is preserved across rounds and reshuffled from discard when
-                needed.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {showRules && <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />}
 
       {/* Overlays for Round End / Game Over */}
       {gameState.gamePhase === 'ended' && (

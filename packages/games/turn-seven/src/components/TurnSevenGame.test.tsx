@@ -402,7 +402,7 @@ describe('TurnSevenGame component', () => {
     fireEvent.click(rulesBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Quick Rules/i)).toBeInTheDocument();
+      expect(screen.getByText(/Rules/i)).toBeInTheDocument();
     });
   });
 });
