@@ -11,8 +11,8 @@ vi.mock('../services/gameService', async (importOriginal) => {
   return {
     ...actual,
     LocalGameService: class extends actual.LocalGameService {
-      constructor(initialState?: GameState) {
-        super(initialState);
+      constructor(options?: { initialState?: GameState; latency?: number }) {
+        super(options);
         // @ts-expect-error - accessing private/protected property for test
         this.simulatedLatencyMs = 0;
       }

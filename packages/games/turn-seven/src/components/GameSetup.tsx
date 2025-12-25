@@ -28,7 +28,7 @@ const BOT_NAMES = [
 export interface PlayerSetup {
   name: string;
   isBot: boolean;
-  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg';
+  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg' | 'omniscient';
 }
 
 interface Props {
@@ -219,6 +219,9 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
                       </option>
                       <option value="omg" style={{ color: 'darkred' }}>
                         OMG
+                      </option>
+                      <option value="omniscient" style={{ color: '#ec4899' }}>
+                        Omni
                       </option>
                     </select>
                   )}

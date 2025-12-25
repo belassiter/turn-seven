@@ -6,7 +6,7 @@ export const MAX_PLAYERS = 18;
 export interface PlayerConfig {
   name: string;
   isBot?: boolean;
-  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg';
+  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg' | 'omniscient';
 }
 
 // We can define a generic interface for game logic

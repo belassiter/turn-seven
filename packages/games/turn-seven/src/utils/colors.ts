@@ -33,6 +33,8 @@ export const getDifficultyColor = (difficulty?: string) => {
       return 'orange';
     case 'omg':
       return 'darkred';
+    case 'omniscient':
+      return '#ec4899'; // pink-500
     default:
       return undefined;
   }

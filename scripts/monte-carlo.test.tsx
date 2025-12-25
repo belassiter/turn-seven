@@ -6,18 +6,9 @@ import { PlayerSetup } from '../packages/games/turn-seven/src/components/GameSet
 import { decideMove, decideTarget } from '../packages/games/turn-seven/src/logic/bot-logic';
 
 // --- Simulation Configuration ---
-// Note: 200 runs takes ~4-5 minutes. Increase for more accuracy.
-const SIMULATION_RUNS = 1000;
-const MAX_TURNS_PER_GAME = 500; // Safety break to prevent infinite loops.
+const SIMULATION_RUNS = 10000;
+const MAX_TURNS_PER_GAME = 600; // Safety break to prevent infinite loops.
 const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
-  {
-    name: 'Hard (vs 2 Easy)',
-    players: [
-      { name: 'HardBot', isBot: true, botDifficulty: 'hard' },
-      { name: 'EasyBot1', isBot: true, botDifficulty: 'easy' },
-      { name: 'EasyBot2', isBot: true, botDifficulty: 'easy' },
-    ],
-  },
   {
     name: 'Medium (vs 2 Easy)',
     players: [
@@ -27,9 +18,25 @@ const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
     ],
   },
   {
+    name: 'Hard (vs 2 Easy)',
+    players: [
+      { name: 'HardBot', isBot: true, botDifficulty: 'hard' },
+      { name: 'EasyBot1', isBot: true, botDifficulty: 'easy' },
+      { name: 'EasyBot2', isBot: true, botDifficulty: 'easy' },
+    ],
+  },
+  {
     name: 'OMG (vs 2 Easy)',
     players: [
       { name: 'OMGBot', isBot: true, botDifficulty: 'omg' },
+      { name: 'EasyBot1', isBot: true, botDifficulty: 'easy' },
+      { name: 'EasyBot2', isBot: true, botDifficulty: 'easy' },
+    ],
+  },
+  {
+    name: 'Omni (vs 2 Easy)',
+    players: [
+      { name: 'OmniBot', isBot: true, botDifficulty: 'omniscient' },
       { name: 'EasyBot1', isBot: true, botDifficulty: 'easy' },
       { name: 'EasyBot2', isBot: true, botDifficulty: 'easy' },
     ],
@@ -48,6 +55,23 @@ const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
       { name: 'OMGBot', isBot: true, botDifficulty: 'omg' },
       { name: 'HardBot1', isBot: true, botDifficulty: 'hard' },
       { name: 'HardBot2', isBot: true, botDifficulty: 'hard' },
+    ],
+  },
+  
+  {
+    name: 'Omni (vs 2 Hard)',
+    players: [
+      { name: 'OmniBot', isBot: true, botDifficulty: 'omniscient' },
+      { name: 'HardBot1', isBot: true, botDifficulty: 'hard' },
+      { name: 'HardBot2', isBot: true, botDifficulty: 'hard' },
+    ],
+  },
+  {
+    name: 'Omni (vs 2 OMG)',
+    players: [
+      { name: 'OmniBot', isBot: true, botDifficulty: 'omniscient' },
+      { name: 'OMGBot1', isBot: true, botDifficulty: 'omg' },
+      { name: 'OMGBot2', isBot: true, botDifficulty: 'omg' },
     ],
   },
   {
@@ -104,7 +128,7 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
 
   afterAll(() => {
     console.log('\n\n--- Monte Carlo Simulation Final Results ---');
-    
+
     const csvRows = ['Matchup,Bot Name,Wins,Win Rate (%),Failures,Total Games'];
 
     for (const matchupName in allResults) {
@@ -115,9 +139,11 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
         const winCount = results.wins[botName];
         const winRate = ((winCount / totalGames) * 100).toFixed(2);
         console.log(`    ${botName}: ${winCount} wins (${winRate}%)`);
-        
+
         // Add to CSV
-        csvRows.push(`"${matchupName}","${botName}",${winCount},${winRate},${results.failures},${totalGames}`);
+        csvRows.push(
+          `"${matchupName}","${botName}",${winCount},${winRate},${results.failures},${totalGames}`
+        );
       }
       if (results.failures > 0) {
         console.log(`    Failed games (timeout): ${results.failures}`);
@@ -144,28 +170,32 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
       matchup.players.forEach((p) => (wins[p.name] = 0));
       let failures = 0;
 
-      const runGame = async (gameIndex: number) => {
+      const runGame = async () => {
         try {
           const gameService = new LocalGameService({ latency: 0 });
           await gameService.start(matchup.players);
 
           let state = gameService.getState();
+          if (!state) throw new Error('Game state is null');
+
           let turn = 0;
           let roundsPlayed = 0;
-          
+
           const roundStats: Record<string, PlayerRoundStats> = {};
-          matchup.players.forEach(p => {
+          matchup.players.forEach((p) => {
             roundStats[p.name] = { scores: [], busts: 0, turnSevens: 0, roundsWon: 0 };
           });
 
-          while (state.gamePhase !== 'gameover' && turn < MAX_TURNS_PER_GAME) {
+          while (state && state.gamePhase !== 'gameover' && turn < MAX_TURNS_PER_GAME) {
             state = gameService.getState();
-            const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+            if (!state) break;
+
+            const currentPlayer = state.players.find((p) => p.id === state!.currentPlayerId);
 
             if (!currentPlayer || !currentPlayer.isActive) {
               if (state.gamePhase === 'ended') {
                 await gameService.startNextRound();
-                
+
                 // Capture round stats immediately after round transition
                 state = gameService.getState();
                 if (state.previousRoundScores) {
@@ -187,7 +217,7 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
 
                   // Second pass: update stats
                   Object.entries(state.previousRoundScores).forEach(([playerId, result]) => {
-                    const player = state.players.find(p => p.id === playerId);
+                    const player = state.players.find((p) => p.id === playerId);
                     if (player) {
                       const stats = roundStats[player.name];
                       stats.scores.push(result.score);
@@ -243,38 +273,41 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
         const batchPromises = [];
         const count = Math.min(BATCH_SIZE, SIMULATION_RUNS - i);
         for (let j = 0; j < count; j++) {
-          batchPromises.push(runGame(i + j + 1));
+          batchPromises.push(runGame());
         }
-        
+
         const results = await Promise.all(batchPromises);
-        
+
         results.forEach(({ state: finalState, roundStats, roundsPlayed }, index) => {
           const gameNum = i + index + 1;
-          
-          if (finalState.gamePhase === 'gameover') {
+
+          if (finalState && finalState.gamePhase === 'gameover') {
             const winner = finalState.players.find((p) => p.id === finalState.winnerId);
             if (winner && wins[winner.name] !== undefined) {
               wins[winner.name]++;
             }
 
             // Process Ledger Rows
-            finalState.players.forEach(p => {
+            finalState.players.forEach((p) => {
               const stats = roundStats[p.name];
               const totalScore = p.totalScore || 0;
               const maxRoundScore = Math.max(...stats.scores, 0);
-              const avgRoundScore = stats.scores.length > 0 
-                ? (stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length).toFixed(2) 
-                : '0';
+              const avgRoundScore =
+                stats.scores.length > 0
+                  ? (stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length).toFixed(2)
+                  : '0';
               const medianRoundScore = calculateMedian(stats.scores);
-              const bustPct = roundsPlayed > 0 ? ((stats.busts / roundsPlayed) * 100).toFixed(1) : '0';
-              const turnSevenPct = roundsPlayed > 0 ? ((stats.turnSevens / roundsPlayed) * 100).toFixed(1) : '0';
-              const roundsWonPct = roundsPlayed > 0 ? ((stats.roundsWon / roundsPlayed) * 100).toFixed(1) : '0';
-              
+              const bustPct =
+                roundsPlayed > 0 ? ((stats.busts / roundsPlayed) * 100).toFixed(1) : '0';
+              const turnSevenPct =
+                roundsPlayed > 0 ? ((stats.turnSevens / roundsPlayed) * 100).toFixed(1) : '0';
+              const roundsWonPct =
+                roundsPlayed > 0 ? ((stats.roundsWon / roundsPlayed) * 100).toFixed(1) : '0';
+
               ledgerRows.push(
                 `"${matchup.name}",${gameNum},"${p.name}","${p.botDifficulty}",${totalScore},${maxRoundScore},${avgRoundScore},${medianRoundScore},${bustPct},${turnSevenPct},${roundsWonPct},${roundsPlayed}`
               );
             });
-
           } else {
             failures++;
           }

@@ -15,15 +15,81 @@ export const decideMove = (bot: PlayerModel, gameState: GameState): BotMove => {
     return Math.random() < 0.5 ? { type: 'HIT' } : { type: 'STAY' };
   }
 
-  // --- Advanced Logic for Medium/Hard/OMG ---
+  // --- Advanced Logic for Medium/Hard/OMG/Omniscient ---
 
   let effectiveDeck: CardModel[] = [];
   const fullDeck = getFullDeckTemplate();
 
-  if (difficulty === 'omg') {
+  if (difficulty === 'omniscient') {
+    // Omniscient: Knows the next card
+    const nextCard = gameState.deck.length > 0 ? gameState.deck[gameState.deck.length - 1] : null;
+
+    if (nextCard) {
+      // 5) Always hit on +x and x2 cards
+      if (
+        ['+1', '+2', '+3', '+4', '+5', '+6', '+7', '+8', '+9', '+10', 'x2'].includes(nextCard.rank)
+      ) {
+        // Note: The deck template uses +2, +4, +6, +8, +10. But let's be safe with the check.
+        // Actually, let's check suit 'modifier' or specific ranks.
+        // The user said "+x and x2".
+        return { type: 'HIT' };
+      }
+      // Also check suit 'modifier' just in case
+      if (nextCard.suit === 'modifier') {
+        return { type: 'HIT' };
+      }
+
+      // 2) Lock Card
+      if (nextCard.rank === 'Lock') {
+        const activeCount = gameState.players.filter((p) => p.isActive).length;
+        if (activeCount === 1) {
+          return { type: 'STAY' };
+        }
+        // Otherwise locking logic is same as OMG (fall through to OMG logic below)
+        // We need to set effectiveDeck to the full deck (as OMG would see it)
+        effectiveDeck = gameState.deck.length > 0 ? gameState.deck : gameState.discardPile || [];
+      }
+      // 3) Turn 3 Card
+      else if (nextCard.rank === 'TurnThree') {
+        const activeCount = gameState.players.filter((p) => p.isActive).length;
+        if (activeCount === 1) {
+          // Stay if that will result in a Bust or Lock
+          // We need to peek at the card AFTER the Turn 3
+          const cardAfter =
+            gameState.deck.length > 1 ? gameState.deck[gameState.deck.length - 2] : null;
+          if (cardAfter) {
+            const sim = simulateCardEffect(bot, cardAfter);
+            if (sim.isBust || sim.isLock) {
+              return { type: 'STAY' };
+            }
+            return { type: 'HIT' };
+          } else {
+            // If no card after, we can't know. Default to HIT? Or STAY?
+            // If deck is empty, reshuffle happens.
+            return { type: 'HIT' };
+          }
+        } else {
+          // 4) Multiple active players -> Always Hit (targeting logic handles the rest)
+          return { type: 'HIT' };
+        }
+      }
+      // 1) Number Cards (and others)
+      else {
+        // Hit if it will not bust.
+        // We set effectiveDeck to just this card, so expectation calculation will be exact.
+        effectiveDeck = [nextCard];
+      }
+    } else {
+      // Deck empty, fall back to OMG logic
+      effectiveDeck = gameState.discardPile || [];
+    }
+  }
+
+  if (difficulty === 'omg' || (difficulty === 'omniscient' && effectiveDeck.length > 1)) {
     // Purple: All cards seen since shuffle (Perfect Memory)
+    // Note: Omniscient falls through here for Lock (active > 1)
     effectiveDeck = gameState.deck.length > 0 ? gameState.deck : gameState.discardPile || [];
-  } else {
+  } else if (difficulty !== 'omniscient') {
     // Green (Medium) or Blue (Hard)
     const knownCards: CardModel[] = [];
     knownCards.push(...bot.hand); // Always knows its own hand
@@ -96,6 +162,47 @@ export const decideTarget = (
     return validTargets[Math.floor(Math.random() * validTargets.length)];
   }
 
+  // Omniscient Turn 3 Logic
+  if (difficulty === 'omniscient' && sourceCard.rank === 'TurnThree') {
+    // The card to be given is the next card in the deck
+    const nextCard = gameState.deck.length > 0 ? gameState.deck[gameState.deck.length - 1] : null;
+
+    if (nextCard) {
+      // a) Check if applying to self results in Turn 7
+      const selfSim = simulateCardEffect(bot, nextCard);
+      if (selfSim.isTurn7) return bot.id;
+
+      // Sort players by total score descending
+      const sortedPlayers = [...gameState.players].sort(
+        (a, b) => (b.totalScore || 0) - (a.totalScore || 0)
+      );
+
+      // b) Check if 2nd place player will bust
+      // c) Check next player...
+      // We iterate from index 1 (2nd place) to end
+      for (let i = 1; i < sortedPlayers.length; i++) {
+        const target = sortedPlayers[i];
+        // Skip self in this loop (we check self in step d)
+        if (target.id !== bot.id && validTargets.includes(target.id)) {
+          const sim = simulateCardEffect(target, nextCard);
+          if (sim.isBust) return target.id;
+        }
+      }
+
+      // d) Check if applying to self is safe (no bust, no lock)
+      if (!selfSim.isBust && !selfSim.isLock) {
+        return bot.id;
+      }
+
+      // e) Otherwise, apply to the last place player
+      // Find the last place player who is a valid target
+      for (let i = sortedPlayers.length - 1; i >= 0; i--) {
+        const target = sortedPlayers[i];
+        if (validTargets.includes(target.id)) return target.id;
+      }
+    }
+  }
+
   // --- Advanced Logic for Medium/Hard/OMG ---
 
   const actionType = sourceCard.rank; // Lock, TurnThree, LifeSaver
@@ -131,4 +238,18 @@ const getTargetScore = (player: PlayerModel, difficulty: string): number => {
   // Hard/OMG: include current round score (if not busted)
   const current = player.hasBusted ? 0 : computeHandScore(player.hand);
   return base + current;
+};
+
+const simulateCardEffect = (
+  player: PlayerModel,
+  card: CardModel
+): { score: number; isBust: boolean; isTurn7: boolean; isLock: boolean } => {
+  const newHand = [...player.hand, card];
+  const score = computeHandScore(newHand);
+  return {
+    score,
+    isBust: score > 7,
+    isTurn7: score === 7,
+    isLock: card.rank === 'Lock',
+  };
 };

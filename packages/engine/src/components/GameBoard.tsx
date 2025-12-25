@@ -23,7 +23,7 @@ export interface PlayerModel {
   totalScore?: number;
   // Bot configuration
   isBot?: boolean;
-  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg';
+  botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg' | 'omniscient';
 }
 
 export interface GameBoardProps {
