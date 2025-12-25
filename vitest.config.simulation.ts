@@ -21,6 +21,6 @@ export default defineConfig({
     // This is the key change: it ONLY includes the simulation script.
     include: ['scripts/monte-carlo.test.tsx'],
     // Give the simulation a long default timeout
-    testTimeout: 5 * 60 * 1000, // 5 minutes
+    testTimeout: 50 * 60 * 1000, // 50 minutes
   },
 });
