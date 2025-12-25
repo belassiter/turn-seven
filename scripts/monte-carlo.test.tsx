@@ -82,8 +82,25 @@ interface MatchupResult {
   failures: number;
 }
 
+interface PlayerRoundStats {
+  scores: number[];
+  busts: number;
+  turnSevens: number;
+  roundsWon: number;
+}
+
+const calculateMedian = (values: number[]): number => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
 describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
   const allResults: Record<string, MatchupResult> = {};
+  const ledgerRows: string[] = [
+    'Simulation Name,Game #,Player Name,Difficulty,Total Score,Max Round Score,Avg Round Score,Median Round Score,Bust %,Turn 7 %,Rounds Won %,Total Rounds',
+  ];
 
   afterAll(() => {
     console.log('\n\n--- Monte Carlo Simulation Final Results ---');
@@ -112,7 +129,13 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
     const csvContent = csvRows.join('\n');
     const outputPath = path.join(process.cwd(), 'scripts', 'simulation_results.csv');
     fs.writeFileSync(outputPath, csvContent);
-    console.log(`\nCSV results written to: ${outputPath}`);
+    console.log(`\nSummary CSV results written to: ${outputPath}`);
+
+    // Write Ledger
+    const ledgerContent = ledgerRows.join('\n');
+    const ledgerPath = path.join(process.cwd(), 'scripts', 'simulation_ledger.csv');
+    fs.writeFileSync(ledgerPath, ledgerContent);
+    console.log(`Ledger CSV results written to: ${ledgerPath}`);
   });
 
   for (const matchup of BOT_MATCHUPS) {
@@ -121,13 +144,19 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
       matchup.players.forEach((p) => (wins[p.name] = 0));
       let failures = 0;
 
-      const runGame = async () => {
+      const runGame = async (gameIndex: number) => {
         try {
           const gameService = new LocalGameService({ latency: 0 });
           await gameService.start(matchup.players);
 
           let state = gameService.getState();
           let turn = 0;
+          let roundsPlayed = 0;
+          
+          const roundStats: Record<string, PlayerRoundStats> = {};
+          matchup.players.forEach(p => {
+            roundStats[p.name] = { scores: [], busts: 0, turnSevens: 0, roundsWon: 0 };
+          });
 
           while (state.gamePhase !== 'gameover' && turn < MAX_TURNS_PER_GAME) {
             state = gameService.getState();
@@ -136,6 +165,38 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
             if (!currentPlayer || !currentPlayer.isActive) {
               if (state.gamePhase === 'ended') {
                 await gameService.startNextRound();
+                
+                // Capture round stats immediately after round transition
+                state = gameService.getState();
+                if (state.previousRoundScores) {
+                  roundsPlayed++;
+                  let maxScore = -1;
+                  let roundWinners: string[] = [];
+
+                  // First pass: collect scores and find max
+                  Object.entries(state.previousRoundScores).forEach(([playerId, result]) => {
+                    if (result.resultType !== 'bust') {
+                      if (result.score > maxScore) {
+                        maxScore = result.score;
+                        roundWinners = [playerId];
+                      } else if (result.score === maxScore) {
+                        roundWinners.push(playerId);
+                      }
+                    }
+                  });
+
+                  // Second pass: update stats
+                  Object.entries(state.previousRoundScores).forEach(([playerId, result]) => {
+                    const player = state.players.find(p => p.id === playerId);
+                    if (player) {
+                      const stats = roundStats[player.name];
+                      stats.scores.push(result.score);
+                      if (result.resultType === 'bust') stats.busts++;
+                      if (result.resultType === 'turn-seven') stats.turnSevens++;
+                      if (roundWinners.includes(playerId)) stats.roundsWon++;
+                    }
+                  });
+                }
               } else {
                 break;
               }
@@ -170,7 +231,7 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
 
             turn++;
           }
-          return state;
+          return { state, roundStats, roundsPlayed };
         } catch (e) {
           console.error('Game failed:', e);
           throw e;
@@ -182,17 +243,38 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
         const batchPromises = [];
         const count = Math.min(BATCH_SIZE, SIMULATION_RUNS - i);
         for (let j = 0; j < count; j++) {
-          batchPromises.push(runGame());
+          batchPromises.push(runGame(i + j + 1));
         }
         
         const results = await Promise.all(batchPromises);
         
-        results.forEach((finalState) => {
+        results.forEach(({ state: finalState, roundStats, roundsPlayed }, index) => {
+          const gameNum = i + index + 1;
+          
           if (finalState.gamePhase === 'gameover') {
             const winner = finalState.players.find((p) => p.id === finalState.winnerId);
             if (winner && wins[winner.name] !== undefined) {
               wins[winner.name]++;
             }
+
+            // Process Ledger Rows
+            finalState.players.forEach(p => {
+              const stats = roundStats[p.name];
+              const totalScore = p.totalScore || 0;
+              const maxRoundScore = Math.max(...stats.scores, 0);
+              const avgRoundScore = stats.scores.length > 0 
+                ? (stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length).toFixed(2) 
+                : '0';
+              const medianRoundScore = calculateMedian(stats.scores);
+              const bustPct = roundsPlayed > 0 ? ((stats.busts / roundsPlayed) * 100).toFixed(1) : '0';
+              const turnSevenPct = roundsPlayed > 0 ? ((stats.turnSevens / roundsPlayed) * 100).toFixed(1) : '0';
+              const roundsWonPct = roundsPlayed > 0 ? ((stats.roundsWon / roundsPlayed) * 100).toFixed(1) : '0';
+              
+              ledgerRows.push(
+                `"${matchup.name}",${gameNum},"${p.name}","${p.botDifficulty}",${totalScore},${maxRoundScore},${avgRoundScore},${medianRoundScore},${bustPct},${turnSevenPct},${roundsWonPct},${roundsPlayed}`
+              );
+            });
+
           } else {
             failures++;
           }

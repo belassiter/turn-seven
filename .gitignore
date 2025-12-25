@@ -46,3 +46,4 @@ coverage
 .firebase
 firebase-debug.log
 scripts/simulation_results.csv
+scripts/simulation_ledger.csv
