@@ -28,7 +28,10 @@ import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimati
 
 export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
   // console.error('Render TurnSevenGame');
-  const gameService = useMemo(() => new LocalGameService(initialGameState), [initialGameState]);
+  const gameService = useMemo(
+    () => new LocalGameService({ initialState: initialGameState }),
+    [initialGameState]
+  );
 
   // Real state from the engine
   const [realGameState, setRealGameState] = useState<GameState | null>(null);

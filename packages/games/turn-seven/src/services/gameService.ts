@@ -13,13 +13,15 @@ export interface IGameService {
 export class LocalGameService implements IGameService {
   private logic: TurnSevenLogic;
   private manager: ClientGameStateManager | null = null;
-  private simulatedLatencyMs: number = 300; // Simulate network lag
+  private simulatedLatencyMs: number;
   private subscribers: ((state: GameState) => void)[] = [];
 
-  constructor(initialState?: GameState) {
+  constructor(options?: { initialState?: GameState; latency?: number }) {
     this.logic = new TurnSevenLogic();
-    if (initialState) {
-      this.manager = new ClientGameStateManager(initialState);
+    this.simulatedLatencyMs = options?.latency ?? 300;
+
+    if (options?.initialState) {
+      this.manager = new ClientGameStateManager(options.initialState);
       // Ensure we subscribe to the manager if we have one, so UI gets updates
       this.manager.subscribe((state) => {
         this.subscribers.forEach((cb) => cb(state));
@@ -84,6 +86,7 @@ export class LocalGameService implements IGameService {
   }
 
   private simulateLatency(): Promise<void> {
+    if (this.simulatedLatencyMs === 0) return Promise.resolve();
     return new Promise((resolve) => setTimeout(resolve, this.simulatedLatencyMs));
   }
 }

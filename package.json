@@ -11,6 +11,7 @@
     "format:check": "prettier --check .",
     "verify:ai": "node ./scripts/verify-ai.js",
     "build:all": "pnpm -w -r run build",
+    "simulate": "vitest run --config ./vitest.config.simulation.ts",
     "check": "pnpm -w -s run format:check && pnpm -w -s run lint && pnpm test && pnpm -w -s run build:all"
   },
   "devDependencies": {

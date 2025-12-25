@@ -45,3 +45,4 @@ coverage
 # -----------------------------------------------------------------------------
 .firebase
 firebase-debug.log
+scripts/simulation_results.csv

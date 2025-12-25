@@ -231,6 +231,12 @@ export class TurnSevenLogic implements IGameLogic {
 
   // Handle a player's HIT action: draw top card and resolve basic effects
   private handleHit(state: GameState): GameState {
+    // If no cards are available in deck or discard, a HIT is impossible.
+    // Force the player to STAY instead to prevent an infinite loop.
+    if ((state.deck?.length ?? 0) === 0 && (state.discardPile?.length ?? 0) === 0) {
+      return this.handleStay(state);
+    }
+
     const newState = structuredClone(state);
     const { players } = newState;
     const currentPlayerId = newState.currentPlayerId;
@@ -559,11 +565,9 @@ export class TurnSevenLogic implements IGameLogic {
           target.pendingImmediateActionIds = [];
         }
 
-        // Playing an action card ends the actor's turn (per user request/interpretation)
-        // Unless they have more pending actions (e.g. from a Turn Three queue)
-
         if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
           this.advanceTurn(newState);
+          this.checkRoundEnd(newState);
         }
         break;
       }
@@ -735,6 +739,7 @@ export class TurnSevenLogic implements IGameLogic {
             // Turn ends for actor.
             if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
               this.advanceTurn(newState);
+              this.checkRoundEnd(newState);
             }
           } else {
             // Case 12: After successful resolution we keep the original TurnThree in the target's hand
@@ -743,6 +748,7 @@ export class TurnSevenLogic implements IGameLogic {
             // No pending actions, advance turn from Actor
             if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
               this.advanceTurn(newState);
+              this.checkRoundEnd(newState);
             }
           }
 
@@ -767,6 +773,7 @@ export class TurnSevenLogic implements IGameLogic {
         // Playing an action card ends the actor's turn
         if (!actor.pendingImmediateActionIds || actor.pendingImmediateActionIds.length === 0) {
           this.advanceTurn(newState);
+          this.checkRoundEnd(newState);
         }
         break;
       }
