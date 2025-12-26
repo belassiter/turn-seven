@@ -730,6 +730,21 @@ export class TurnSevenLogic implements IGameLogic {
         if (!interrupted) {
           // Case 14/15: If player busted, discard any set-aside actions
           if (target.hasBusted) {
+            // If target busted, they cannot perform further actions.
+            // Clear any pending actions they might have.
+            if (target.pendingImmediateActionIds && target.pendingImmediateActionIds.length > 0) {
+              const pendingIds = new Set(target.pendingImmediateActionIds);
+              if (target.reservedActions) {
+                const toDiscard = target.reservedActions.filter((c) => pendingIds.has(c.id));
+                target.reservedActions = target.reservedActions.filter(
+                  (c) => !pendingIds.has(c.id)
+                );
+                newState.discardPile = newState.discardPile || [];
+                newState.discardPile.push(...toDiscard);
+              }
+              target.pendingImmediateActionIds = [];
+            }
+
             // Discard the original TurnThree card when the target busted (Case 14)
             // Note: card is NOT in hand yet, so we just discard it directly
             if (!newState.discardPile.some((d) => d.id === card.id)) {

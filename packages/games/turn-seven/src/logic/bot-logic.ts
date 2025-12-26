@@ -15,6 +15,11 @@ export const decideMove = (bot: PlayerModel, gameState: GameState): BotMove => {
     return Math.random() < 0.5 ? { type: 'HIT' } : { type: 'STAY' };
   }
 
+  // Medium Bot: 50% chance to act like Easy (Random), 50% chance to use advanced logic
+  if (difficulty === 'medium' && Math.random() < 0.5) {
+    return Math.random() < 0.5 ? { type: 'HIT' } : { type: 'STAY' };
+  }
+
   // --- Advanced Logic for Medium/Hard/OMG/Omniscient ---
 
   let effectiveDeck: CardModel[] = [];
@@ -159,6 +164,11 @@ export const decideTarget = (
   }
 
   if (difficulty === 'easy') {
+    return validTargets[Math.floor(Math.random() * validTargets.length)];
+  }
+
+  // Medium Bot: 50% chance to act like Easy (Random Target)
+  if (difficulty === 'medium' && Math.random() < 0.5) {
     return validTargets[Math.floor(Math.random() * validTargets.length)];
   }
 

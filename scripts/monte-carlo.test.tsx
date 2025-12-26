@@ -7,7 +7,7 @@ import { decideMove, decideTarget } from '../packages/games/turn-seven/src/logic
 
 // --- Simulation Configuration ---
 const SIMULATION_RUNS = 10000;
-const MAX_TURNS_PER_GAME = 600; // Safety break to prevent infinite loops.
+const MAX_TURNS_PER_GAME = 10000; // Safety break to prevent infinite loops.
 const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
   {
     name: 'Medium (vs 2 Easy)',
@@ -57,7 +57,7 @@ const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
       { name: 'HardBot2', isBot: true, botDifficulty: 'hard' },
     ],
   },
-  
+
   {
     name: 'Omni (vs 2 Hard)',
     players: [
@@ -182,8 +182,10 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
           let roundsPlayed = 0;
 
           const roundStats: Record<string, PlayerRoundStats> = {};
+          const playerLastTotal: Record<string, number> = {};
           matchup.players.forEach((p) => {
             roundStats[p.name] = { scores: [], busts: 0, turnSevens: 0, roundsWon: 0 };
+            playerLastTotal[p.name] = 0;
           });
 
           while (state && state.gamePhase !== 'gameover' && turn < MAX_TURNS_PER_GAME) {
@@ -193,23 +195,46 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
             const currentPlayer = state.players.find((p) => p.id === state!.currentPlayerId);
 
             if (!currentPlayer || !currentPlayer.isActive) {
-              if (state.gamePhase === 'ended') {
-                await gameService.startNextRound();
-
+              if (state.gamePhase === 'ended' || state.gamePhase === 'gameover') {
                 // Capture round stats immediately after round transition
-                state = gameService.getState();
-                if (state.previousRoundScores) {
+                // Note: If gameover, the last round scores are in state.previousRoundScores
+                // because startNextRound (or endRound logic) populates it before setting gameover.
+
+                // We need to check if we already processed this round to avoid double counting
+                // But since we break or continue, and state changes, it should be fine.
+                // However, for 'gameover', we might need to be careful.
+
+                // Actually, the loop condition is `state.gamePhase !== 'gameover'`.
+                // So if it IS gameover, we won't enter the loop?
+                // No, we enter the loop, then check gamePhase.
+                // Wait, the while loop condition is checked at the START.
+                // If state becomes gameover inside the loop (e.g. after startNextRound), we need to handle it.
+
+                if (state.gamePhase === 'ended') {
+                  await gameService.startNextRound();
+                  state = gameService.getState();
+                }
+
+                // If the game ended, startNextRound might have set gamePhase to 'gameover'
+                // AND populated previousRoundScores for the final round.
+
+                if (state && state.previousRoundScores) {
                   roundsPlayed++;
                   let maxScore = -1;
                   let roundWinners: string[] = [];
 
                   // First pass: collect scores and find max
                   Object.entries(state.previousRoundScores).forEach(([playerId, result]) => {
-                    if (result.resultType !== 'bust') {
-                      if (result.score > maxScore) {
-                        maxScore = result.score;
+                    const player = state.players.find((p) => p.id === playerId);
+                    if (player && result.resultType !== 'bust') {
+                      const currentTotal = result.score;
+                      const previousTotal = playerLastTotal[player.name] || 0;
+                      const roundScore = currentTotal - previousTotal;
+
+                      if (roundScore > maxScore) {
+                        maxScore = roundScore;
                         roundWinners = [playerId];
-                      } else if (result.score === maxScore) {
+                      } else if (roundScore === maxScore) {
                         roundWinners.push(playerId);
                       }
                     }
@@ -220,12 +245,22 @@ describe(`Monte Carlo Simulation (Headless, N=${SIMULATION_RUNS})`, () => {
                     const player = state.players.find((p) => p.id === playerId);
                     if (player) {
                       const stats = roundStats[player.name];
-                      stats.scores.push(result.score);
+                      const currentTotal = result.score;
+                      const previousTotal = playerLastTotal[player.name] || 0;
+                      const roundScore = currentTotal - previousTotal;
+
+                      stats.scores.push(roundScore);
+                      playerLastTotal[player.name] = currentTotal;
+
                       if (result.resultType === 'bust') stats.busts++;
                       if (result.resultType === 'turn-seven') stats.turnSevens++;
                       if (roundWinners.includes(playerId)) stats.roundsWon++;
                     }
                   });
+                }
+
+                if (state.gamePhase === 'gameover') {
+                  break;
                 }
               } else {
                 break;
