@@ -7,7 +7,8 @@
       'hud';
     grid-template-columns: 1fr;
     grid-template-rows: 1fr auto;
-    height: 100vh;
+    height: 100vh; /* Fallback */
+    height: 100dvh; /* Dynamic Viewport Height */
     width: 100%;
     overflow: hidden;
   }
@@ -262,6 +263,7 @@
     background: white;
     border-top: 1px solid #e5e7eb;
     padding: 0; /* Zero padding */
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* Safe area padding */
     box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
     z-index: 40;
     cursor: pointer;
@@ -342,7 +344,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 80vh;
+    height: 80vh; /* Fallback */
+    height: 80dvh;
     background: white;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
@@ -350,6 +353,7 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .drawer-handle-bar {
@@ -383,7 +387,8 @@
   .turn-seven-game-setup {
     margin: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100vh; /* Fallback */
+    height: 100dvh; /* Dynamic Viewport Height */
     max-width: none;
     border-radius: 0;
     display: flex;
@@ -393,7 +398,8 @@
   /* Ledger Mobile */
   .ledger-modal .modal-content {
     width: 95%;
-    max-height: 80vh;
+    max-height: 80vh; /* Fallback */
+    max-height: 80dvh;
   }
   .ledger-table {
     font-size: 0.8rem;
