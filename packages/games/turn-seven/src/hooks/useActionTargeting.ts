@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IGameService } from '../services/gameService';
+import { IGameService } from '@turn-seven/engine';
 
 export interface TargetingState {
   cardId: string;

@@ -124,10 +124,6 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
           zIndex: 10,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <img src="/logo.png" alt="Turn Seven Logo" style={{ height: 100 }} />
-        </div>
-
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <button
             onClick={start}

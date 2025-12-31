@@ -40,6 +40,7 @@ describe('TurnSevenGame turn sequence (UI)', () => {
 
     const { getByText } = render(<TurnSevenGame />);
     // Start the game via setup
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -95,6 +96,7 @@ describe('TurnSevenGame turn sequence (UI)', () => {
     );
 
     const { getByText } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 

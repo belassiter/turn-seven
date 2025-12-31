@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useActionTargeting } from './useActionTargeting';
-import { IGameService } from '../services/gameService';
+import { IGameService } from '@turn-seven/engine';
 
 describe('useActionTargeting', () => {
   it('manages targeting state', () => {

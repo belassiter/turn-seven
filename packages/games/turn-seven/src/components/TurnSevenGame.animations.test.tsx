@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor, act } from '@testing-library/react';
+import { render, waitFor, act, fireEvent } from '@testing-library/react';
 import { TurnSevenGame } from './TurnSevenGame';
 import { LocalGameService } from '../services/gameService';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -81,7 +81,11 @@ describe('TurnSevenGame Animations', () => {
     };
     gameServiceMock.getState.mockReturnValue(initialState);
 
-    const { getByTestId, queryByTestId } = render(<TurnSevenGame />);
+    const { getByTestId, queryByTestId, getByText } = render(<TurnSevenGame />);
+
+    // Select Local Game
+    fireEvent.click(getByText('Local Game'));
+    fireEvent.click(getByText('Start Game'));
 
     // Initial render
     expect(queryByTestId('game-overlay')).toBeNull();
@@ -114,7 +118,11 @@ describe('TurnSevenGame Animations', () => {
     };
     gameServiceMock.getState.mockReturnValue(initialState);
 
-    const { getByTestId, queryByTestId } = render(<TurnSevenGame />);
+    const { getByTestId, queryByTestId, getByText } = render(<TurnSevenGame />);
+
+    // Select Local Game
+    fireEvent.click(getByText('Local Game'));
+    fireEvent.click(getByText('Start Game'));
 
     expect(queryByTestId('game-overlay')).toBeNull();
 
@@ -145,7 +153,11 @@ describe('TurnSevenGame Animations', () => {
     };
     gameServiceMock.getState.mockReturnValue(initialState);
 
-    const { getByTestId, queryByTestId } = render(<TurnSevenGame />);
+    const { getByTestId, queryByTestId, getByText } = render(<TurnSevenGame />);
+
+    // Select Local Game
+    fireEvent.click(getByText('Local Game'));
+    fireEvent.click(getByText('Start Game'));
 
     expect(queryByTestId('game-overlay')).toBeNull();
 
@@ -277,7 +289,11 @@ describe('TurnSevenGame Animations', () => {
     };
     gameServiceMock.getState.mockReturnValue(initialState);
 
-    const { getByTestId } = render(<TurnSevenGame />);
+    const { getByTestId, getByText } = render(<TurnSevenGame />);
+
+    // Select Local Game
+    fireEvent.click(getByText('Local Game'));
+    fireEvent.click(getByText('Start Game'));
 
     // Wait for initial render to settle (it might animate the deal of 6 cards if we don't handle it)
     // But TurnSevenGame handles initial load by syncing if round > 1?

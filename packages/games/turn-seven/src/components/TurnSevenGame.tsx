@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GameState, Card as CardComponent, CardModel } from '@turn-seven/engine';
+import {
+  GameState,
+  Card as CardComponent,
+  CardModel,
+  IGameService,
+  IRemoteGameService,
+  RemoteGameService,
+  Lobby,
+  LobbyState,
+} from '@turn-seven/engine';
 import { LocalGameService } from '../services/gameService';
 import { GameSetup, PlayerSetup } from './GameSetup';
+import { RemoteSetup } from './RemoteSetup';
 import { useActionTargeting } from '../hooks/useActionTargeting';
 import { useBotPlayer } from '../hooks/useBotPlayer';
 import { computeHitExpectation, getFullDeckTemplate } from '../logic/odds';
@@ -27,11 +37,31 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimation';
 
 export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
-  // console.error('Render TurnSevenGame');
-  const gameService = useMemo(
-    () => new LocalGameService({ initialState: initialGameState }),
-    [initialGameState]
-  );
+  // Mode Selection State
+  const [gameMode, setGameMode] = useState<'local' | 'remote' | null>(null);
+  const [gameService, setGameService] = useState<IGameService | null>(null);
+  const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+  const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
+  const [initialGameCode, setInitialGameCode] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gameCode = params.get('game');
+    if (gameCode) {
+      setInitialGameCode(gameCode);
+      setGameMode('remote');
+    } else {
+      setGameMode((prev) => (prev ? prev : 'local'));
+    }
+  }, []);
+
+  // Initialize Local Service if initialGameState is provided (Testing/Dev)
+  useEffect(() => {
+    if (initialGameState && !gameService) {
+      setGameMode('local');
+      setGameService(new LocalGameService({ initialState: initialGameState }));
+    }
+  }, [initialGameState, gameService]);
 
   // Real state from the engine
   const [realGameState, setRealGameState] = useState<GameState | null>(null);
@@ -57,12 +87,119 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const [showLedger, setShowLedger] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Ref to track immediate processing state to prevent rapid-fire actions
+  const isProcessingRef = useRef(false);
+
+  const isHost = useMemo(() => {
+    if (gameMode === 'local') return true;
+    if (!lobbyState || !localPlayerId) return false;
+    const player = lobbyState.players.find((p) => p.id === localPlayerId);
+    return player?.isHost ?? false;
+  }, [gameMode, lobbyState, localPlayerId]);
+
   // Queue for animations that should play AFTER a card deal
   const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
   const isDealingLargeBatch = useRef<boolean>(false);
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
+
+  // Handlers for Game Setup
+  const handleLocalStart = useCallback((players: PlayerSetup[]) => {
+    const service = new LocalGameService();
+    setGameService(service);
+    service.start(players);
+    // For local games, assume the local client is the first player (p1)
+    setLocalPlayerId('p1');
+  }, []);
+
+  const handleRemoteCreate = useCallback(async (name: string) => {
+    const service = new RemoteGameService();
+    try {
+      await service.createGame(name);
+      setGameService(service);
+      setLocalPlayerId('p1'); // Host is p1
+      service.subscribeToLobby(setLobbyState);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to create game');
+      setGameService(null);
+    }
+  }, []);
+
+  const handleRemoteJoin = useCallback(async (gameId: string, name: string) => {
+    const service = new RemoteGameService();
+    try {
+      const playerId = await service.joinGame(gameId, name);
+      setGameService(service);
+      setLocalPlayerId(playerId);
+      service.subscribeToLobby(setLobbyState);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to join game');
+      setGameService(null);
+    }
+  }, []);
+
+  const handleRemoteStart = useCallback(async () => {
+    if (gameService && lobbyState?.players) {
+      const count = lobbyState.players.length;
+      if (count < 3 || count > 18) {
+        alert('Player limit: 3-18 players. Please remove excess players and try again.');
+        return;
+      }
+      // For remote games, we just signal start. The backend handles config from the lobby state.
+      const configs = lobbyState.players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        isBot: p.isBot,
+        botDifficulty: 'medium' as const,
+      }));
+      await gameService.start(configs);
+    }
+  }, [gameService, lobbyState]);
+
+  const handleAddBot = useCallback(async () => {
+    if (gameService && 'addBot' in gameService) {
+      // Cast to IRemoteGameService or check capability
+      // Since we know we are in remote mode, gameService is RemoteGameService
+      await (gameService as IRemoteGameService).addBot(lobbyState?.gameId || '');
+    }
+  }, [gameService, lobbyState]);
+
+  const handleUpdateBotDifficulty = useCallback(
+    async (botId: string, difficulty: string) => {
+      if (gameService && 'updateBotDifficulty' in gameService) {
+        const svc = gameService as IRemoteGameService;
+        if (svc.updateBotDifficulty) {
+          await svc.updateBotDifficulty(lobbyState?.gameId || '', botId, difficulty);
+        }
+      }
+    },
+    [gameService, lobbyState]
+  );
+
+  const handleRemovePlayer = useCallback(
+    async (playerId: string) => {
+      if (!gameService) return;
+      try {
+        // Prefer service-level removePlayer (updates lobby directly) when available
+        if ('removePlayer' in gameService) {
+          const svc = gameService as IRemoteGameService;
+          if (svc.removePlayer) {
+            await svc.removePlayer(lobbyState?.gameId || '', playerId);
+          } else {
+            await gameService.sendAction({ type: 'REMOVE_PLAYER', payload: { playerId } });
+          }
+        } else {
+          await gameService.sendAction({ type: 'REMOVE_PLAYER', payload: { playerId } });
+        }
+      } catch (e) {
+        console.error('Remove player failed', e);
+      }
+    },
+    [gameService, lobbyState?.gameId]
+  );
 
   // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
@@ -141,13 +278,21 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   // Subscribe to game service
   useEffect(() => {
+    if (!gameService) return;
     const unsubscribe = gameService.subscribe((s) => {
       setRealGameState(s);
+      // If this is a local game service, allow the local UI to act as the current player
+      if (gameService instanceof LocalGameService) {
+        setLocalPlayerId(s.currentPlayerId || null);
+      }
     });
     // If gameService has state, set it immediately
     const currentState = gameService.getState();
     if (currentState) {
       setRealGameState(currentState);
+      if (gameService instanceof LocalGameService) {
+        setLocalPlayerId(currentState.currentPlayerId || null);
+      }
     }
     return () => unsubscribe();
   }, [gameService]);
@@ -564,7 +709,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const isInputLocked = isPending || isAnimating || isStateDesync;
 
   const handleHit = useCallback(async () => {
-    if (isInputLocked) return;
+    if (isInputLocked || !gameService || isProcessingRef.current) return;
     // Double check game service state
     if (!gameService.getState()) {
       console.error('Attempted to hit but game service has no state');
@@ -574,6 +719,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       return;
     }
 
+    isProcessingRef.current = true;
     setIsPending(true);
     try {
       await gameService.sendAction({ type: 'HIT' });
@@ -586,11 +732,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       }
     } finally {
       setIsPending(false);
+      isProcessingRef.current = false;
     }
   }, [gameService, isInputLocked]);
 
   const handleStay = useCallback(async () => {
-    if (isInputLocked) return;
+    if (isInputLocked || !gameService || isProcessingRef.current) return;
     if (!gameService.getState()) {
       console.error('Attempted to stay but game service has no state');
       setRealGameState(null);
@@ -598,6 +745,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       return;
     }
 
+    isProcessingRef.current = true;
     setIsPending(true);
     try {
       await gameService.sendAction({ type: 'STAY' });
@@ -609,6 +757,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       }
     } finally {
       setIsPending(false);
+      isProcessingRef.current = false;
     }
   }, [gameService, isInputLocked]);
 
@@ -617,6 +766,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     currentPlayer: realGameState?.players.find((p) => p.id === realGameState.currentPlayerId),
     isAnimating,
     isInputLocked,
+    isHost,
     targetingState,
     onStartTargeting: startTargeting,
     onHit: handleHit,
@@ -625,9 +775,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   });
 
   const handleNextRound = useCallback(async () => {
+    if (!gameService) return;
     setIsPending(true);
     try {
-      await gameService.startNextRound();
+      await gameService.sendAction({ type: 'NEXT_ROUND' });
     } finally {
       setIsPending(false);
     }
@@ -647,7 +798,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   }, [realGameState, handleNextRound]);
 
   const handleNewGame = useCallback(() => {
-    gameService.reset();
+    if (gameService) {
+      gameService.reset();
+    }
     setRealGameState(null);
     setVisualGameState(null);
     setRevealedDeckCard(null);
@@ -681,6 +834,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       if (!gameState || gameState.gamePhase !== 'playing') return;
       // Ensure we are the active player (in local multiplayer, we always are if it's our turn)
       if (!currentPlayer || currentPlayer.id !== gameState.currentPlayerId) return;
+      // Ensure local player is the current player (for remote play)
+      if (localPlayerId && currentPlayer.id !== localPlayerId) return;
+
       if (currentPlayer.isBot) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (isInputLocked) return; // Ignore hotkeys when locked
@@ -703,21 +859,90 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, currentPlayer, hasPendingActions, handleHit, handleStay, isInputLocked]);
-
-  const handleStart = async (players: PlayerSetup[]) => {
-    setIsPending(true);
-    try {
-      await gameService.start(players);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  }, [
+    gameState,
+    currentPlayer,
+    hasPendingActions,
+    handleHit,
+    handleStay,
+    isInputLocked,
+    localPlayerId,
+  ]);
 
   // --- Render Helpers ---
 
   if (!gameState) {
-    // Render without the header on setup — keep the footer visible at the bottom of the page.
+    // 1. Remote Lobby / Loading (Active Remote Game Service)
+    if (gameMode === 'remote' && gameService) {
+      if (lobbyState) {
+        return (
+          <div className="turn-seven-layout">
+            <div
+              style={{
+                gridArea: 'main',
+                gridColumn: '1 / -1',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                width: '100%',
+                paddingTop: 16,
+                paddingBottom: 16,
+                height: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                className="turn-seven-game-setup"
+                style={{
+                  padding: 0,
+                  maxWidth: 600,
+                  width: '95%',
+                  margin: '0 auto',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
+                <div style={{ padding: '16px 32px 0 32px', flexShrink: 0, textAlign: 'center' }}>
+                  <img
+                    src="/logo.png"
+                    alt="Turn Seven"
+                    style={{ height: 100, marginBottom: 12, maxWidth: '100%' }}
+                  />
+                </div>
+                <Lobby
+                  gameId={lobbyState.gameId}
+                  players={lobbyState.players}
+                  isHost={!!lobbyState.players.find((p) => p.id === localPlayerId && p.isHost)}
+                  onStartGame={handleRemoteStart}
+                  onAddBot={handleAddBot}
+                  onUpdateBotDifficulty={handleUpdateBotDifficulty}
+                  onCopyInviteLink={() =>
+                    navigator.clipboard.writeText(
+                      window.location.origin + '?game=' + lobbyState.gameId
+                    )
+                  }
+                  currentPlayerId={localPlayerId || undefined}
+                  onRemovePlayer={handleRemovePlayer}
+                />
+              </div>
+            </div>
+            <GameFooter />
+          </div>
+        );
+      }
+      // Loading state for remote
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-yellow-400"></div>
+        </div>
+      );
+    }
+
+    // 2. Unified Setup Screen (No active game service)
+    const activeTab = gameMode === 'remote' ? 'remote' : 'local';
+
     return (
       <div className="turn-seven-layout">
         <div
@@ -747,7 +972,40 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               height: '100%',
             }}
           >
-            <GameSetup onStart={handleStart} />
+            <div style={{ padding: '16px 32px 0 32px', flexShrink: 0, textAlign: 'center' }}>
+              <img
+                src="/logo.png"
+                alt="Turn Seven"
+                style={{ height: 100, marginBottom: 12, maxWidth: '100%' }}
+              />
+
+              <div className="setup-tabs" style={{ marginBottom: 0 }}>
+                <button
+                  className={`setup-tab ${activeTab === 'local' ? 'active' : ''}`}
+                  onClick={() => setGameMode('local')}
+                >
+                  Local Game
+                </button>
+                <button
+                  className={`setup-tab ${activeTab === 'remote' ? 'active' : ''}`}
+                  onClick={() => setGameMode('remote')}
+                >
+                  Online Game
+                </button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+              {activeTab === 'local' ? (
+                <GameSetup onStart={handleLocalStart} />
+              ) : (
+                <RemoteSetup
+                  onCreateGame={handleRemoteCreate}
+                  onJoinGame={handleRemoteJoin}
+                  initialGameCode={initialGameCode}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -768,7 +1026,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   // Action Handlers
   const handlePlayPendingAction = async (cardId: string, targetId: string) => {
-    if (!currentPlayer) return;
+    if (!currentPlayer || !gameService) return;
     setIsPending(true);
     try {
       await gameService.sendAction({
@@ -828,6 +1086,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       currentPlayer.reservedActions.length === 0
     )
       return null;
+
+    // Only show reserved actions if we are the current player
+    if (localPlayerId && currentPlayer.id !== localPlayerId) return null;
+
     return (
       <div className="reserved-actions" style={{ marginTop: 10 }}>
         <h4 style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#6b7280' }}>
@@ -1170,7 +1432,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   marginTop: 20,
                   borderTop: '1px solid #f3f4f6',
                   paddingTop: 20,
-                  pointerEvents: currentPlayer?.isBot ? 'none' : 'auto',
+                  pointerEvents:
+                    currentPlayer?.isBot || currentPlayer?.id !== localPlayerId ? 'none' : 'auto',
                 }}
                 key={`${currentPlayer.id}-controls`}
                 initial={{ opacity: 0 }}
@@ -1191,7 +1454,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                           !!currentPlayer.hasStayed ||
                           !currentPlayer.isActive ||
                           !!currentPlayer.hasBusted ||
-                          (gameState.deck.length === 0 && gameState.discardPile.length === 0)
+                          (gameState.deck.length === 0 && gameState.discardPile.length === 0) ||
+                          currentPlayer.id !== localPlayerId
                         }
                         title={
                           gameState.deck.length === 0 && gameState.discardPile.length === 0
@@ -1206,7 +1470,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                         className="btn btn-secondary"
                         onClick={handleStay}
                         disabled={
-                          isInputLocked || !!currentPlayer.hasStayed || !!currentPlayer.hasBusted
+                          isInputLocked ||
+                          !!currentPlayer.hasStayed ||
+                          !!currentPlayer.hasBusted ||
+                          currentPlayer.id !== localPlayerId
                         }
                       >
                         Stay

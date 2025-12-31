@@ -35,6 +35,12 @@ describe('TurnSevenGame Full Bot Game', () => {
   it('should run a 3-bot game to completion', { timeout: 120000 }, async () => {
     render(<TurnSevenGame />);
 
+    // Select Local Game
+    const localBtn = screen.getByText('Local Game');
+    act(() => {
+      localBtn.click();
+    });
+
     // Start Game
     const startBtn = screen.getByTestId('start-game-btn');
     act(() => {

@@ -66,6 +66,9 @@ describe('TurnSevenGame Gallery Integration', () => {
   it('opens and closes the card gallery modal', async () => {
     render(<TurnSevenGame />);
 
+    // Select Local Game
+    fireEvent.click(screen.getByText('Local Game'));
+
     // Start the game to see the header
     fireEvent.click(screen.getByTestId('start-game-btn'));
 

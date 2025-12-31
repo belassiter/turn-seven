@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@turn-seven/engine": ["../packages/engine/src/index.ts"],
+      "turn-seven": ["../packages/games/turn-seven/src/index.ts"]
+    }
+  },
+  "compileOnSave": true,
+  "include": ["src"]
+}

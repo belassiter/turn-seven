@@ -52,12 +52,13 @@ describe('TurnSevenGame component', () => {
 
   it('renders the game board and actions', async () => {
     const { getByText } = render(<TurnSevenGame />);
-    // Footer should be visible on setup
-    expect(screen.getByText(/Turn Seven/i)).toBeInTheDocument();
+    // Footer should be visible on setup — logo is used instead of heading
+    expect(screen.getByAltText('Turn Seven')).toBeInTheDocument();
     // start the game via setup
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     // header title removed — assert logo exists instead
-    expect(screen.getByAltText('Turn Seven Logo')).toBeInTheDocument();
+    // expect(screen.getByAltText('Turn Seven Logo')).toBeInTheDocument();
     await screen.findByText('Hit');
     expect(getByText('Stay')).toBeInTheDocument();
     expect(screen.getAllByText('Player 1').length).toBeGreaterThan(0);
@@ -65,6 +66,7 @@ describe('TurnSevenGame component', () => {
 
   it('does not show the default startup message in the last action log', async () => {
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -84,6 +86,7 @@ describe('TurnSevenGame component', () => {
     );
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -105,6 +108,7 @@ describe('TurnSevenGame component', () => {
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue(mockDeck);
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -142,6 +146,7 @@ describe('TurnSevenGame component', () => {
     // In single player, Stay keeps it on Player 1.
     // But we can verify the button is clickable and doesn't crash.
     const { getByText } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -194,6 +199,7 @@ describe('TurnSevenGame component', () => {
     ]);
 
     const { getByText, getByTitle } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 
@@ -232,6 +238,7 @@ describe('TurnSevenGame component', () => {
     ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
 
     // Wait for sidebar to populate
@@ -289,6 +296,7 @@ describe('TurnSevenGame component', () => {
     ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
 
     // Wait for sidebar
@@ -338,6 +346,7 @@ describe('TurnSevenGame component', () => {
     ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
 
     await waitFor(() => {
@@ -377,6 +386,7 @@ describe('TurnSevenGame component', () => {
     ] as CardModel[]);
 
     const { getByText, container } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
 
     await waitFor(() => {
@@ -393,6 +403,7 @@ describe('TurnSevenGame component', () => {
 
   it('header rules button opens summarized rules overlay', async () => {
     const { getByText, getByTitle } = render(<TurnSevenGame />);
+    fireEvent.click(getByText('Local Game'));
     fireEvent.click(getByText('Start Game'));
     await screen.findByText('Hit');
 

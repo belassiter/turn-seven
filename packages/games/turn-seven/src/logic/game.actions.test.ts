@@ -218,7 +218,8 @@ describe('Action card behavior', () => {
     const p3 = after.players.find((p) => p.id === 'p3')!;
 
     expect(p2.hasLifeSaver).toBe(true); // Still has it
-    expect(p3.hasLifeSaver).toBe(true); // Received the passed one
+    expect(p3.hasLifeSaver).toBe(false); // Should NOT receive it (no auto-pass)
+    expect(after.discardPile).toHaveLength(1); // Card is wasted
   });
 
   it('Life Saver is discarded if no eligible player exists', () => {

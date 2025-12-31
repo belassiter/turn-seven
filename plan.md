@@ -38,6 +38,7 @@ The project will be built as a generic card game engine with "Turn Seven" as the
   - **Strict TDD for the Core Engine:** For the `packages/engine`, we will strictly adhere to TDD (Test-Driven Development). This means writing failing tests before any implementation. This ensures the engine is robust and has a clean, stable API.
   - **TDD for Bug Fixes:** When fixing bugs in any package (engine or games), we must ALWAYS create a failing test case that reproduces the bug before writing the fix. This ensures the bug is confirmed and prevents regression.
   - **Conventional Testing for Game Logic & UI:** For the `packages/games/turn-seven`, we will write unit and integration tests for game logic and components, but not strictly follow TDD for new features. This allows for more flexibility and faster iteration on the user-facing parts of the application.
+  - **Emulation Tests:** To run the full integration tests against the Firebase Emulator, use the command `pnpm run emulator:run-tests`.
 - **State Management:** A decoupled state model ("UI State" vs "Server State") will be managed by a generic `useGameState` hook.
 - **Backend & Hosting:** All backend and hosting will be managed by Firebase.
   - **Hosting:** Firebase Hosting.
@@ -81,6 +82,36 @@ The work will be divided between building the engine and implementing the game.
     - [ ] **Engine:** Create the `useGameState` hook to subscribe to Firestore.
     - [ ] **Turn Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.
 
+    ### Architecture Decisions (Remote Play)
+
+    1.  **Service Abstraction:** We will introduce an `IGameService` interface.
+        - `LocalGameService`: Existing implementation for local play/dev.
+        - `RemoteGameService`: New implementation that syncs with Firestore and calls Cloud Functions.
+    2.  **Host-Driven Bots:** To simplify bot logic and reuse existing hooks, the "Host" player's client will be responsible for triggering bot actions in Remote Play. This avoids complex server-side bot logic.
+    3.  **Reusable Lobby:** The Lobby UI will be built as a generic component in the `engine` package, as it is a common requirement for all card games.
+    4.  **Animation Safety:** The existing `visualGameState` vs `realGameState` loop in `TurnSevenGame` is robust enough to handle state jumps from server updates, as it reconciles differences one step at a time.
+    5.  **Data Privacy (Honor System):** For V1, we will send the full game state to all clients. We acknowledge the risk of cheating (inspecting network traffic) but accept it for the MVP.
+
+    ### Detailed Requirements
+
+    1. On game setup screen, create a tab selector at the top. First option is Local, which is the existing UI. Other option is Remote, which will be new.
+    2. Remote will show an option for "Create Game". This will go to the Lobby screen
+    3. The game creator will have special permissions, vs people who join
+    4. The Lobby will show a game code, which will be part of a URL other players can use to join. There is a button to copy the URL
+    5. The creator, in the lobby, can specify a certain number of player slots by pressing a + button. 3 is default.
+    6. The creator can assign a player slot to be a bot, with the bot difficulty dropdown appearing
+    7. Remote will show an option for "Join Game". This will require the user to input a code. Alternatively, the user could paste a URL to go directly to the lobby
+    8. When a player joins the lobby, they are required to enter a name. They are then assigned to a slot.
+    9. The creator sees a "-" next to each slot, to remove that slot
+    10. Once all slots are filled, the creator sees a "Start Game" button.
+    11. When the game is started, it proceeds are usual
+    12. Local play should in no way be impacted by remote play.
+
+    ### Future / Backlog
+
+    - **Cheating Prevention:** Implement server-side state sanitization so clients only receive data they are allowed to see (e.g., hiding opponent hands and deck order).
+    - **Host Management:** Allow the host to kick players, drop stalled players, or convert them to bots. Implement auto-host reassignment if the host disconnects.
+
     ### Development Workflow Note
 
     For local development, this project is configured to use the **Firebase Local Emulator Suite**. This is the standard best practice and provides several key advantages over connecting to the live Firebase project:
@@ -114,7 +145,7 @@ The work will be divided between building the engine and implementing the game.
     - [x] UI that works for Mobile, vertical
     - [ ] UI that works for Mobile, horizontal
 9.  **Deploy**
-    - [ ] TBD
+    - [x] Firebase
 
 ## Bot Implementation Details
 

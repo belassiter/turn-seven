@@ -35,6 +35,9 @@ describe('Large game UI (18 players) — integration', () => {
 
     const { container, getByText } = render(<TurnSevenGame />);
 
+    // Select Local Game
+    fireEvent.click(getByText('Local Game'));
+
     // adjust setup: set player count slider to 18
     const slider = container.querySelector('input[type="range"]') as HTMLInputElement;
     expect(slider).toBeTruthy();

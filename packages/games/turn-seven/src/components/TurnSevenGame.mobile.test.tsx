@@ -35,6 +35,12 @@ describe('TurnSevenGame Mobile', () => {
   it('should render mobile-specific elements and run a game', { timeout: 120000 }, async () => {
     const { container } = render(<TurnSevenGame />);
 
+    // Select Local Game
+    const localBtn = screen.getByText('Local Game');
+    act(() => {
+      localBtn.click();
+    });
+
     // Start Game
     const startBtn = screen.getByTestId('start-game-btn');
     act(() => {

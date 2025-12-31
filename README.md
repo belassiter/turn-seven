@@ -25,6 +25,42 @@ pnpm test -- --watch
 pnpm test -- --reporter verbose
 ```
 
+**Local emulation (one-command workflow)**
+
+Use the workspace helper to produce a production build of the game package and start the Firebase emulators that the app expects locally.
+
+- One-off build and start emulators (from repo root):
+
+```powershell
+pnpm emulate
+```
+
+- Continuous rebuild (requires `build:watch` in the game package):
+
+```powershell
+pnpm emulate:watch
+```
+
+Notes:
+
+- The hosting emulator serves the production build at `packages/games/turn-seven/dist` (http://127.0.0.1:5000). The Vite dev server with HMR runs at `http://localhost:5173` and is recommended for active development.
+- If the hosting emulator shows an older UI, run the `pnpm emulate` command (or `pnpm --filter ./packages/games/turn-seven run build`) to refresh `dist`, then refresh the browser. Use `pnpm emulate:watch` or a file-watcher to keep `dist` updated automatically.
+- The Firebase Functions emulator requires a built functions bundle in `functions/lib`. Run the functions build when asked:
+
+```powershell
+cd functions
+pnpm install
+pnpm run build
+```
+
+- The Firebase CLI and emulators require Java JDK 21+ installed on the host. If you see an error about Java version, install a JDK 21+ (Adoptium/Temurin recommended) and ensure your `PATH` or `JAVA_HOME` points to that JDK's `bin`.
+
+**Troubleshooting**
+
+- If the Functions emulator reports `lib/index.js does not exist`, build the functions (see above) and the emulator will reload the function definitions.
+- If your browser is showing stale files, do a hard refresh (Ctrl+F5) or restart the emulators (`firebase emulators:stop` then `firebase emulators:start`).
+- To test against production, `pnpm build` and `firebase deploy` remain the exact deploy steps used for releases.
+
 ## AI-agent / automation verification
 
 If an automated agent (for example Copilot or other automation) is making changes directly in the repository, it MUST verify its work _before_ declaring a task completed.

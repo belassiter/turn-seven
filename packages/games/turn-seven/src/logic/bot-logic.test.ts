@@ -39,9 +39,9 @@ describe('decideMove', () => {
     expect(['HIT', 'STAY']).toContain(move.type);
   });
 
-  it('should return HIT for medium bot if score is expected to increase', () => {
+  it('should return HIT for hard bot if score is expected to increase', () => {
     // Hand of 10, deck has only a 2. Bust is impossible. Expected score is 12.
-    const player = createPlayer('p1', 'medium', [{ id: 'c1', rank: '10', suit: 'number' }]);
+    const player = createPlayer('p1', 'hard', [{ id: 'c1', rank: '10', suit: 'number' }]);
     const deck = [{ id: 'c2', rank: '2', suit: 'number' }];
     const gameState = createGameState([player], deck);
     const move = decideMove(player, gameState);
@@ -120,5 +120,22 @@ describe('decideTarget', () => {
     });
 
     expect(target).toBe('p2'); // p2 is the underdog
+  });
+
+  it('should avoid targeting players who already have a Life Saver', () => {
+    const bot = createPlayer('p1', 100);
+    const p2_underdog_with_ls = createPlayer('p2', 10);
+    p2_underdog_with_ls.hasLifeSaver = true;
+    const p3_middle = createPlayer('p3', 50);
+    p3_middle.hasLifeSaver = false;
+
+    const gameState = createGameState([bot, p2_underdog_with_ls, p3_middle]);
+    const validTargets = ['p2', 'p3'];
+    const sourceCard: CardModel = { id: 'ls', rank: 'LifeSaver', suit: 'action', isFaceUp: true };
+
+    const targetId = decideTarget(bot, gameState, { validTargets, sourceCard });
+
+    // Should target p3 (middle) because p2 (underdog) already has one
+    expect(targetId).toBe('p3');
   });
 });

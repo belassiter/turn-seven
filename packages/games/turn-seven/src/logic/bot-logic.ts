@@ -219,7 +219,14 @@ export const decideTarget = (
 
   if (actionType === 'LifeSaver') {
     // Help underdog (lowest total score)
-    const targets = gameState.players.filter((p) => validTargets.includes(p.id));
+    let targets = gameState.players.filter((p) => validTargets.includes(p.id));
+
+    // Filter out players who already have a Life Saver, unless everyone has one
+    const targetsWithoutLS = targets.filter((p) => !p.hasLifeSaver);
+    if (targetsWithoutLS.length > 0) {
+      targets = targetsWithoutLS;
+    }
+
     targets.sort((a, b) => {
       const scoreA = getTargetScore(a, difficulty);
       const scoreB = getTargetScore(b, difficulty);

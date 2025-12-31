@@ -7,6 +7,7 @@ interface UseBotPlayerProps {
   currentPlayer: PlayerModel | undefined;
   isAnimating: boolean;
   isInputLocked: boolean;
+  isHost: boolean;
   targetingState: {
     cardId: string;
     actorId: string;
@@ -22,6 +23,7 @@ export const useBotPlayer = ({
   currentPlayer,
   isAnimating,
   isInputLocked,
+  isHost,
   targetingState,
   onStartTargeting,
   onHit,
@@ -64,6 +66,7 @@ export const useBotPlayer = ({
 
     // If we are animating or invalid state, clear everything
     if (
+      !isHost || // Only the host runs bot logic
       !gameState ||
       !currentPlayer ||
       !currentPlayer.isBot ||
@@ -167,7 +170,15 @@ export const useBotPlayer = ({
     return () => {
       // Cleanup only on unmount
     };
-  }, [gameState, currentPlayer, isAnimating, isInputLocked, targetingState, onStartTargeting]);
+  }, [
+    gameState,
+    currentPlayer,
+    isAnimating,
+    isInputLocked,
+    targetingState,
+    onStartTargeting,
+    isHost,
+  ]);
 
   // Unmount cleanup
   useEffect(() => {
