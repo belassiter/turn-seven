@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, CardModel } from './Card';
+import { Card } from './Card';
+import { CardModel } from '../types';
 
 export interface PlayerHandProps {
   cards: CardModel[];

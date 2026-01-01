@@ -1,4 +1,4 @@
-import type { CardModel } from '../components/Card';
+import type { CardModel } from '../types';
 
 // Compute the round score for a hand. This mirrors the scoring logic used in the
 // TurnSeven game rules so that UI and helpers can share a single implementation.

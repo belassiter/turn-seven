@@ -1,5 +1,5 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { TurnSevenLogic, GameState } from '@turn-seven/engine';
 
 admin.initializeApp();
@@ -8,14 +8,12 @@ const db = admin.firestore();
 // Ignore undefined properties when writing to Firestore (helps avoid runtime errors)
 db.settings({ ignoreUndefinedProperties: true });
 
-export const performAction = functions.https.onCall(async (data, context) => {
+export const performAction = onCall({ cors: true, invoker: 'public' }, async (request) => {
+  const { data, auth } = request;
   const { gameId, action } = data;
 
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'The function must be called while authenticated.'
-    );
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
   }
 
   const gameRef = db.collection('games').doc(gameId);
@@ -23,7 +21,7 @@ export const performAction = functions.https.onCall(async (data, context) => {
   return db.runTransaction(async (transaction) => {
     const gameDoc = await transaction.get(gameRef);
     if (!gameDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Game not found');
+      throw new HttpsError('not-found', 'Game not found');
     }
 
     const gameData = gameDoc.data();
@@ -37,11 +35,11 @@ export const performAction = functions.https.onCall(async (data, context) => {
         // payload should be player configs
         const playerConfigs = action.payload;
         if (!Array.isArray(playerConfigs)) {
-          throw new functions.https.HttpsError('invalid-argument', 'Invalid player config');
+          throw new HttpsError('invalid-argument', 'Invalid player config');
         }
         gameState = logic.createInitialStateFromConfig(playerConfigs);
       } else {
-        throw new functions.https.HttpsError('failed-precondition', 'Game not started');
+        throw new HttpsError('failed-precondition', 'Game not started');
       }
     } else {
       // TODO: Validate player turn matches context.auth.uid (if we map uid to playerId)

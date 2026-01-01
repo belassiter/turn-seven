@@ -23,7 +23,13 @@ export interface IGameService {
 export interface LobbyState {
   gameId: string;
   hostName: string;
-  players: { id: string; name: string; isHost: boolean; isBot?: boolean }[];
+  players: {
+    id: string;
+    name: string;
+    isHost: boolean;
+    isBot?: boolean;
+    botDifficulty?: 'easy' | 'medium' | 'hard' | 'omg' | 'omniscient';
+  }[];
   status: 'lobby' | 'playing' | 'finished';
 }
 

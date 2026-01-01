@@ -1,11 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
-
-export interface CardModel {
-  id: string; // A unique ID for this card instance
-  suit: string; // e.g., 'hearts', 'spades'
-  rank: string; // e.g., 'A', '7', 'K'
-  isFaceUp?: boolean;
-}
+import { CardModel } from '../types';
 
 export interface CardProps {
   card: CardModel;

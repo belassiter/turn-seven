@@ -1,4 +1,5 @@
 export * from './components/Card';
+export * from './types';
 export * from './components/PlayerHand';
 export * from './components/GameBoard';
 export * from './components/Lobby';

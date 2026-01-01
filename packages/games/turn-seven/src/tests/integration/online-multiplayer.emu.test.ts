@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RemoteGameService, GameState, LobbyState } from '@turn-seven/engine';
+import { RemoteGameService, LobbyState } from '@turn-seven/engine';
 
 // Integration test for multiplayer interaction (Host + Human Joiner)
 // This ensures that a joined player can actually perform actions when it's their turn.
@@ -44,7 +44,9 @@ maybeDescribe('emulator: online multiplayer', () => {
     await hostSvc.start(configs);
 
     // 4. Subscribe to game state for both
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let hostState: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let joinerState: any = null;
 
     const unsubHost = hostSvc.subscribe((s) => {

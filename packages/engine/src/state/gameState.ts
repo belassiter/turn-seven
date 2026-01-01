@@ -1,5 +1,4 @@
-import { CardModel } from '../components/Card';
-import { PlayerModel } from '../components/GameBoard';
+import { CardModel, PlayerModel } from '../types';
 
 export interface LedgerEntry {
   roundNumber: number;

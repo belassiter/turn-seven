@@ -9,18 +9,18 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "18"
+    "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^11.8.0",
-    "firebase-functions": "^4.3.1"
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.2"
   },
   "devDependencies": {
-    "esbuild": "^0.19.5",
-    "typescript": "^5.2.2",
     "@turn-seven/engine": "workspace:*",
-    "turn-seven": "workspace:*"
+    "esbuild": "^0.19.5",
+    "turn-seven": "workspace:*",
+    "typescript": "^5.2.2"
   },
   "private": true
 }

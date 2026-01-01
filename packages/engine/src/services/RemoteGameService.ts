@@ -12,7 +12,7 @@ import { signInAnonymously } from 'firebase/auth';
 import { db, auth, functions } from '../firebase'; // Assuming this exports the initialized firestore instance
 import { IRemoteGameService, LobbyState } from './IGameService';
 import { GameState } from '../state/gameState';
-import { PlayerModel } from '../components/GameBoard';
+import { PlayerModel } from '../types';
 
 export class RemoteGameService implements IRemoteGameService {
   private gameId: string | null = null;

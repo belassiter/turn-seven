@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { Card, CardModel } from './Card';
+import { Card } from './Card';
+import { CardModel } from '../types';
 
 describe('Card component', () => {
   const card: CardModel = { id: '1', suit: 'hearts', rank: 'A' };

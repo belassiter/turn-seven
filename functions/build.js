@@ -33,9 +33,9 @@ esbuild
     entryPoints: ['src/index.ts'],
     bundle: true,
     platform: 'node',
-    target: 'node18',
+    target: 'node22',
     outfile: 'lib/index.js',
-    external: ['firebase-admin', 'firebase-functions', 'react', 'react-dom', 'framer-motion'],
+    external: ['firebase-admin', 'firebase-functions'],
     logLevel: 'info',
     define: {
       'import.meta.env.MODE': '"production"',

@@ -46,6 +46,14 @@ The project will be built as a generic card game engine with "Turn Seven" as the
   - **Database:** Firestore will hold the game state.
   - **Generic Backend Logic:** A single Firebase Cloud Function will serve as a generic `performAction` endpoint. It will dynamically load and apply the correct game logic module based on the game type.
 
+## Recent Fixes & Improvements (Deployment & Runtime)
+
+- **Deployment Script:** Created `scripts/deploy.js` to handle deployment in a monorepo structure where `workspace:*` protocols are not supported by Google Cloud Build. This script temporarily replaces workspace dependencies with file paths or removes them during deployment.
+- **Runtime Environment:** Upgraded Firebase Functions to Node.js 22 (2nd Gen) to resolve deprecation warnings and improve performance.
+- **CORS & Connectivity:** Configured Cloud Functions with `{ cors: true, invoker: 'public' }` to allow cross-origin requests from the web app.
+- **Circular Dependencies:** Refactored the `engine` package to extract shared interfaces (`CardModel`, `PlayerModel`) into a dedicated `types.ts` file. This resolves circular dependency issues that were causing the Cloud Function to crash silently (manifesting as CORS/Unauthenticated errors) when loading the game logic.
+- **IAM Permissions Reset:** Deleted and redeployed the `performAction` function to force a reset of the Cloud Run IAM policies. This ensures the `invoker: 'public'` setting is correctly applied, resolving the "Unauthenticated" 403 error on preflight requests.
+
 ## Turn Seven Specifics (`games/turn-seven` package)
 
 - **Game Logic:** A pure TypeScript module (`TurnSevenLogic.ts`) will define the deck, rules, scoring, and win/loss conditions for Turn Seven. This module will be executed by the generic backend function.
@@ -125,6 +133,14 @@ The work will be divided between building the engine and implementing the game.
     1.  In one terminal, run `pnpm firebase emulators:start`.
     2.  In a second terminal, run `pnpm dev`.
     3.  The app will automatically connect to the local emulators. The Emulator UI is available at `http://localhost:4000`.
+
+    ### Deployment
+
+    To deploy the application to Firebase, use the custom deployment script. This script handles the temporary removal of workspace dependencies which are not supported by Cloud Build.
+
+    ```bash
+    node scripts/deploy.js
+    ```
 
 5.  **Polish & Animations:**
     - [x] **Engine:** Refine the card turn animation and add other generic animations (e.g., card dealing).

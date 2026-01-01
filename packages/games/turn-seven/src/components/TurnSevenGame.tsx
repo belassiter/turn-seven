@@ -153,7 +153,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         id: p.id,
         name: p.name,
         isBot: p.isBot,
-        botDifficulty: 'medium' as const,
+        botDifficulty: p.botDifficulty || 'medium',
       }));
       await gameService.start(configs);
     }
