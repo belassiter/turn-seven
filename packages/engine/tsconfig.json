@@ -5,7 +5,7 @@
     "rootDir": "src",
     "declaration": true,
     "declarationMap": false,
-    "types": ["@testing-library/jest-dom"]
+    "types": ["@testing-library/jest-dom", "vite/client"]
   },
   "include": ["src"],
   "references": []

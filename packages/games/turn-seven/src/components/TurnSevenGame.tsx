@@ -18,7 +18,6 @@ import { computeHitExpectation, getFullDeckTemplate } from '../logic/odds';
 import { computeHandScore } from '@turn-seven/engine';
 import { getPlayerColor, getDifficultyColor } from '../utils/colors';
 
-// @ts-expect-error - import.meta.env is provided by Vite
 const ANIMATION_DELAY = import.meta.env.MODE === 'test' ? 50 : 1000;
 
 type OddsMode = 'off' | 'green' | 'blue' | 'purple';

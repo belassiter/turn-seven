@@ -9,7 +9,6 @@ interface GameOverlayAnimationProps {
 }
 
 export const GameOverlayAnimation: React.FC<GameOverlayAnimationProps> = ({ type, onComplete }) => {
-  // @ts-expect-error - import.meta.env is provided by Vite
   const DURATION = import.meta.env.MODE === 'test' ? 100 : 2500;
 
   useEffect(() => {

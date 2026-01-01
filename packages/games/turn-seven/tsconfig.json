@@ -7,7 +7,7 @@
       "@turn-seven/engine": ["../../engine/src/index.ts"]
     },
     "composite": true,
-    "types": ["@testing-library/jest-dom"],
+    "types": ["@testing-library/jest-dom", "vite/client"],
     "moduleResolution": "node",
     "allowImportingTsExtensions": true
   },

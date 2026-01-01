@@ -42433,21 +42433,31 @@ registerVersion(name5, version5, "app");
 // ../packages/engine/src/firebase.ts
 var import_meta = {};
 var firebaseConfig = {
-  apiKey: "AIzaSyAV2WcIZI9GjOav84lU9I_cC55ezOPh9Mw",
-  authDomain: "turn-seven.firebaseapp.com",
-  projectId: "turn-seven",
-  storageBucket: "turn-seven.firebasestorage.app",
-  messagingSenderId: "1064842151762",
-  appId: "1:1064842151762:web:7ac732c7d5aad1d229dc8b",
-  measurementId: "G-PR15Y134LF"
+  apiKey: define_import_meta_env_default.VITE_FIREBASE_API_KEY,
+  authDomain: define_import_meta_env_default.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: define_import_meta_env_default.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: define_import_meta_env_default.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: define_import_meta_env_default.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: define_import_meta_env_default.VITE_FIREBASE_APP_ID,
+  measurementId: define_import_meta_env_default.VITE_FIREBASE_MEASUREMENT_ID
 };
-var app = initializeApp(firebaseConfig);
-var db = getFirestore(app);
-var auth = getAuth(app);
-var functions = getFunctions(app);
+var app;
+var db;
+var auth;
+var functions;
+if (firebaseConfig.apiKey) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+  functions = getFunctions(app);
+} else {
+  db = {};
+  auth = {};
+  functions = {};
+}
 var isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 var isDev = typeof import_meta !== "undefined" && define_import_meta_env_default && define_import_meta_env_default.DEV;
-if (isLocalhost || isDev) {
+if ((isLocalhost || isDev) && app) {
   try {
     console.log("Connecting to Firebase Emulators (runtime detected).");
     connectFirestoreEmulator(db, "localhost", 8080);
