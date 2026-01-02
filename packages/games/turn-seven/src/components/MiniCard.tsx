@@ -4,9 +4,15 @@ import { motion } from 'framer-motion';
 
 interface MiniCardProps {
   card: CardModel;
+  onLayoutAnimationStart?: () => void;
+  disableLayoutId?: boolean;
 }
 
-export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
+export const MiniCard: React.FC<MiniCardProps> = ({
+  card,
+  onLayoutAnimationStart,
+  disableLayoutId,
+}) => {
   const { rank, suit } = card;
   const isNumber = suit === 'number';
   const isAction = suit === 'action';
@@ -45,8 +51,9 @@ export const MiniCard: React.FC<MiniCardProps> = ({ card }) => {
     <motion.div
       className={classes}
       title={`${rank} (${suit})`}
-      layoutId={card.id}
+      layoutId={disableLayoutId ? undefined : card.id}
       layout
+      onLayoutAnimationStart={onLayoutAnimationStart}
       initial={false}
       data-testid="mini-card"
     >

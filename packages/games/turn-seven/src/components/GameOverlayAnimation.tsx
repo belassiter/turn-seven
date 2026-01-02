@@ -79,7 +79,6 @@ export const GameOverlayAnimation: React.FC<GameOverlayAnimationProps> = ({ type
         justifyContent: 'center',
         zIndex: 9999,
         pointerEvents: 'none',
-        fontSize: 'clamp(2rem, 10vw, 4rem)',
         fontWeight: 900,
         textShadow:
           '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 4px 8px rgba(0,0,0,0.2)',

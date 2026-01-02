@@ -99,6 +99,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   // Queue for animations that should play AFTER a card deal
   const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
   const isDealingLargeBatch = useRef<boolean>(false);
+  const lastAnimatedLog = useRef<string>('');
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
@@ -492,47 +493,33 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             return;
           }
 
-          // Check for Turn 3 Animation (if receiving 3+ cards at once)
+          // Check for Turn 3 Animation (if receiving 3+ cards at once OR if log indicates Turn 3)
           // We only trigger this once, before the first card of the batch is dealt
           const cardsNeeded = rp.hand.length - vp.hand.length;
 
           // Track if we are in a large deal sequence (e.g. initial deal of 7 cards)
-          if (cardsNeeded > 3) {
+          // We use 4 as threshold because a Turn 3 action can result in 4 cards (3 drawn + 1 returned)
+          // and we still want to show the Turn 3 overlay in that case.
+          if (cardsNeeded > 4) {
             isDealingLargeBatch.current = true;
           }
           if (cardsNeeded === 0) {
             isDealingLargeBatch.current = false;
           }
 
-          if (cardsNeeded >= 3) {
-            // We use a ref or just check if we haven't animated yet?
-            // Actually, we can just trigger the animation and return.
-            // But we need to know we've done it.
-            // Since we return, the next loop will come back here.
-            // We need a way to avoid infinite loop of animations.
-            // However, the overlayAnimation state is separate.
-            // We can check if overlayAnimation is active? No, it clears.
-            // We can check if we just did it?
-            // Or we can rely on the fact that we deal one card at a time.
-            // If we trigger animation, we must NOT deal a card yet.
-            // But then we'll be in the same state next time.
-            // Solution: We can't store "animated" in visual state easily without polluting it.
-            // Alternative: Trigger animation AND deal the first card in one go?
-            // Or, just let the animation play, and inside the onComplete, we proceed?
-            // But this is a useEffect loop.
+          const currentLog = realGameState.previousTurnLog || '';
+          const isTurnThreeLog = currentLog.includes('played Turn Three');
+          const isNewLog = currentLog !== lastAnimatedLog.current;
 
-            // Better approach:
-            // If we detect Turn 3 condition, we play the animation using a Promise that blocks this function.
-            // We don't return. We just await the animation.
-            // But we only want to do it for the FIRST card of the 3.
-            // How do we know it's the first?
-            // We can check if the PREVIOUS hand length was exactly 3 less?
-            // Or just check if cardsNeeded === 3 (assuming exactly 3 for Turn 3).
-            // If cardsNeeded is 2, we've already dealt one.
-            if (cardsNeeded === 3 && !isDealingLargeBatch.current) {
-              await playOverlayAnimation('turn3');
-              // Now proceed to deal the card
+          if (
+            (cardsNeeded >= 3 || (isTurnThreeLog && isNewLog && cardsNeeded > 0)) &&
+            !isDealingLargeBatch.current
+          ) {
+            if (isTurnThreeLog) {
+              lastAnimatedLog.current = currentLog;
             }
+            await playOverlayAnimation('turn3');
+            // Now proceed to deal the card
           }
 
           // Check if card exists in any other hand in visual state (Action Card Transfer)
@@ -540,11 +527,14 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
             p.hand.some((c) => c.id === newCard.id)
           );
 
-          if (existingCardOwner) {
+          // Check if card is in discard pile (Returning Action Card)
+          const inDiscard = visualGameState.discardPile.find((c) => c.id === newCard.id);
+
+          if (existingCardOwner || inDiscard) {
             // Move directly (no deck animation)
-            // We need to remove from old owner and add to new owner in one step
+            // We need to remove from old owner/discard and add to new owner in one step
             const nextPlayers = visualGameState.players.map((p, idx) => {
-              if (p.id === existingCardOwner.id) {
+              if (existingCardOwner && p.id === existingCardOwner.id) {
                 return { ...p, hand: p.hand.filter((c) => c.id !== newCard.id) };
               }
               if (p.id === vp.id) {
@@ -555,7 +545,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               return p;
             });
 
-            const nextState = { ...visualGameState, players: nextPlayers };
+            let nextDiscard = visualGameState.discardPile;
+            if (inDiscard) {
+              nextDiscard = nextDiscard.filter((c) => c.id !== newCard.id);
+            }
+
+            const nextState = { ...visualGameState, players: nextPlayers, discardPile: nextDiscard };
             setVisualGameState(nextState);
             await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
             setIsAnimating(false);
@@ -644,7 +639,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
               const tempHand = [...vp.hand, cardToAnimate];
               const tempPlayers = [...visualGameState.players];
-              tempPlayers[i] = { ...vp, hand: tempHand };
+              // Update hasLifeSaver to false immediately to prevent re-triggering this animation loop
+              tempPlayers[i] = { ...vp, hand: tempHand, hasLifeSaver: false };
               setVisualGameState({
                 ...visualGameState,
                 players: tempPlayers,
