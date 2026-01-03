@@ -120,11 +120,12 @@ describe('Turn Seven Life Saver Logic', () => {
     target.hand = [five, ls1];
     target.hasLifeSaver = true;
 
-    // Deck: [LifeSaver 2, 5 (Dup)] (Pop order: 5, LS2)
-    // We push LS2, 5
+    // Deck: [Safe, LifeSaver 2, 5 (Dup)] (Pop order: 5, LS2, Safe)
+    // We push Safe, LS2, 5
+    const safe = createCard('2', 'number', 'safe');
     const ls2 = createCard('LifeSaver', 'action', 'ls2');
     const dupFive = createCard('5', 'number', 'c2');
-    state.deck = [ls2, dupFive];
+    state.deck = [safe, ls2, dupFive];
 
     state = logic.performAction(state, {
       type: 'PLAY_ACTION',

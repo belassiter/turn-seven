@@ -38,7 +38,7 @@ The project will be built as a generic card game engine with "Turn Seven" as the
   - **Strict TDD for the Core Engine:** For the `packages/engine`, we will strictly adhere to TDD (Test-Driven Development). This means writing failing tests before any implementation. This ensures the engine is robust and has a clean, stable API.
   - **TDD for Bug Fixes:** When fixing bugs in any package (engine or games), we must ALWAYS create a failing test case that reproduces the bug before writing the fix. This ensures the bug is confirmed and prevents regression.
   - **Conventional Testing for Game Logic & UI:** For the `packages/games/turn-seven`, we will write unit and integration tests for game logic and components, but not strictly follow TDD for new features. This allows for more flexibility and faster iteration on the user-facing parts of the application.
-  - **Emulation Tests:** To run the full integration tests against the Firebase Emulator, use the command `pnpm run emulator:run-tests`.
+  - **Emulation Tests:** To run the full integration tests against the Firebase Emulator, use the command `pnpm -w run emulator:run-tests`.
 - **State Management:** A decoupled state model ("UI State" vs "Server State") will be managed by a generic `useGameState` hook.
 - **Backend & Hosting:** All backend and hosting will be managed by Firebase.
   - **Hosting:** Firebase Hosting.

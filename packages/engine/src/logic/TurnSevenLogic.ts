@@ -1,5 +1,5 @@
 import { CardModel, PlayerModel } from '../types';
-import { GameState, LedgerEntry } from '../state/gameState';
+import { GameState, LedgerEntry, GameEvent } from '../state/gameState';
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 18;
@@ -42,7 +42,7 @@ export class TurnSevenLogic implements IGameLogic {
     // Deal one card to each player to start, resolving Action cards immediately.
     // If a player already received a card (e.g. as a target of an earlier action),
     // that counts as their initial card and we should not deal another.
-    this.continueDealing({
+    const initialState: GameState = {
       players,
       deck,
       discardPile: [],
@@ -52,20 +52,16 @@ export class TurnSevenLogic implements IGameLogic {
       previousTurnLog: undefined,
       previousRoundScores: undefined,
       ledger,
-    });
+      lastTurnEvents: [],
+    };
+
+    this.continueDealing(initialState);
 
     return {
-      players,
-      deck,
-      discardPile: [],
+      ...initialState,
       currentPlayerId:
         players.find((p) => p.pendingImmediateActionIds?.length > 0)?.id || playerIds[0] || null,
       roundStarterId: playerIds[0] || null,
-      gamePhase: 'playing',
-      roundNumber: 1,
-      previousTurnLog: undefined,
-      previousRoundScores: undefined,
-      ledger,
     };
   }
 
@@ -92,7 +88,7 @@ export class TurnSevenLogic implements IGameLogic {
     const ledger: LedgerEntry[] = [];
 
     // Deal one card to each player and resolve action cards immediately.
-    this.continueDealing({
+    const initialState: GameState = {
       players,
       deck,
       discardPile: [],
@@ -103,20 +99,15 @@ export class TurnSevenLogic implements IGameLogic {
       previousTurnLog: undefined,
       previousRoundScores: undefined,
       ledger,
-    });
+      lastTurnEvents: [],
+    };
+
+    this.continueDealing(initialState);
 
     return {
-      players,
-      deck,
-      discardPile: [],
+      ...initialState,
       currentPlayerId:
         players.find((p) => p.pendingImmediateActionIds?.length > 0)?.id || ids[0] || null,
-      roundStarterId: ids[0] || null,
-      gamePhase: 'playing',
-      roundNumber: 1,
-      previousTurnLog: undefined,
-      previousRoundScores: undefined,
-      ledger,
     };
   }
 
@@ -216,21 +207,54 @@ export class TurnSevenLogic implements IGameLogic {
   performAction(state: GameState, action: { type: string; payload?: unknown }): GameState {
     if (state.gamePhase !== 'playing' && action.type !== 'NEXT_ROUND') return state;
 
+    // Clear previous events for this new action
+    // We modify the state object directly here because it will be cloned inside the handlers
+    // or we can clone it here?
+    // The handlers do `const newState = structuredClone(state);`
+    // So if we modify `state` here, `newState` will have empty events.
+    // However, `state` passed in is usually the "current" state which we shouldn't mutate if it's immutable.
+    // But in this codebase, `performAction` seems to be the entry point.
+    // Let's just set it on the state passed to handlers.
+    // Actually, better to let handlers start with a clean slate?
+    // No, handlers clone the state.
+    // So I should clone it here?
+    // If I clone it here, I have to update all handlers to NOT clone it, or clone it again.
+    // Let's just mutate the input state's property if it exists, or assume the caller handles immutability?
+    // Safest is to let the handlers do their thing, but we need to ensure `lastTurnEvents` is empty in the `newState`.
+
+    // Let's wrap the handler calls.
+    let newState: GameState;
+
     switch (action.type) {
       case 'HIT':
-        return this.handleHit(state);
+        newState = this.handleHit(state);
+        break;
       case 'STAY':
-        return this.handleStay(state);
+        newState = this.handleStay(state);
+        break;
       case 'PLAY_ACTION':
-        return this.handlePlayAction(
+        newState = this.handlePlayAction(
           state,
           action.payload as { actorId: string; cardId: string; targetId: string }
         );
+        break;
       case 'NEXT_ROUND':
-        return this.startNextRound(state);
+        newState = this.startNextRound(state);
+        break;
       default:
         return state;
     }
+
+    // Ensure the new state has a fresh event log if the handler didn't initialize it (it should have)
+    // But wait, the handlers clone `state`. If `state` had old events, `newState` has old events.
+    // We want `newState` to ONLY have new events.
+    // So we should clear events on the `newState` at the START of the handler?
+    // Or we can clear them here on `state` before passing?
+    // If `state` is immutable (from React state), mutating it is bad.
+    // But `structuredClone` in handlers will copy the mutation if we do it first.
+    // Let's try to modify the handlers to clear it.
+
+    return newState;
   }
 
   // Handle a player's HIT action: draw top card and resolve basic effects
@@ -242,6 +266,7 @@ export class TurnSevenLogic implements IGameLogic {
     }
 
     const newState = structuredClone(state);
+    newState.lastTurnEvents = []; // Clear events for this turn
     const { players } = newState;
     const currentPlayerId = newState.currentPlayerId;
     const currentPlayerIndex = players.findIndex((p) => p.id === currentPlayerId);
@@ -266,6 +291,12 @@ export class TurnSevenLogic implements IGameLogic {
 
     const card = this.drawOne(newState);
     if (!card) return newState;
+
+    this.recordEvent(newState, {
+      type: 'DRAW',
+      playerId: currentPlayer.id,
+      card: { ...card, isFaceUp: true },
+    });
 
     let log = `${currentPlayer.name} hit: drew ${String(card.rank).replace(
       /([a-z])([A-Z])/g,
@@ -325,6 +356,13 @@ export class TurnSevenLogic implements IGameLogic {
             currentPlayer.hand = currentPlayer.hand.filter((c) => c.id !== card.id);
             newState.discardPile.push({ ...card, isFaceUp: true });
 
+            this.recordEvent(newState, {
+              type: 'DISCARD',
+              playerId: currentPlayer.id,
+              card: { ...card, isFaceUp: true },
+              details: 'Life Saver overflow (no targets)',
+            });
+
             newState.previousTurnLog = log + ' (Discarded Life Saver - no eligible targets)';
             this.addToLedger(
               newState,
@@ -357,8 +395,18 @@ export class TurnSevenLogic implements IGameLogic {
           if (scIdx !== -1) {
             const lifeSaverCard = currentPlayer.hand.splice(scIdx, 1)[0];
             newState.discardPile.push({ ...lifeSaverCard, isFaceUp: true });
+            newState.discardPile.push({ ...card, isFaceUp: true });
+
+            this.recordEvent(newState, {
+              type: 'LIFE_SAVED',
+              playerId: currentPlayer.id,
+              cards: [
+                { ...lifeSaverCard, isFaceUp: true },
+                { ...card, isFaceUp: true },
+              ],
+              details: 'Life Saver consumed',
+            });
           }
-          newState.discardPile.push({ ...card, isFaceUp: true });
 
           log += ' Life Saved!';
           ledgerResult += '. Life Saved!';
@@ -391,6 +439,13 @@ export class TurnSevenLogic implements IGameLogic {
         } else {
           currentPlayer.hasBusted = true;
           currentPlayer.isActive = false;
+
+          this.recordEvent(newState, {
+            type: 'BUST',
+            playerId: currentPlayer.id,
+            card: { ...card, isFaceUp: true },
+          });
+
           log += ' Busted!';
           ledgerResult += '. Busted!';
           // Flip this player's cards face-down when they bust
@@ -408,6 +463,10 @@ export class TurnSevenLogic implements IGameLogic {
     const uniqueCount = new Set(numberRanks).size;
     if (uniqueCount >= 7) {
       log += ' Turn 7!';
+      this.recordEvent(newState, {
+        type: 'TURN_SEVEN',
+        playerId: currentPlayer.id,
+      });
     }
 
     newState.previousTurnLog = log;
@@ -474,6 +533,7 @@ export class TurnSevenLogic implements IGameLogic {
     payload: { actorId: string; cardId: string; targetId: string }
   ): GameState {
     const newState = structuredClone(state);
+    newState.lastTurnEvents = []; // Clear events
 
     // Security Check: Ensure actor is the current player
     if (payload.actorId !== newState.currentPlayerId) {
@@ -524,6 +584,20 @@ export class TurnSevenLogic implements IGameLogic {
     const cardName = rank.replace(/([a-z])([A-Z])/g, '$1 $2');
     let log = `${actor.name} played ${cardName} on ${target.name}.`;
     newState.previousTurnLog = log;
+
+    this.recordEvent(newState, {
+      type: 'PLAY_CARD',
+      playerId: actor.id,
+      card: { ...card, isFaceUp: true },
+      targetId: target.id,
+    });
+
+    this.recordEvent(newState, {
+      type: 'TRANSFER',
+      playerId: actor.id,
+      targetId: target.id,
+      card: { ...card, isFaceUp: true },
+    });
 
     let result = 'Played';
     if (rank === 'Lock') result = `Locked ${target.name}`;
@@ -583,9 +657,6 @@ export class TurnSevenLogic implements IGameLogic {
           drawCount = parseInt(resumeMatch[1], 10);
         }
 
-        // We do NOT put the TurnThree card in hand immediately.
-        // We wait to see if the action completes or is interrupted.
-
         // Queue for actions revealed during the draw
         const drawnCardNames: string[] = [];
         let interrupted = false;
@@ -594,6 +665,12 @@ export class TurnSevenLogic implements IGameLogic {
           const next = this.drawOne(newState);
           if (!next) break;
           drawnCardNames.push(String(next.rank).replace(/([a-z])([A-Z])/g, '$1 $2'));
+
+          this.recordEvent(newState, {
+            type: 'DRAW',
+            playerId: target.id,
+            card: { ...next, isFaceUp: true },
+          });
 
           if (!next.suit || next.suit === 'number') {
             const duplicateCount = target.hand.filter(
@@ -608,7 +685,21 @@ export class TurnSevenLogic implements IGameLogic {
                 const scIdx = target.hand.findIndex(
                   (h) => h.suit === 'action' && String(h.rank) === 'LifeSaver'
                 );
-                if (scIdx !== -1) target.hand.splice(scIdx, 1);
+                if (scIdx !== -1) {
+                  const lifeSaverCard = target.hand.splice(scIdx, 1)[0];
+                  newState.discardPile.push({ ...lifeSaverCard, isFaceUp: true });
+                  newState.discardPile.push({ ...next, isFaceUp: true });
+
+                  this.recordEvent(newState, {
+                    type: 'LIFE_SAVED',
+                    playerId: target.id,
+                    cards: [
+                      { ...lifeSaverCard, isFaceUp: true },
+                      { ...next, isFaceUp: true },
+                    ],
+                    details: 'Life Saver consumed',
+                  });
+                }
 
                 // Check if we have another Life Saver (e.g. pending)
                 const hasAnother = target.hand.some(
@@ -639,6 +730,13 @@ export class TurnSevenLogic implements IGameLogic {
               } else {
                 target.hasBusted = true;
                 target.isActive = false;
+
+                this.recordEvent(newState, {
+                  type: 'BUST',
+                  playerId: target.id,
+                  card: { ...next, isFaceUp: true },
+                });
+
                 log += ` ${target.name} Busted!`;
                 // Flip target's cards face-down when they bust during TurnThree
                 if (target.hand && target.hand.length > 0) {
@@ -662,6 +760,11 @@ export class TurnSevenLogic implements IGameLogic {
                 'Action',
                 `Turn 3 (on ${target.name}). Draws ${drawnString}`
               );
+
+              this.recordEvent(newState, {
+                type: 'TURN_SEVEN',
+                playerId: target.id,
+              });
 
               this.computeScores(newState);
               if (newState.gamePhase !== 'gameover') {
@@ -689,6 +792,13 @@ export class TurnSevenLogic implements IGameLogic {
                   shouldInterrupt = true;
                 } else {
                   newState.discardPile.push({ ...next, isFaceUp: true });
+
+                  this.recordEvent(newState, {
+                    type: 'DISCARD',
+                    playerId: target.id,
+                    card: { ...next, isFaceUp: true },
+                    details: 'Life Saver overflow (no targets)',
+                  });
                 }
               } else {
                 target.hasLifeSaver = true;
@@ -700,11 +810,7 @@ export class TurnSevenLogic implements IGameLogic {
               // Add action to hand/reserved for resolution
               target.reservedActions = target.reservedActions || [];
               target.reservedActions.push({ ...next, isFaceUp: true });
-
-              // Only add to hand if it's NOT a Life Saver overflow (which we pass on)
-              if (nextRank !== 'LifeSaver') {
-                target.hand.push({ ...next, isFaceUp: true });
-              }
+              target.hand.push({ ...next, isFaceUp: true });
 
               // Queue action for immediate resolution
               target.pendingImmediateActionIds = target.pendingImmediateActionIds || [];
@@ -851,6 +957,7 @@ export class TurnSevenLogic implements IGameLogic {
 
   private handleStay(state: GameState): GameState {
     const newState = structuredClone(state);
+    newState.lastTurnEvents = []; // Clear events
     const { players, currentPlayerId } = newState;
     const currentPlayerIndex = players.findIndex((p) => p.id === currentPlayerId);
     if (currentPlayerIndex === -1) return newState;
@@ -1010,6 +1117,8 @@ export class TurnSevenLogic implements IGameLogic {
 
   public startNextRound(state: GameState): GameState {
     const newState = structuredClone(state);
+    newState.lastTurnEvents = []; // Clear events
+    this.recordEvent(newState, { type: 'NEW_ROUND' });
 
     // Capture scores from the end of the previous round
     newState.previousRoundScores = {};
@@ -1189,6 +1298,7 @@ export class TurnSevenLogic implements IGameLogic {
       // Shuffle the discard pile into the deck and empty discard
       state.deck = this.shuffle(state.discardPile);
       state.discardPile = [];
+      this.recordEvent(state, { type: 'SHUFFLE_DISCARD' });
     }
 
     return state.deck.pop();
@@ -1321,6 +1431,12 @@ export class TurnSevenLogic implements IGameLogic {
         const cardName = String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2');
         this.addToLedger(state, player.name, 'Deal', `Dealt ${cardName}`);
 
+        this.recordEvent(state, {
+          type: 'DRAW',
+          playerId: player.id,
+          card: { ...card, isFaceUp: true },
+        });
+
         // If pending action created, STOP.
         // We check the player object directly from the state to be safe
         if (player.pendingImmediateActionIds && player.pendingImmediateActionIds.length > 0) {
@@ -1341,6 +1457,11 @@ export class TurnSevenLogic implements IGameLogic {
           'Deal',
           `Dealt ${String(card.rank).replace(/([a-z])([A-Z])/g, '$1 $2')}`
         );
+        this.recordEvent(state, {
+          type: 'DRAW',
+          playerId: player.id,
+          card: { ...card, isFaceUp: true },
+        });
       }
     }
 
@@ -1358,5 +1479,15 @@ export class TurnSevenLogic implements IGameLogic {
       [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
     }
     return newDeck;
+  }
+
+  private recordEvent(state: GameState, event: Omit<GameEvent, 'timestamp'>) {
+    if (!state.lastTurnEvents) {
+      state.lastTurnEvents = [];
+    }
+    state.lastTurnEvents.push({
+      ...event,
+      timestamp: Date.now(),
+    });
   }
 }

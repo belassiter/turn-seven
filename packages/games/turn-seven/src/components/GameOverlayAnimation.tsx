@@ -24,11 +24,29 @@ export const GameOverlayAnimation: React.FC<GameOverlayAnimationProps> = ({ type
     switch (type) {
       case 'bust':
         return (
-          <span style={{ color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>💥 BUST 💥</span>
+          <span
+            style={{
+              color: '#ef4444',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 'min(15vw, 6rem)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            💥 BUST 💥
+          </span>
         );
       case 'lifesaver':
         return (
-          <span style={{ color: '#f97316', fontFamily: 'Inter, sans-serif' }}>🛟 LIFE SAVED 🛟</span>
+          <span
+            style={{
+              color: '#f97316',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 'min(10vw, 4rem)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🛟 LIFE SAVED 🛟
+          </span>
         );
       case 'lock':
         return (

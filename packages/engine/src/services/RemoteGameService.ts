@@ -100,7 +100,18 @@ export class RemoteGameService implements IRemoteGameService {
       'GLaDOS',
       'Cortana',
     ];
-    const botName = `🤖 ${BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]}`;
+
+    // Check existing players to avoid duplicate names
+    const snap = await getDoc(gameRef);
+    const currentPlayers = snap.exists() ? (snap.data().players as PlayerModel[]) : [];
+    const usedNames = currentPlayers.map((p) => p.name);
+
+    const availableNames = BOT_NAMES.filter(
+      (name) => !usedNames.some((used) => used.includes(name))
+    );
+    const pool = availableNames.length > 0 ? availableNames : BOT_NAMES;
+
+    const botName = `🤖 ${pool[Math.floor(Math.random() * pool.length)]}`;
 
     await updateDoc(gameRef, {
       players: arrayUnion({

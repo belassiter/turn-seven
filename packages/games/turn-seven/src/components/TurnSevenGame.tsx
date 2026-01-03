@@ -8,6 +8,7 @@ import {
   RemoteGameService,
   Lobby,
   LobbyState,
+  GameEvent,
 } from '@turn-seven/engine';
 import { LocalGameService } from '../services/gameService';
 import { GameSetup, PlayerSetup } from './GameSetup';
@@ -34,6 +35,44 @@ import { LedgerModal } from './LedgerModal';
 import { RulesModal } from './RulesModal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameOverlayAnimation, OverlayAnimationType } from './GameOverlayAnimation';
+
+// Helper to reconstruct deck state before a batch of draws
+const reconstructDeck = (finalDeck: CardModel[], events: GameEvent[]): CardModel[] => {
+  const deck = [...finalDeck];
+  // Process events in reverse order
+  // Only care about DRAW events that pulled from the deck
+  const drawEvents = events.filter((e) => e.type === 'DRAW');
+  for (let i = drawEvents.length - 1; i >= 0; i--) {
+    if (drawEvents[i].card) {
+      deck.push(drawEvents[i].card!);
+    }
+  }
+  return deck;
+};
+
+// Helper to rewind state for initial load animation
+const rewindInitialState = (finalState: GameState): GameState => {
+  const state = structuredClone(finalState);
+  const events = state.lastTurnEvents || [];
+
+  // 1. Reconstruct Deck
+  state.deck = reconstructDeck(finalState.deck, events);
+
+  // 2. Remove drawn cards from hands
+  events.forEach((e) => {
+    if (e.type === 'DRAW' && e.card && e.playerId) {
+      const p = state.players.find((p) => p.id === e.playerId);
+      if (p) {
+        p.hand = p.hand.filter((c) => c.id !== e.card!.id);
+        if (p.reservedActions) {
+          p.reservedActions = p.reservedActions.filter((c) => c.id !== e.card!.id);
+        }
+      }
+    }
+  });
+
+  return state;
+};
 
 export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ initialGameState }) => {
   // Mode Selection State
@@ -86,6 +125,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const [showLedger, setShowLedger] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Event Processing State
+  const [processingEventIndex, setProcessingEventIndex] = useState<number>(-1);
+  const [targetRealState, setTargetRealState] = useState<GameState | null>(null);
+
   // Ref to track immediate processing state to prevent rapid-fire actions
   const isProcessingRef = useRef(false);
 
@@ -97,9 +140,9 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   }, [gameMode, lobbyState, localPlayerId]);
 
   // Queue for animations that should play AFTER a card deal
-  const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
-  const isDealingLargeBatch = useRef<boolean>(false);
-  const lastAnimatedLog = useRef<string>('');
+  // const pendingOverlayRef = useRef<OverlayAnimationType | null>(null);
+  // const isDealingLargeBatch = useRef<boolean>(false);
+  // const lastAnimatedLog = useRef<string>('');
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
@@ -303,393 +346,281 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
     // Initial load
     if (!visualGameState) {
-      // If it's the start of the game (Round 1), start with empty hands to animate the deal
-      // We check if players have cards in real state but we want to show them being dealt
-      if (realGameState.roundNumber === 1 && realGameState.players.some((p) => p.hand.length > 0)) {
-        // Calculate total cards in hands to restore deck count for animation
-        const totalCardsInHands = realGameState.players.reduce((sum, p) => sum + p.hand.length, 0);
-        // Create dummy cards to pad the deck length
-        const dummyCards = Array(totalCardsInHands).fill({
-          id: 'dummy',
-          suit: 'number',
-          rank: 0,
-          isFaceUp: false,
-        });
-
-        const emptyState = {
-          ...realGameState,
-          players: realGameState.players.map((p) => ({ ...p, hand: [] })),
-          deck: [...realGameState.deck, ...dummyCards],
-        };
-        setVisualGameState(emptyState);
-        return;
+      // Check if we have initial deal events to animate
+      if (
+        realGameState.roundNumber === 1 &&
+        realGameState.lastTurnEvents?.some((e) => e.type === 'DRAW')
+      ) {
+        const startState = rewindInitialState(realGameState);
+        setVisualGameState(startState);
+        setTargetRealState(realGameState);
+        setProcessingEventIndex(0);
+      } else {
+        setVisualGameState(realGameState);
       }
-      setVisualGameState(realGameState);
       return;
     }
 
     // If states are identical, do nothing
-    if (
-      JSON.stringify(realGameState) === JSON.stringify(visualGameState) &&
-      !pendingOverlayRef.current
-    )
-      return;
+    if (realGameState === visualGameState) return;
 
-    if (isAnimating) {
-      // console.log('Animation loop skipped: isAnimating=true');
+    // Check if we need to start processing events
+    if (targetRealState !== realGameState) {
+      // New state arrived
+      if (realGameState.lastTurnEvents && realGameState.lastTurnEvents.length > 0) {
+        setTargetRealState(realGameState);
+        setProcessingEventIndex(0);
+      } else {
+        // No events (e.g. Stay, or legacy). Snap to state.
+        setVisualGameState(realGameState);
+      }
+    }
+  }, [realGameState, visualGameState, targetRealState]);
+
+  // Event Processor
+  useEffect(() => {
+    if (!targetRealState || processingEventIndex === -1) return;
+
+    const events = targetRealState.lastTurnEvents || [];
+
+    if (processingEventIndex >= events.length) {
+      // Done processing events. Snap to final state to ensure consistency.
+      setVisualGameState(targetRealState);
+      setProcessingEventIndex(-1);
+      setTargetRealState(null);
+      setIsAnimating(false);
       return;
     }
 
-    const performStep = async () => {
-      // console.log('Starting animation step...');
-      setIsAnimating(true);
+    setIsAnimating(true);
+    const event = events[processingEventIndex];
+    let animationDuration = ANIMATION_DELAY;
 
-      const playOverlayAnimation = async (type: OverlayAnimationType) => {
-        await new Promise<void>((resolve) => {
-          let resolved = false;
-          const safeResolve = () => {
-            if (!resolved) {
-              resolved = true;
-              resolve();
-            }
-          };
-          setOverlayAnimation({ type, onComplete: safeResolve });
-          // Fallback timeout in case animation gets stuck (e.g. tab backgrounded)
-          setTimeout(safeResolve, 3000);
-        });
-        setOverlayAnimation(null);
-      };
+    // Side effect containers
+    let overlayToTrigger: OverlayAnimationType | null = null;
+    let cardToReveal: CardModel | null = null;
+    let drawRevealDuration = 600;
 
-      try {
-        // Check for Round Change
-        if (realGameState.roundNumber > visualGameState.roundNumber) {
-          // Reset visual hands to empty to trigger deal animation
-          const resetState = {
-            ...realGameState,
-            players: realGameState.players.map((p) => ({ ...p, hand: [] })),
-          };
-          setVisualGameState(resetState);
-          await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-          setIsAnimating(false);
-          return;
+    // Apply event to visualGameState
+    const nextState = structuredClone(visualGameState);
+    if (!nextState) return;
+
+    // Helper to find player index
+    const getPlayerIdx = (id: string) => nextState.players.findIndex((p) => p.id === id);
+
+    let updateVisualState = true;
+
+    switch (event.type) {
+      case 'DRAW': {
+        const pIdx = getPlayerIdx(event.playerId!);
+        if (pIdx !== -1) {
+          // Set revealed card for animation
+          cardToReveal = event.card!;
+          // Ensure current player is the one drawing (for camera focus)
+          if (nextState.currentPlayerId !== event.playerId) {
+            nextState.currentPlayerId = event.playerId!;
+          }
+
+          // Don't add to hand yet in visual state
+          updateVisualState = true; // Update currentPlayerId immediately
+
+          // Request 5: Add 0.5s pause after flip (reveal) before moving to hand.
+          // Original was 600ms. New is 600ms + 500ms = 1100ms.
+          drawRevealDuration = import.meta.env.MODE === 'test' ? 50 : 1100;
+          animationDuration = Math.max(
+            animationDuration,
+            drawRevealDuration + (import.meta.env.MODE === 'test' ? 20 : 900)
+          ); // Ensure total delay covers it
         }
-
-        // 0. Check for Pre-Deal Status Animations (Lock)
-        // These should happen BEFORE dealing cards, as they are usually the result of an action
-        for (let i = 0; i < visualGameState.players.length; i++) {
-          const vp = visualGameState.players[i];
-          const rp = realGameState.players[i];
-
-          // Lock
-          if (!vp.isLocked && rp.isLocked) {
-            // Switch view to the locked player if not already
-            if (visualGameState.currentPlayerId !== vp.id) {
-              const switchState = {
-                ...visualGameState,
-                currentPlayerId: vp.id,
-              };
-              setVisualGameState(switchState);
-              await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-              setIsAnimating(false);
-              return;
-            }
-
-            await playOverlayAnimation('lock');
-
-            // Update visual state to reflect lock so we don't loop
-            const nextPlayers = [...visualGameState.players];
-            nextPlayers[i] = { ...vp, isLocked: true };
-            setVisualGameState({ ...visualGameState, players: nextPlayers });
-
-            setIsAnimating(false);
-            return;
-          }
-        }
-
-        // 0.5. Check for removed cards (Discards/Transfers)
-        // This handles cases where cards are removed from hand (e.g. Turn Three self-target discard)
-        // We must process removals BEFORE additions to ensure correct hand state syncing
-        let playerToRemoveIndex = -1;
-        for (let i = 0; i < visualGameState.players.length; i++) {
-          const vp = visualGameState.players[i];
-          const rp = realGameState.players[i];
-          // Check if vp has any card that rp does not have (by ID)
-          const realIds = new Set(rp.hand.map((c) => c.id));
-          if (vp.hand.some((c) => !realIds.has(c.id))) {
-            playerToRemoveIndex = i;
-            break;
-          }
-        }
-
-        if (playerToRemoveIndex !== -1) {
-          const vp = visualGameState.players[playerToRemoveIndex];
-          const rp = realGameState.players[playerToRemoveIndex];
-          const realIds = new Set(rp.hand.map((c) => c.id));
-          const cardToRemove = vp.hand.find((c) => !realIds.has(c.id));
-
-          if (cardToRemove) {
-            // Animate removal
-            const nextPlayers = [...visualGameState.players];
-            nextPlayers[playerToRemoveIndex] = {
-              ...vp,
-              hand: vp.hand.filter((c) => c.id !== cardToRemove.id),
-            };
-
-            // Add to visual discard pile if not already there
-            const nextDiscard = [...visualGameState.discardPile];
-            if (!nextDiscard.some((c) => c.id === cardToRemove.id)) {
-              nextDiscard.push({ ...cardToRemove, isFaceUp: true });
-            }
-
-            setVisualGameState({
-              ...visualGameState,
-              players: nextPlayers,
-              discardPile: nextDiscard,
-            });
-            await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-            setIsAnimating(false);
-            return;
-          }
-        }
-
-        // 1. Check for missing cards (Deal/Hit/Turn 3)
-        let playerToUpdateIndex = -1;
-
-        // Try to find the current visual player first to prioritize active player animations
-        const currentVisualIdx = visualGameState.players.findIndex(
-          (p) => p.id === visualGameState.currentPlayerId
-        );
-        if (currentVisualIdx !== -1) {
-          const vp = visualGameState.players[currentVisualIdx];
-          const rp = realGameState.players[currentVisualIdx];
-          if (rp && rp.hand.length > vp.hand.length) {
-            playerToUpdateIndex = currentVisualIdx;
-          }
-        }
-
-        // If not current, find any player who needs a card
-        if (playerToUpdateIndex === -1) {
-          playerToUpdateIndex = visualGameState.players.findIndex((vp, idx) => {
-            const rp = realGameState.players[idx];
-            return rp && rp.hand.length > vp.hand.length;
-          });
-        }
-
-        if (playerToUpdateIndex !== -1) {
-          const vp = visualGameState.players[playerToUpdateIndex];
-          const rp = realGameState.players[playerToUpdateIndex];
-          const newCard = rp.hand[vp.hand.length]; // Next card to add
-
-          // If the player receiving the card is NOT the current visual player,
-          // switch turn to them first so we can see the deal animation
-          if (vp.id !== visualGameState.currentPlayerId) {
-            const switchState = {
-              ...visualGameState,
-              currentPlayerId: vp.id,
-            };
-            setVisualGameState(switchState);
-            await new Promise((r) => setTimeout(r, ANIMATION_DELAY)); // Wait for turn switch
-            setIsAnimating(false);
-            return;
-          }
-
-          // Check for Turn 3 Animation (if receiving 3+ cards at once OR if log indicates Turn 3)
-          // We only trigger this once, before the first card of the batch is dealt
-          const cardsNeeded = rp.hand.length - vp.hand.length;
-
-          // Track if we are in a large deal sequence (e.g. initial deal of 7 cards)
-          // We use 4 as threshold because a Turn 3 action can result in 4 cards (3 drawn + 1 returned)
-          // and we still want to show the Turn 3 overlay in that case.
-          if (cardsNeeded > 4) {
-            isDealingLargeBatch.current = true;
-          }
-          if (cardsNeeded === 0) {
-            isDealingLargeBatch.current = false;
-          }
-
-          const currentLog = realGameState.previousTurnLog || '';
-          const isTurnThreeLog = currentLog.includes('played Turn Three');
-          const isNewLog = currentLog !== lastAnimatedLog.current;
-
-          if (
-            (cardsNeeded >= 3 || (isTurnThreeLog && isNewLog && cardsNeeded > 0)) &&
-            !isDealingLargeBatch.current
-          ) {
-            if (isTurnThreeLog) {
-              lastAnimatedLog.current = currentLog;
-            }
-            await playOverlayAnimation('turn3');
-            // Now proceed to deal the card
-          }
-
-          // Check if card exists in any other hand in visual state (Action Card Transfer)
-          const existingCardOwner = visualGameState.players.find((p) =>
-            p.hand.some((c) => c.id === newCard.id)
-          );
-
-          // Check if card is in discard pile (Returning Action Card)
-          const inDiscard = visualGameState.discardPile.find((c) => c.id === newCard.id);
-
-          if (existingCardOwner || inDiscard) {
-            // Move directly (no deck animation)
-            // We need to remove from old owner/discard and add to new owner in one step
-            const nextPlayers = visualGameState.players.map((p, idx) => {
-              if (existingCardOwner && p.id === existingCardOwner.id) {
-                return { ...p, hand: p.hand.filter((c) => c.id !== newCard.id) };
-              }
-              if (p.id === vp.id) {
-                // vp is the target player
-                // Sync with real player state to capture pending actions
-                return { ...realGameState.players[idx], hand: [...p.hand, newCard] };
-              }
-              return p;
-            });
-
-            let nextDiscard = visualGameState.discardPile;
-            if (inDiscard) {
-              nextDiscard = nextDiscard.filter((c) => c.id !== newCard.id);
-            }
-
-            const nextState = { ...visualGameState, players: nextPlayers, discardPile: nextDiscard };
-            setVisualGameState(nextState);
-            await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-            setIsAnimating(false);
-            return;
-          }
-
-          // Animate Flip
-          setRevealedDeckCard(newCard);
-          await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-
-          // Animate Fly (Add to hand)
-          const nextPlayers = [...visualGameState.players];
-          // IMPORTANT: Do not copy ...rp here, as it may contain future state flags (like hasBusted)
-          // that we haven't animated yet. We only want to update the hand.
-          nextPlayers[playerToUpdateIndex] = {
-            ...vp,
-            hand: [...vp.hand, newCard],
-          };
-
-          // Check for Turn 7 Completion (trigger animation next loop)
-          const prevUnique = new Set(
-            vp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
-          ).size;
-          const nextUnique = new Set(
-            nextPlayers[playerToUpdateIndex].hand
-              .filter((c) => !c.suit || c.suit === 'number')
-              .map((c) => c.rank)
-          ).size;
-
-          if (prevUnique < 7 && nextUnique >= 7) {
-            pendingOverlayRef.current = 'turn7';
-          }
-
-          const nextState = {
-            ...visualGameState,
-            players: nextPlayers,
-            // Decrement deck count visually if we drew from it
-            deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
-          };
-
-          setRevealedDeckCard(null);
-          setVisualGameState(nextState);
-          await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-
-          setIsAnimating(false);
-          return;
-        }
-
-        // 2. Check for Status Animations (Bust, LifeSaver, Turn 7)
-        // We check if the status changed from false to true (or true to false for LifeSaver)
-
-        if (pendingOverlayRef.current) {
-          const type = pendingOverlayRef.current;
-          await playOverlayAnimation(type);
-          pendingOverlayRef.current = null;
-        } else {
-          // We iterate players to find changes
-          for (let i = 0; i < visualGameState.players.length; i++) {
-            const vp = visualGameState.players[i];
-            const rp = realGameState.players[i];
-
-            // Bust
-            // Ensure we only show bust if we have synced the hand (no pending cards to deal)
-            if (!vp.hasBusted && rp.hasBusted && rp.hand.length === vp.hand.length) {
-              await playOverlayAnimation('bust');
-              // We don't return here, we let the state sync happen below
-              // But wait, if we don't sync, the loop will run again and see the same diff?
-              // Yes. So we MUST sync the state or at least this property.
-              // But we usually sync the whole state at step 4.
-              // So we just await the animation, then fall through to step 4.
-              break; // Only one animation per step
-            }
-
-            // Life Saver (Used)
-            // Condition: Had it, lost it, didn't bust.
-            if (vp.hasLifeSaver && !rp.hasLifeSaver && !rp.hasBusted) {
-              // Simulate the draw that caused the save
-              setRevealedDeckCard(null);
-
-              // Animate Fly to Hand (Visual only - add temporarily)
-              // FIX: Get drawn card from discard pile (it was just discarded)
-              const drawnCard = realGameState.discardPile[realGameState.discardPile.length - 1];
-              // Fallback if discard is empty (shouldn't happen)
-              const cardToAnimate =
-                drawnCard || ({ id: 'unknown', rank: '?', suit: 'number' } as CardModel);
-
-              const tempHand = [...vp.hand, cardToAnimate];
-              const tempPlayers = [...visualGameState.players];
-              // Update hasLifeSaver to false immediately to prevent re-triggering this animation loop
-              tempPlayers[i] = { ...vp, hand: tempHand, hasLifeSaver: false };
-              setVisualGameState({
-                ...visualGameState,
-                players: tempPlayers,
-                deck: visualGameState.deck.length > 0 ? visualGameState.deck.slice(0, -1) : [],
-              });
-              await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-
-              await playOverlayAnimation('lifesaver');
-              break;
-            }
-
-            // Turn 7
-            const vpUnique = new Set(
-              vp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
-            ).size;
-            const rpUnique = new Set(
-              rp.hand.filter((c) => !c.suit || c.suit === 'number').map((c) => c.rank)
-            ).size;
-            if (vpUnique < 7 && rpUnique >= 7) {
-              await playOverlayAnimation('turn7');
-              break;
-            }
-          }
-        }
-
-        // 3. Check for Turn Change (if hands are synced)
-        if (realGameState.currentPlayerId !== visualGameState.currentPlayerId) {
-          setVisualGameState(realGameState);
-          await new Promise((r) => setTimeout(r, ANIMATION_DELAY));
-          setIsAnimating(false);
-          return;
-        }
-
-        // 4. Sync any other state (scores, card removals, etc)
-        setVisualGameState(realGameState);
-      } catch (error) {
-        console.error('Animation error:', error);
-        // Force sync to recover from error state
-        if (realGameState) {
-          setVisualGameState(realGameState);
-        }
-      } finally {
-        // console.log('Animation step complete.');
-        setIsAnimating(false);
+        break;
       }
-    };
+      case 'DISCARD': {
+        const pIdx = getPlayerIdx(event.playerId!);
+        if (pIdx !== -1) {
+          // Remove from hand
+          nextState.players[pIdx].hand = nextState.players[pIdx].hand.filter(
+            (c) => c.id !== event.card!.id
+          );
+          // Add to discard
+          nextState.discardPile.push(event.card!);
+        }
+        break;
+      }
+      case 'BUST': {
+        const pIdx = getPlayerIdx(event.playerId!);
+        if (pIdx !== -1) {
+          nextState.players[pIdx].hasBusted = true;
+          nextState.players[pIdx].isActive = false;
+          // Flip cards
+          nextState.players[pIdx].hand.forEach((c) => (c.isFaceUp = false));
+        }
+        overlayToTrigger = 'bust';
+        animationDuration = 2000;
+        break;
+      }
+      case 'TURN_SEVEN': {
+        overlayToTrigger = 'turn7';
+        animationDuration = 2000;
+        break;
+      }
+      case 'PLAY_CARD': {
+        const pIdx = getPlayerIdx(event.playerId!);
+        if (pIdx !== -1) {
+          // Remove from hand
+          nextState.players[pIdx].hand = nextState.players[pIdx].hand.filter(
+            (c) => c.id !== event.card!.id
+          );
+          // If it was reserved, remove it too
+          if (nextState.players[pIdx].reservedActions) {
+            nextState.players[pIdx].reservedActions = nextState.players[
+              pIdx
+            ].reservedActions!.filter((c) => c.id !== event.card!.id);
+          }
 
-    performStep();
-  }, [realGameState, visualGameState, isAnimating]);
+          if (String(event.card!.rank) === 'Lock') {
+            if (event.targetId) {
+              nextState.currentPlayerId = event.targetId; // Switch view to target
+              const tIdx = getPlayerIdx(event.targetId);
+              if (tIdx !== -1) nextState.players[tIdx].isLocked = true;
+            }
+            overlayToTrigger = 'lock';
+            animationDuration = 2000;
+          } else if (String(event.card!.rank) === 'TurnThree') {
+            if (event.targetId) {
+              nextState.currentPlayerId = event.targetId; // Switch view to target
+            }
+            overlayToTrigger = 'turn3';
+            animationDuration = 2000;
+          } else if (String(event.card!.rank) === 'LifeSaver') {
+            // Request 3: Do NOT play animation here. Only on LIFE_SAVED event.
+            // playOverlayAnimation('lifesaver');
+          }
+        }
+        break;
+      }
+      case 'SHUFFLE_DISCARD': {
+        // Move discard to deck
+        nextState.deck = [...nextState.discardPile];
+        nextState.discardPile = [];
+        break;
+      }
+      case 'NEW_ROUND': {
+        nextState.players.forEach((p) => {
+          p.hand = [];
+          p.roundScore = 0;
+          p.hasBusted = false;
+          p.isLocked = false;
+          p.hasStayed = false;
+          p.reservedActions = [];
+        });
+        // Request 2: Ensure game phase is playing so modal closes
+        nextState.gamePhase = 'playing';
+
+        // Fix: Reconstruct deck for the start of the round so subsequent DRAW animations work
+        if (targetRealState) {
+          const remainingEvents = events.slice(processingEventIndex + 1);
+          nextState.deck = reconstructDeck(targetRealState.deck, remainingEvents);
+        }
+        break;
+      }
+      case 'LIFE_SAVED': {
+        overlayToTrigger = 'lifesaver';
+        animationDuration = 2000;
+        const pIdx = getPlayerIdx(event.playerId!);
+        if (pIdx !== -1 && event.cards) {
+          const cardIds = event.cards.map((c) => c.id);
+          nextState.players[pIdx].hand = nextState.players[pIdx].hand.filter(
+            (c) => !cardIds.includes(c.id)
+          );
+          // Add to discard
+          nextState.discardPile.push(...event.cards);
+        }
+        break;
+      }
+      case 'TRANSFER': {
+        const sourceIdx = getPlayerIdx(event.playerId!);
+        const targetIdx = event.targetId ? getPlayerIdx(event.targetId) : -1;
+
+        if (sourceIdx !== -1 && targetIdx !== -1 && event.card) {
+          // Remove from source (if not already removed by PLAY_CARD)
+          nextState.players[sourceIdx].hand = nextState.players[sourceIdx].hand.filter(
+            (c) => c.id !== event.card!.id
+          );
+          if (nextState.players[sourceIdx].reservedActions) {
+            nextState.players[sourceIdx].reservedActions = nextState.players[
+              sourceIdx
+            ].reservedActions!.filter((c) => c.id !== event.card!.id);
+          }
+
+          // Add to target
+          nextState.players[targetIdx].hand.push(event.card!);
+
+          // Switch view to target
+          nextState.currentPlayerId = event.targetId!;
+        }
+        break;
+      }
+    }
+
+    // Request 1: Pause before moving to next player
+    // Fix: Ensure visualGameState is not null before accessing properties
+    const isPlayerSwitch =
+      visualGameState && nextState.currentPlayerId !== visualGameState.currentPlayerId;
+    // User explicitly requested delay on all deals/switches, including initial deal
+    const switchDelay = isPlayerSwitch ? (import.meta.env.MODE === 'test' ? 50 : 1000) : 0;
+    // If we switch players, wait for rotation (approx 600ms) before starting action
+    const rotationDelay = isPlayerSwitch ? (import.meta.env.MODE === 'test' ? 20 : 600) : 0;
+    const actionStartDelay = switchDelay + rotationDelay;
+
+    const updateTimer = setTimeout(() => {
+      if (updateVisualState) {
+        setVisualGameState(nextState);
+      }
+    }, switchDelay);
+
+    const sideEffectTimer = setTimeout(() => {
+      if (overlayToTrigger) {
+        setOverlayAnimation({ type: overlayToTrigger, onComplete: () => {} });
+      }
+
+      if (cardToReveal) {
+        setRevealedDeckCard(cardToReveal);
+        // Schedule the card addition
+        setTimeout(() => {
+          setVisualGameState((prevState) => {
+            if (!prevState) return prevState;
+            const newState = structuredClone(prevState);
+            const pIdx = newState.players.findIndex((p) => p.id === event.playerId);
+            if (pIdx !== -1) {
+              newState.players[pIdx].hand.push(event.card!);
+              if (newState.deck.length > 0) newState.deck.pop();
+            }
+            return newState;
+          });
+          setRevealedDeckCard(null);
+        }, drawRevealDuration);
+      }
+    }, actionStartDelay);
+
+    const nextEventTimer = setTimeout(() => {
+      if (event.type !== 'DRAW') {
+        setRevealedDeckCard(null);
+        setOverlayAnimation(null); // Clear overlay
+        setProcessingEventIndex((i) => i + 1);
+      } else {
+        // For DRAW, we wait for the animation to complete
+        setOverlayAnimation(null);
+        setProcessingEventIndex((i) => i + 1);
+      }
+    }, actionStartDelay + animationDuration);
+
+    return () => {
+      clearTimeout(updateTimer);
+      clearTimeout(sideEffectTimer);
+      clearTimeout(nextEventTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingEventIndex, targetRealState]);
 
   const currentPlayer = gameState?.players.find((p) => p.id === gameState.currentPlayerId);
   const hasPendingActions =

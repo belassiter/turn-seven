@@ -49,30 +49,6 @@ export const ActivePlayerHand: React.FC<ActivePlayerHandProps> = ({
   return (
     <div className="active-player-hand" style={{ position: 'relative' }}>
       <AnimatePresence>
-        {isBusted && (
-          <motion.div
-            key="busted"
-            className="busted-overlay"
-            initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: 'spring', bounce: 0.5 }}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 100,
-              fontSize: '4rem',
-              fontWeight: 'bold',
-              color: '#ef4444',
-              textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff',
-              pointerEvents: 'none',
-            }}
-          >
-            BUSTED!
-          </motion.div>
-        )}
         {!isBusted && isLocked && (
           <motion.div
             key="locked"

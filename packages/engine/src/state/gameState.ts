@@ -1,5 +1,30 @@
 import { CardModel, PlayerModel } from '../types';
 
+export type GameEventType =
+  | 'DRAW'
+  | 'PLAY_CARD'
+  | 'ACTION_RESOLVED'
+  | 'BUST'
+  | 'TURN_SEVEN'
+  | 'ROUND_END'
+  | 'STAY'
+  | 'DISCARD'
+  | 'TRANSFER'
+  | 'SHUFFLE_DISCARD'
+  | 'DEAL'
+  | 'NEW_ROUND'
+  | 'LIFE_SAVED';
+
+export interface GameEvent {
+  type: GameEventType;
+  playerId?: string; // The primary actor or target
+  targetId?: string; // For interactions
+  card?: CardModel; // The card involved
+  cards?: CardModel[]; // For multi-card events (like dealing)
+  timestamp: number;
+  details?: string;
+}
+
 export interface LedgerEntry {
   roundNumber: number;
   playerName: string;
@@ -27,6 +52,7 @@ export interface GameState {
     [playerId: string]: { score: number; resultType?: 'turn-seven' | 'bust' | 'normal' };
   };
   ledger: LedgerEntry[];
+  lastTurnEvents?: GameEvent[];
 }
 
 // A simple in-memory store for the game state.

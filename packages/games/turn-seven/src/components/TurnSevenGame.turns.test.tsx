@@ -69,7 +69,7 @@ describe('TurnSevenGame turn sequence (UI)', () => {
         if (newHeader !== header) return; // Success
         // If neither happened, throw to keep waiting
         throw new Error('Waiting for turn advance or round end');
-      });
+      }, { timeout: 2000 });
     }
 
     // After all players have stayed, Next Round should appear
@@ -109,6 +109,6 @@ describe('TurnSevenGame turn sequence (UI)', () => {
     await waitFor(() => {
       const actionsHeaderAfter = document.querySelector('.zone-header h2')?.textContent || '';
       expect(actionsHeaderAfter).not.toBe(actionsHeader);
-    });
+    }, { timeout: 2000 });
   });
 });

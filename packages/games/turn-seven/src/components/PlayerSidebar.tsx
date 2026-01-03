@@ -12,18 +12,6 @@ interface PlayerSidebarProps {
   targetingActorId?: string;
 }
 
-const logAnimation = (name: string, trigger: string, details: any = {}) => {
-  console.log(
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      type: 'ANIMATION_LOG',
-      name,
-      trigger,
-      ...details,
-    })
-  );
-};
-
 export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
   players,
   currentPlayerId,
@@ -87,13 +75,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                   : { x: 0, backgroundColor: 'rgba(0,0,0,0)' }
               }
               transition={{ duration: 0.4 }}
-              onAnimationStart={(definition) =>
-                logAnimation('Sidebar Player Row', 'animate', {
-                  playerId: player.id,
-                  isBusted: player.hasBusted,
-                  definition,
-                })
-              }
             >
               <div className="player-info">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -106,13 +87,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1.5 }}
                           transition={{ type: 'spring' }}
-                          onAnimationStart={(definition) =>
-                            logAnimation('Sidebar Status Icon', 'animate', {
-                              playerId: player.id,
-                              status: 'busted',
-                              definition,
-                            })
-                          }
                         >
                           💥
                         </motion.span>
@@ -123,13 +97,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ type: 'spring' }}
-                          onAnimationStart={(definition) =>
-                            logAnimation('Sidebar Status Icon', 'animate', {
-                              playerId: player.id,
-                              status: 'locked',
-                              definition,
-                            })
-                          }
                         >
                           🔒
                         </motion.span>
@@ -140,13 +107,6 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           transition={{ type: 'spring' }}
-                          onAnimationStart={(definition) =>
-                            logAnimation('Sidebar Status Icon', 'animate', {
-                              playerId: player.id,
-                              status: 'stayed',
-                              definition,
-                            })
-                          }
                         >
                           🛑
                         </motion.span>
@@ -182,37 +142,8 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                       initial={{ opacity: 0, scale: 0 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0 }}
-                      onAnimationStart={(definition) =>
-                        logAnimation('Sidebar Card', 'animate', {
-                          playerId: player.id,
-                          cardId: card.id,
-                          rank: card.rank,
-                          suit: card.suit,
-                          definition,
-                        })
-                      }
-                      onLayoutAnimationStart={() =>
-                        logAnimation('Sidebar Card', 'layout', {
-                          playerId: player.id,
-                          cardId: card.id,
-                          rank: card.rank,
-                          suit: card.suit,
-                        })
-                      }
                     >
-                      <MiniCard
-                        card={card}
-                        disableLayoutId={isCurrent}
-                        onLayoutAnimationStart={() =>
-                          logAnimation('Sidebar Card', 'layout', {
-                            playerId: player.id,
-                            cardId: card.id,
-                            rank: card.rank,
-                            suit: card.suit,
-                            subType: 'shared-element',
-                          })
-                        }
-                      />
+                      <MiniCard card={card} disableLayoutId={isCurrent} />
                     </motion.div>
                   ))}
                 </AnimatePresence>

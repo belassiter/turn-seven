@@ -95,6 +95,9 @@ describe('TurnSevenGame Animations', () => {
       ...initialState,
       currentPlayerId: 'p2', // Turn changes
       players: [{ ...initialState.players[0], isLocked: true }],
+      lastTurnEvents: [
+        { type: 'PLAY_CARD', card: { rank: 'Lock' }, playerId: 'p1', targetId: 'p1' },
+      ],
     };
 
     updateState(lockedState);
@@ -131,6 +134,7 @@ describe('TurnSevenGame Animations', () => {
       ...initialState,
       currentPlayerId: 'p2',
       players: [{ ...initialState.players[0], hasBusted: true }],
+      lastTurnEvents: [{ type: 'BUST', playerId: 'p1' }],
     };
 
     updateState(bustedState);
@@ -173,6 +177,10 @@ describe('TurnSevenGame Animations', () => {
           isLocked: true,
           hand: [{ id: 'c1', rank: '1', suit: 'number' }],
         },
+      ],
+      lastTurnEvents: [
+        { type: 'PLAY_CARD', card: { rank: 'Lock' }, playerId: 'p1', targetId: 'p1' },
+        { type: 'DRAW', card: { id: 'c1', rank: '1', suit: 'number' }, playerId: 'p1' },
       ],
     };
 
@@ -310,6 +318,7 @@ describe('TurnSevenGame Animations', () => {
     const turn7State = {
       ...initialState,
       players: [{ ...initialState.players[0], hand: turn7Hand }],
+      lastTurnEvents: [{ type: 'TURN_SEVEN', playerId: 'p1' }],
     };
 
     // We need to wait for the initial animations to finish before updating state?

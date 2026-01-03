@@ -32,7 +32,7 @@ describe('TurnSevenGame Full Bot Game', () => {
     vi.clearAllMocks();
   });
 
-  it('should run a 3-bot game to completion', { timeout: 120000 }, async () => {
+  it('should run a 3-bot game to completion', { timeout: 300000 }, async () => {
     render(<TurnSevenGame />);
 
     // Select Local Game
@@ -63,15 +63,12 @@ describe('TurnSevenGame Full Bot Game', () => {
     // Run the game loop until Game Over
     let isGameOver = false;
     let loops = 0;
-    const maxLoops = 2000; // Allow enough loops for a full game
+    const maxLoops = 2500; // Allow enough loops for a full game
 
     while (!isGameOver && loops < maxLoops) {
-      // Advance time for bot thinking (1000ms) + animations
+      // Advance time for bot thinking (2000ms) + animations
       await act(async () => {
-        // Advance 5 seconds in 100ms steps
-        for (let i = 0; i < 50; i++) {
-          vi.advanceTimersByTime(100);
-        }
+        vi.advanceTimersByTime(2000);
       });
 
       // Check for "Start Next Round" button (end of round)
@@ -79,6 +76,7 @@ describe('TurnSevenGame Full Bot Game', () => {
       if (nextRoundBtn) {
         await act(async () => {
           nextRoundBtn.click();
+          vi.advanceTimersByTime(1000); // Advance to cover latency and state updates
         });
       }
 

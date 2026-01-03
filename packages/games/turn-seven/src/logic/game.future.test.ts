@@ -87,6 +87,9 @@ describe('TurnSevenLogic - Future Features & Robustness', () => {
     // Normalize timestamps for comparison
     const normalize = (s: GameState) => {
       s.ledger.forEach((l) => (l.timestamp = 0));
+      if (s.lastTurnEvents) {
+        s.lastTurnEvents.forEach((e) => (e.timestamp = 0));
+      }
       return s;
     };
 

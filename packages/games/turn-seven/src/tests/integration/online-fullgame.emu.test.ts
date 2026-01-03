@@ -20,9 +20,21 @@ maybeDescribe('emulator: online full game', () => {
     await new Promise((r) => setTimeout(r, 200));
 
     const lobbyPlayers: Array<{ name: string; isBot?: boolean }> = [];
-    const unsub = hostSvc.subscribeToLobby((lobby) => {
-      lobbyPlayers.splice(0, lobbyPlayers.length, ...lobby.players);
+
+    let unsub: () => void;
+    // Create a promise that resolves when we have 3 players
+    const playersReady = new Promise<void>((resolve) => {
+      unsub = hostSvc.subscribeToLobby((lobby) => {
+        lobbyPlayers.splice(0, lobbyPlayers.length, ...lobby.players);
+        if (lobby.players.length === 3) {
+          resolve();
+        }
+      });
     });
+
+    // Wait for players to sync
+    await playersReady;
+    if (unsub!) unsub();
 
     // Start game
     const configs = lobbyPlayers.map((p) => ({
@@ -34,14 +46,14 @@ maybeDescribe('emulator: online full game', () => {
 
     // Subscribe to game state and run until finished
     const svc = new RemoteGameService();
-    svc.subscribe(() => {
+    unsub = svc.subscribe(() => {
       // noop; in a real test we'd assert on state transitions
     }, gameId);
 
     // Wait some time for game to run in emulator functions
     await new Promise((r) => setTimeout(r, 5000));
 
-    unsub();
+    if (unsub!) unsub();
 
     expect(true).toBe(true);
   }, 45000);

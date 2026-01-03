@@ -74,7 +74,12 @@ export const GameSetup: React.FC<Props> = ({ onStart }) => {
         let newName = p.name;
         if (isBot) {
           // Pick a random name if switching to bot
-          const randomName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+          const usedNames = prev.map((pl) => pl.name);
+          const availableNames = BOT_NAMES.filter(
+            (name) => !usedNames.some((used) => used.includes(name))
+          );
+          const pool = availableNames.length > 0 ? availableNames : BOT_NAMES;
+          const randomName = pool[Math.floor(Math.random() * pool.length)];
           newName = `🤖 ${randomName}`;
         } else if (p.name.startsWith('🤖 ')) {
           // Revert to default if switching back

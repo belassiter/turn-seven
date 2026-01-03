@@ -44,14 +44,20 @@ export { db, auth, functions };
 const isLocalhost =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+// Safely check import.meta.env for CJS/Functions compatibility
+const isDev =
+  typeof import.meta !== 'undefined' &&
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (import.meta as any).env &&
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (import.meta as any).env.DEV;
 
 if ((isLocalhost || isDev) && app) {
   try {
     console.log('Connecting to Firebase Emulators (runtime detected).');
-    connectFirestoreEmulator(db, 'localhost', 8080);
-    connectAuthEmulator(auth, 'http://localhost:9099');
-    connectFunctionsEmulator(functions, 'localhost', 5001);
+    connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099');
+    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   } catch (e) {
     // If the emulator SDK functions are not present or fail, don't crash the app.
     // We'll log the error for diagnostics.

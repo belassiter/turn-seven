@@ -81,11 +81,20 @@ describe('TurnSevenGame Mobile', () => {
 
     let gameFinished = false;
     // Loop until game over or timeout
-    // Max 5000 iterations of 100ms = 500s (plenty of time for bots to finish even on slow machines)
-    for (let i = 0; i < 5000; i++) {
+    // Max 2000 iterations of 1000ms = 2000s
+    for (let i = 0; i < 2000; i++) {
       await act(async () => {
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(1000);
       });
+
+      // Check for "Start Next Round" button (end of round)
+      const nextRoundBtn = screen.queryByText('Start Next Round');
+      if (nextRoundBtn) {
+        await act(async () => {
+          nextRoundBtn.click();
+          vi.advanceTimersByTime(1000);
+        });
+      }
 
       if (screen.queryByText('Game Over!')) {
         gameFinished = true;
