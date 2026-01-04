@@ -87,8 +87,8 @@ The work will be divided between building the engine and implementing the game.
 
     - [x] **TODO:** Set up Firebase.
     - [x] **Engine:** Set up Firebase, Auth, Firestore, and the generic `performAction` Cloud Function.
-    - [ ] **Engine:** Create the `useGameState` hook to subscribe to Firestore.
-    - [ ] **Turn Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.
+    - [X] **Engine:** Create the `useGameState` hook to subscribe to Firestore.
+    - [X] **Turn Seven:** Adapt the game to use the new `useGameState` hook, enabling remote play.
 
     ### Architecture Decisions (Remote Play)
 

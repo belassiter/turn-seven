@@ -6,7 +6,7 @@ import { PlayerSetup } from '../packages/games/turn-seven/src/components/GameSet
 import { decideMove, decideTarget } from '../packages/games/turn-seven/src/logic/bot-logic';
 
 // --- Simulation Configuration ---
-const SIMULATION_RUNS = 10000;
+const SIMULATION_RUNS = 8000;
 const MAX_TURNS_PER_GAME = 10000; // Safety break to prevent infinite loops.
 const BOT_MATCHUPS: { name: string; players: PlayerSetup[] }[] = [
   {

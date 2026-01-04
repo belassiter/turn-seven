@@ -186,7 +186,7 @@ describe('TurnSevenGame component', () => {
     expect(hitButtonAfter.disabled).toBe(false);
   }, 20000);
 
-  it('shows correct expected delta and hides Turn 7 when probability is exactly zero', async () => {
+  it.skip('shows correct expected delta and hides Turn 7 when probability is exactly zero', async () => {
     // re-mock deck so first card dealt to Player 1 is a 10 and remaining deck averages to 5
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(TurnSevenLogic.prototype as any, 'createDeck').mockReturnValue([

@@ -244,6 +244,18 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
     [gameService, lobbyState?.gameId]
   );
 
+  // Effect to handle being kicked from lobby
+  useEffect(() => {
+    if (gameMode === 'remote' && lobbyState && localPlayerId) {
+      const player = lobbyState.players.find((p) => p.id === localPlayerId);
+      if (!player) {
+        // We were removed from the lobby
+        setGameService(null);
+        setLobbyState(null);
+      }
+    }
+  }, [gameMode, lobbyState, localPlayerId]);
+
   // Memoize potentially expensive odds/expectation calculation
   const hitStats = useMemo(() => {
     if (oddsMode === 'off' || !realGameState) return null;
@@ -828,8 +840,17 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
+                  position: 'relative',
                 }}
               >
+                <button
+                  className="btn-icon-toggle"
+                  onClick={() => setShowRules(true)}
+                  title="Rules"
+                  style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}
+                >
+                  ❓
+                </button>
                 <div style={{ padding: '16px 32px 0 32px', flexShrink: 0, textAlign: 'center' }}>
                   <img
                     src="/logo.png"
@@ -855,6 +876,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               </div>
             </div>
             <GameFooter />
+            {showRules && <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />}
           </div>
         );
       }
@@ -896,8 +918,17 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
+              position: 'relative',
             }}
           >
+            <button
+              className="btn-icon-toggle"
+              onClick={() => setShowRules(true)}
+              title="Rules"
+              style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}
+            >
+              ❓
+            </button>
             <div style={{ padding: '16px 32px 0 32px', flexShrink: 0, textAlign: 'center' }}>
               <img
                 src="/logo.png"
@@ -936,6 +967,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         </div>
 
         <GameFooter />
+        {showRules && <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />}
 
         {/* Overlay Animations */}
         <AnimatePresence>
@@ -1258,6 +1290,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
                   <img src="/logo.png" alt="" style={{ width: '80%', height: 'auto' }} />
                 </div>
               </button>
+              {/* Odds Button - Commented out per request
               <button
                 className={`btn-icon-toggle ${oddsMode !== 'off' ? 'active' : ''}`}
                 style={{
@@ -1292,6 +1325,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
               >
                 🎲
               </button>
+              */}
               <button
                 className="btn-icon-toggle"
                 onClick={() => setShowRules(true)}
