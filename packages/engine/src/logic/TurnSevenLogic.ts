@@ -241,6 +241,9 @@ export class TurnSevenLogic implements IGameLogic {
       case 'NEXT_ROUND':
         newState = this.startNextRound(state);
         break;
+      case 'CONVERT_TO_BOT':
+        newState = this.handleConvertToBot(state, action.payload as { playerId: string });
+        break;
       default:
         return state;
     }
@@ -1002,6 +1005,30 @@ export class TurnSevenLogic implements IGameLogic {
 
     // After staying, also check 7-unique condition
     this.checkRoundEnd(newState);
+    return newState;
+  }
+
+  private handleConvertToBot(state: GameState, payload: { playerId: string }): GameState {
+    const newState = structuredClone(state);
+    // Clear previous events to prevent re-animating old events (like initial deal)
+    newState.lastTurnEvents = [];
+
+    const player = newState.players.find((p) => p.id === payload.playerId);
+    if (player) {
+      player.isBot = true;
+      player.botDifficulty = 'medium';
+      // Append (Bot) to name if not already there to indicate status change
+      if (!player.name.includes('(Bot)')) {
+        player.name = `${player.name} (Bot)`;
+      }
+      this.addToLedger(newState, player.name, 'System', 'Converted to Bot');
+
+      newState.lastTurnEvents.push({
+        type: 'CONVERT_TO_BOT',
+        playerId: player.id,
+        timestamp: Date.now(),
+      });
+    }
     return newState;
   }
 

@@ -257,15 +257,17 @@ describe('TurnSevenGame component', () => {
     // We simulate clicking Player 2 to target them.
 
     // The pending action UI should only allow targeting via the sidebar. Find Player 2 in the sidebar and click.
-    const sidebar = container.querySelector('.player-sidebar');
-    const player2InSidebar = within(sidebar as HTMLElement).getByText(/Player 2/i);
-    fireEvent.click(player2InSidebar);
+    // Note: Clicking the name text triggers the profile modal. We must click the row itself for targeting.
+    const player2Row = container.querySelector('#player-row-p2');
+    expect(player2Row).toBeDefined();
+    fireEvent.click(player2Row!);
 
     // Now Player 2 should be locked
     // Player 2 (index 1) should only have the Lock card (1 card) and be locked
     // In the sidebar, we check for mini-cards
     await waitFor(
       () => {
+        const playerRows = container.querySelectorAll('.player-row');
         const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
         expect(p2MiniCards).toHaveLength(1);
         // Check for locked icon in the sidebar row
@@ -310,13 +312,14 @@ describe('TurnSevenGame component', () => {
     const playerRows = container.querySelectorAll('.player-row');
 
     // Player 1 has TurnThree pending. Target Player 2.
-    // Click the Player 2 entry in the sidebar
-    const sidebar2 = container.querySelector('.player-sidebar');
-    const player2InSidebar2 = within(sidebar2 as HTMLElement).getByText(/Player 2/i);
-    fireEvent.click(player2InSidebar2);
+    // Click the Player 2 entry in the sidebar (click row, not name)
+    const player2Row = container.querySelector('#player-row-p2');
+    expect(player2Row).toBeDefined();
+    fireEvent.click(player2Row!);
 
     await waitFor(
       () => {
+        const playerRows = container.querySelectorAll('.player-row');
         const p2MiniCards = playerRows[1].querySelectorAll('.mini-card');
 
         // Expect Player 2 to have 8 + Lock (2 cards) - interrupted
@@ -355,10 +358,10 @@ describe('TurnSevenGame component', () => {
 
     // Actor (Player 1) should have a pending Lock and see targeting UI
     // Choose Player 1 from the sidebar (actor should be able to self-target via sidebar)
-    const sidebar3 = container.querySelector('.player-sidebar');
-    const player1InSidebar = within(sidebar3 as HTMLElement).getByText(/Player 1/i);
-    expect(player1InSidebar).toBeDefined();
-    fireEvent.click(player1InSidebar);
+    // Click the row, not the name
+    const player1Row = container.querySelector('#player-row-p1');
+    expect(player1Row).toBeDefined();
+    fireEvent.click(player1Row!);
 
     // Now Player 1 should be locked
     await waitFor(

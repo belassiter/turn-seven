@@ -3,6 +3,7 @@ import {
   GameState,
   Card as CardComponent,
   CardModel,
+  PlayerModel,
   IGameService,
   IRemoteGameService,
   RemoteGameService,
@@ -119,11 +120,12 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
   const [isPending, setIsPending] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const [oddsMode, setOddsMode] = useState<OddsMode>('off');
+  const [oddsMode] = useState<OddsMode>('off');
   const [showRules, setShowRules] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [playerToConvert, setPlayerToConvert] = useState<PlayerModel | null>(null);
 
   // Event Processing State
   const [processingEventIndex, setProcessingEventIndex] = useState<number>(-1);
@@ -146,6 +148,21 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
 
   // Use visualGameState for rendering logic
   const gameState = visualGameState;
+
+  const handlePlayerNameClick = (player: PlayerModel) => {
+    // Only host can convert players
+    if (!isHost) return;
+    // Only convert human players
+    if (player.isBot) return;
+    setPlayerToConvert(player);
+  };
+
+  const handleConfirmConvertToBot = () => {
+    if (playerToConvert && gameService) {
+      gameService.sendAction({ type: 'CONVERT_TO_BOT', payload: { playerId: playerToConvert.id } });
+      setPlayerToConvert(null);
+    }
+  };
 
   // Handlers for Game Setup
   const handleLocalStart = useCallback((players: PlayerSetup[]) => {
@@ -361,7 +378,8 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       // Check if we have initial deal events to animate
       if (
         realGameState.roundNumber === 1 &&
-        realGameState.lastTurnEvents?.some((e) => e.type === 'DRAW')
+        realGameState.lastTurnEvents?.some((e) => e.type === 'DRAW') &&
+        !realGameState.lastTurnEvents?.some((e) => e.type === 'CONVERT_TO_BOT')
       ) {
         const startState = rewindInitialState(realGameState);
         setVisualGameState(startState);
@@ -580,6 +598,10 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       visualGameState && nextState.currentPlayerId !== visualGameState.currentPlayerId;
     // User explicitly requested delay on all deals/switches, including initial deal
     const switchDelay = isPlayerSwitch ? (import.meta.env.MODE === 'test' ? 50 : 1000) : 0;
+
+    // Fix: Delay state update for BUST events so overlay appears first
+    const stateUpdateDelay = switchDelay + (event.type === 'BUST' ? (import.meta.env.MODE === 'test' ? 50 : 1500) : 0);
+
     // If we switch players, wait for rotation (approx 600ms) before starting action
     const rotationDelay = isPlayerSwitch ? (import.meta.env.MODE === 'test' ? 20 : 600) : 0;
     const actionStartDelay = switchDelay + rotationDelay;
@@ -588,7 +610,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
       if (updateVisualState) {
         setVisualGameState(nextState);
       }
-    }, switchDelay);
+    }, stateUpdateDelay);
 
     const sideEffectTimer = setTimeout(() => {
       if (overlayToTrigger) {
@@ -1098,6 +1120,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
           isTargetingMode={!!targetingState || hasPendingActions}
           targetingActorId={currentPlayer?.id}
           onTargetPlayer={handleSidebarTargetClick}
+          onPlayerNameClick={handlePlayerNameClick}
         />
       </div>
 
@@ -1109,6 +1132,7 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         isTargetingMode={!!targetingState || hasPendingActions}
         targetingActorId={currentPlayer?.id}
         onTargetPlayer={handleSidebarTargetClick}
+        onPlayerNameClick={handlePlayerNameClick}
       />
 
       <div className="game-main-area">
@@ -1489,6 +1513,39 @@ export const TurnSevenGame: React.FC<{ initialGameState?: GameState }> = ({ init
         />
       )}
       {showRules && <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />}
+
+      {playerToConvert && (
+        <div className="modal-overlay" onClick={() => setPlayerToConvert(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Convert to Bot?</h2>
+              <button className="close-button" onClick={() => setPlayerToConvert(null)}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Are you sure you want to convert <strong>{playerToConvert.name}</strong> to a bot?
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setPlayerToConvert(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmConvertToBot}
+              >
+                Convert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overlays for Round End / Game Over */}
       {gameState.gamePhase === 'ended' && (

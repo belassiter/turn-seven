@@ -10,6 +10,7 @@ interface PlayerSidebarProps {
   onTargetPlayer?: (playerId: string) => void;
   isTargetingMode?: boolean;
   targetingActorId?: string;
+  onPlayerNameClick?: (player: PlayerModel) => void;
 }
 
 export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
@@ -17,6 +18,7 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
   currentPlayerId,
   onTargetPlayer,
   isTargetingMode,
+  onPlayerNameClick,
 }) => {
   return (
     <div className="player-sidebar">
@@ -29,6 +31,13 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
           const handleClick = () => {
             if (isTargetingMode && onTargetPlayer && player.isActive) {
               onTargetPlayer(player.id);
+            }
+          };
+
+          const handleNameClick = (e: React.MouseEvent) => {
+            if (onPlayerNameClick) {
+              e.stopPropagation();
+              onPlayerNameClick(player);
             }
           };
 
@@ -115,7 +124,9 @@ export const PlayerSidebar: React.FC<PlayerSidebarProps> = ({
                   </div>
                   <span
                     className="player-name"
+                    onClick={handleNameClick}
                     style={{
+                      cursor: onPlayerNameClick ? 'pointer' : 'default',
                       color:
                         player.isBot && player.botDifficulty
                           ? getDifficultyColor(player.botDifficulty)

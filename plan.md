@@ -48,7 +48,7 @@ The project will be built as a generic card game engine with "Turn Seven" as the
 
 ## Recent Fixes & Improvements (Deployment & Runtime)
 
-- **Deployment Script:** Created `scripts/deploy.js` to handle deployment in a monorepo structure where `workspace:*` protocols are not supported by Google Cloud Build. This script temporarily replaces workspace dependencies with file paths or removes them during deployment.
+- **Deployment Script:** Created `scripts/deploy.js` to handle deployment in a monorepo structure where `workspace:*` protocols are not supported by Google Cloud Build. This script temporarily replaces workspace dependencies with file paths or removes them during deployment. Use 'node scripts/deploy.js'
 - **Runtime Environment:** Upgraded Firebase Functions to Node.js 22 (2nd Gen) to resolve deprecation warnings and improve performance.
 - **CORS & Connectivity:** Configured Cloud Functions with `{ cors: true, invoker: 'public' }` to allow cross-origin requests from the web app.
 - **Circular Dependencies:** Refactored the `engine` package to extract shared interfaces (`CardModel`, `PlayerModel`) into a dedicated `types.ts` file. This resolves circular dependency issues that were causing the Cloud Function to crash silently (manifesting as CORS/Unauthenticated errors) when loading the game logic.

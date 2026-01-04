@@ -62,14 +62,17 @@ describe('TurnSevenGame turn sequence (UI)', () => {
       fireEvent.click(stay);
 
       // Wait for player change or next round button
-      await waitFor(() => {
-        const newHeader = document.querySelector('.zone-header h2')?.textContent || '';
-        const newNextBtn = screen.queryByRole('button', { name: /start next round/i });
-        if (newNextBtn) return; // Success
-        if (newHeader !== header) return; // Success
-        // If neither happened, throw to keep waiting
-        throw new Error('Waiting for turn advance or round end');
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          const newHeader = document.querySelector('.zone-header h2')?.textContent || '';
+          const newNextBtn = screen.queryByRole('button', { name: /start next round/i });
+          if (newNextBtn) return; // Success
+          if (newHeader !== header) return; // Success
+          // If neither happened, throw to keep waiting
+          throw new Error('Waiting for turn advance or round end');
+        },
+        { timeout: 2000 }
+      );
     }
 
     // After all players have stayed, Next Round should appear
@@ -106,9 +109,12 @@ describe('TurnSevenGame turn sequence (UI)', () => {
     await waitFor(() => expect(stay.closest('button')).not.toBeDisabled());
     fireEvent.click(stay);
 
-    await waitFor(() => {
-      const actionsHeaderAfter = document.querySelector('.zone-header h2')?.textContent || '';
-      expect(actionsHeaderAfter).not.toBe(actionsHeader);
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        const actionsHeaderAfter = document.querySelector('.zone-header h2')?.textContent || '';
+        expect(actionsHeaderAfter).not.toBe(actionsHeader);
+      },
+      { timeout: 2000 }
+    );
   });
 });

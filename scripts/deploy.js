@@ -1,9 +1,21 @@
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 const functionsPackagePath = path.join(__dirname, '../functions/package.json');
 const backupPath = path.join(__dirname, '../functions/package.json.bak');
+
+// 0. Build Everything
+console.log('Building all packages...');
+try {
+  execSync('pnpm -r run build', {
+    cwd: path.join(__dirname, '..'),
+    stdio: 'inherit',
+  });
+} catch (e) {
+  console.error('Build failed:', e);
+  process.exit(1);
+}
 
 // Ensure we don't overwrite a backup if it exists (e.g. from a crashed run)
 if (fs.existsSync(backupPath)) {

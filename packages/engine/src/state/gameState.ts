@@ -13,7 +13,8 @@ export type GameEventType =
   | 'SHUFFLE_DISCARD'
   | 'DEAL'
   | 'NEW_ROUND'
-  | 'LIFE_SAVED';
+  | 'LIFE_SAVED'
+  | 'CONVERT_TO_BOT';
 
 export interface GameEvent {
   type: GameEventType;

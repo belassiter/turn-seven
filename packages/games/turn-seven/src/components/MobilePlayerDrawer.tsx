@@ -11,6 +11,7 @@ interface MobilePlayerDrawerProps {
   isTargetingMode?: boolean;
   targetingActorId?: string;
   onTargetPlayer?: (playerId: string) => void;
+  onPlayerNameClick?: (player: PlayerModel) => void;
 }
 
 export const MobilePlayerDrawer: React.FC<MobilePlayerDrawerProps> = ({
@@ -21,6 +22,7 @@ export const MobilePlayerDrawer: React.FC<MobilePlayerDrawerProps> = ({
   isTargetingMode,
   targetingActorId,
   onTargetPlayer,
+  onPlayerNameClick,
 }) => {
   return (
     <AnimatePresence>
@@ -54,6 +56,7 @@ export const MobilePlayerDrawer: React.FC<MobilePlayerDrawerProps> = ({
                   // Auto-close on selection if in targeting mode
                   if (isTargetingMode) onClose();
                 }}
+                onPlayerNameClick={onPlayerNameClick}
               />
             </div>
           </motion.div>
